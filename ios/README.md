@@ -1,7 +1,8 @@
 # StockDesk for iOS
 
-<details open>
-<summary><b>中文</b></summary>
+[中文](#中文) · [English](#english)
+
+## 中文
 
 完全独立的原生 iOS 股票投资 App：**不依赖 Mac 后端**，行情、K 线、财务、持仓、复盘、回测、选股、提醒全部在 iPhone 本地完成。
 SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切换明亮/深色；设置内可切换中文 / English。
@@ -150,10 +151,6 @@ StockDesk/
 
 ---
 
-</details>
-
-<details>
-<summary><b>English</b></summary>
 
 ## English
 
@@ -175,4 +172,3 @@ StockDesk for iOS is a fully standalone SwiftUI app. It does **not** require the
 
 The unsigned IPA can be re-signed with Sideloadly, AltStore or Xcode. A free Apple ID signature expires after 7 days.
 
-</details>

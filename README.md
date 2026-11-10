@@ -5,16 +5,13 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-This README contains Chinese and English inline · [US Edition](docs/US-MARKET.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Publish](docs/PUBLISH.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
+[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
 
 ![Mac HUB](screenshots/mac-hub.png)
 
 ![Mac HUB English](screenshots/mac-hub-en.png)
 
 ---
-
-<details open>
-<summary><b>中文</b></summary>
 
 ## 中文
 
@@ -136,10 +133,6 @@ stockdesk-akshare/
 
 ---
 
-</details>
-
-<details>
-<summary><b>English</b></summary>
 
 ## English
 
@@ -286,4 +279,3 @@ Not investment advice. Quotes may be delayed, missing, or incorrect. Trading dec
 
 MIT License. See [LICENSE](LICENSE).
 
-</details>

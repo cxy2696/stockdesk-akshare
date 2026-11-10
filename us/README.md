@@ -1,47 +1,59 @@
-# StockDesk US / 美股版
+# StockDesk US · 美股版
 
-<details open>
-<summary><b>English</b></summary>
-
-Standalone US equity dashboard.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python run.py
-```
-
-Open http://127.0.0.1:8770.
-
-- Indices, watchlist, search, candles, movers, breadth.
-- Local ECharts bundle; no build step.
-- Independent from the A-share desktop app.
-
-</details>
-
-<details>
-<summary><b>中文</b></summary>
+[中文](#中文) · [English](#english)
 
 ## 中文
 
-独立的美股仪表盘，与 A 股桌面版完全分离。
+这是一个可以放在自己电脑上运行的美股仪表盘。它不依赖 Mac 后端，也不会碰 A 股桌面版的数据；打开后就是一个独立的本地网页。
 
-- 道琼斯 / 纳斯达克 100 / 标普 500
-- 自选股增删、代码/公司搜索
-- 日 K + 成交量（3M / 6M / 1Y）
-- 涨幅榜 / 跌幅榜
-- 市场宽度样本
-- 中文 / English 顶栏切换
-- 60 秒自动刷新
+你可以用它快速看盘：
+
+- 道琼斯、纳斯达克 100、标普 500 的实时位置
+- 自选股增删与本地保存
+- 按代码或公司名搜索
+- 日 K 线和成交量，支持 3M / 6M / 1Y
+- 涨幅榜和跌幅榜
+- 按成交额样本估算的市场宽度
+- 顶栏「中 / EN」随时切换语言
+- 每 60 秒自动刷新
+
+### 运行
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python run.py
 ```
 
-打开 http://127.0.0.1:8770
+然后打开 <http://127.0.0.1:8770>。
 
-</details>
+行情来自东方财富公开接口，只用于研究，不构成投资建议。
+
+## English
+
+This is a small US equity dashboard you can run on your own machine. It does not need the Mac backend and does not touch the A-share app's data — it is simply a local web app.
+
+A few things it is good at:
+
+- Dow Jones, Nasdaq 100 and S&P 500 at a glance
+- A watchlist that stays in your browser
+- Search by ticker or company name
+- Daily candles and volume for 3M / 6M / 1Y
+- Gainers and losers boards
+- A market-breadth estimate from the top-turnover sample
+- A 中 / EN switch in the top bar
+- Automatic refresh every 60 seconds
+
+### Run
+
+```bash
+python -m venv .venv
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python run.py
+```
+
+Open <http://127.0.0.1:8770>.
+
+Quotes come from Eastmoney's public endpoints. They are for research only, not investment advice.

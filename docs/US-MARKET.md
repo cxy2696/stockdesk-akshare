@@ -1,10 +1,12 @@
-# US Edition / 美股版
+# US Edition · 美股版
 
-A standalone US equity dashboard. It does not share processes, ports, databases, or caches with the A-share desktop app.
+[中文](#中文) · [English](#english)
 
-独立的美国股票仪表盘。与 A 股桌面版不共享进程、端口、数据库或缓存。
+## 中文
 
-## Run
+美股版是一个可以单独运行的小型看盘工具。它不依赖 A 股桌面版，也不会读取或修改那边的数据库；两个程序可以同时开着。
+
+### 启动
 
 ```bash
 cd us
@@ -14,55 +16,70 @@ pip install -r requirements.txt
 python run.py --port 8770
 ```
 
-Open `http://127.0.0.1:8770`.
+打开 <http://127.0.0.1:8770>。
 
-## Features
+### 能做什么
 
-- Dow Jones / Nasdaq 100 / S&P 500 index strip
-- Watchlist with local storage, add/remove symbols
-- Symbol/company search
-- Daily candlestick + volume chart (3M / 6M / 1Y)
-- Gainers / losers momentum board
-- Market breadth sample (top-turnover US names)
-- Auto-refresh every 60 s
-- Responsive layout for desktop and tablet
+- 道琼斯、纳斯达克 100、标普 500
+- 自选股增删、本地保存
+- 按代码或公司名搜索
+- 日 K + 成交量，3M / 6M / 1Y
+- 涨幅榜 / 跌幅榜
+- 成交额样本市场宽度
+- 中文 / English 切换
+- 60 秒自动刷新
 
-## API
+### API
 
-| Method | Path | Description |
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/us/health` | 健康检查 |
+| GET | `/api/us/overview` | 指数、榜单、宽度 |
+| GET | `/api/us/quotes?symbols=AAPL,MSFT` | 批量报价 |
+| GET | `/api/us/klines/{symbol}?limit=180` | 日 K |
+| GET | `/api/us/search?q=apple` | 搜索 |
+
+### 数据说明
+
+行情来自东方财富公开接口，价格按 `f59` 小数位缩放。自选搜索会尝试 105/106/107 三个市场。市场宽度只取成交额靠前的样本，适合感受温度，不是交易所官方统计。
+
+## English
+
+The US edition is a small, self-contained market dashboard. It does not depend on the A-share desktop app and never reads or writes its database; you can run both at the same time.
+
+### Start
+
+```bash
+cd us
+python -m venv .venv
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python run.py --port 8770
+```
+
+Open <http://127.0.0.1:8770>.
+
+### What it does
+
+- Dow Jones, Nasdaq 100 and S&P 500
+- A watchlist that stays local
+- Search by ticker or company name
+- Daily candles and volume, 3M / 6M / 1Y
+- Gainers and losers
+- A top-turnover breadth estimate
+- 中文 / English switch
+- Refresh every 60 seconds
+
+### API
+
+| Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/api/us/health` | health check |
-| GET | `/api/us/overview` | indices, gainers, losers, breadth |
+| GET | `/api/us/overview` | indices, movers, breadth |
 | GET | `/api/us/quotes?symbols=AAPL,MSFT` | batch quotes |
 | GET | `/api/us/klines/{symbol}?limit=180` | daily candles |
 | GET | `/api/us/search?q=apple` | symbol search |
 
-## Data source
+### About the data
 
-Eastmoney US public endpoints:
-
-- List: `push2.eastmoney.com/api/qt/clist/get` with `fs=m:105,m:106,m:107`
-- Quote: `push2.eastmoney.com/api/qt/stock/get`
-- K-line: `push2his.eastmoney.com/api/qt/stock/kline/get`
-- Search: `searchapi.eastmoney.com/api/suggest/get`
-
-No API key is required. Responses are cached in memory for 20–120 seconds.
-
-## Notes
-
-- Prices are scaled using the `f59` decimal field from Eastmoney.
-- Some OTC/ADR symbols resolve across market ids 105/106/107; the resolver tries each.
-- Breadth uses the top-turnover sample, not the full 13k US list; it is a market-temperature indicator, not an exchange official statistic.
-- Quotes may be delayed; research only.
-
-## Optional akshare adapter
-
-The project name references akshare, but the current US adapter uses direct HTTP for portability. To add akshare:
-
-```python
-import akshare as ak
-spot = ak.stock_us_spot_em()
-hist = ak.stock_us_hist(symbol="105.AAPL", period="daily", adjust="qfq")
-```
-
-Map the fields into `market_us.quote()` / `klines()` and keep the same API contract.
+Quotes come from Eastmoney's public endpoints. Prices are scaled with the `f59` decimal field. Symbol lookup tries market ids 105/106/107. Breadth uses the top-turnover sample — it is a temperature gauge, not an official exchange statistic.
