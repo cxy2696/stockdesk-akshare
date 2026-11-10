@@ -239,6 +239,18 @@ stockdesk-akshare/
 └── .github/        CI
 ```
 
+### Releases & Packages
+
+- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0
+- **macOS**: `StockDesk-macOS-1.9.0.zip`
+- **Windows**: `StockDesk-Windows-1.9.0.exe`
+- **iOS**: `StockDesk-iOS-3.6-unsigned.ipa`
+- **US container**: `ghcr.io/cxy2696/stockdesk-akshare-us:latest`
+
+```bash
+docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
+```
+
 ### Versions
 
 - macOS: 1.9.0
