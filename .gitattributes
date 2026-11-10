@@ -1,7 +1,13 @@
-*.py linguist-detectable=true
-*.ts linguist-detectable=true
-*.tsx linguist-detectable=true
-*.swift linguist-detectable=true
-*.js linguist-detectable=true
-*.css linguist-detectable=true
-*.html linguist-detectable=true
+# Explicit paths for GitHub's language bar
+desktop/backend/* linguist-language=Python
+desktop/frontend/src/* linguist-language=TypeScript
+desktop/frontend/src/**/* linguist-language=TypeScript
+ios/StockDesk/** linguist-language=Swift
+us/*.py linguist-language=Python
+us/static/*.js linguist-language=JavaScript
+us/static/*.css linguist-language=CSS
+us/static/*.html linguist-language=HTML
+
+# Third-party bundles should not dominate the stats
+desktop/frontend/public/vendor/* linguist-vendored
+us/static/echarts.min.js linguist-vendored
