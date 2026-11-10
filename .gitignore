@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+frontend/dist/
+build/
+dist/
+*.app/
+*.exe
+*.ipa
+data/
+*.db
+.DS_Store
