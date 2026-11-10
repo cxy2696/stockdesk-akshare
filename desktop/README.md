@@ -22,9 +22,13 @@
 | --- | --- | --- |
 | ![板块](docs/preview-boards.png) | ![情绪](docs/preview-mood.png) | ![热图](docs/preview-market.png) |
 
-| 形态选股 | K 线 MACD + 九转 | 每日策略 |
+| 形态选股（扫描结果） | K 线 MACD + 九转 | 每日策略 |
 | --- | --- | --- |
 | ![形态](docs/preview-patterns.png) | ![K线 MACD](docs/preview-stock.png) | ![每日](docs/preview-daily.png) |
+
+### 量化模型
+
+![量化模型 HMM + 渗流](docs/preview-models.png)
 
 | 明亮 HUB | 深色 HUB |
 | --- | --- |
@@ -276,3 +280,51 @@ stockdesk/
 ## License
 
 个人使用项目，仅供学习与研究，不构成任何投资建议。
+
+
+---
+
+## English
+
+### Overview
+
+StockDesk is a local-first, single-user equity research desk. Market data comes from Eastmoney public endpoints; trades, holdings and settings stay in a local SQLite database.
+
+The default surface is the **HUB**: a dark circular asset hub, three enlarged silver action buttons on the left, four modules on the right, an admin plate under the left column, and a LIVE status bar. HUD, light and dark themes share the same HUB home; the theme switch only changes background, top bar and border colors.
+
+### Highlights
+
+- Left 3 actions: Daily Plan, Sectors, Review
+- Right 4 modules: Backtest, Regions, Industry News, Quant Models
+- Click the central disc to open the portfolio
+- Font scaling 100% / 120% / 150%: text only, with automatic wrapping and row growth
+- Built-in Chinese / English switch in the top bar and Settings
+- Full-page image sharing from detail pages
+- HMM on five A-share indices + percolation giant component; per-stock position guidance
+
+### Screens
+
+| Portfolio | Chips | Review |
+| --- | --- | --- |
+| ![](docs/preview-portfolio.png) | ![](docs/preview-chips.png) | ![](docs/preview-analytics.png) |
+
+| Sectors | Mood | Heatmap |
+| --- | --- | --- |
+| ![](docs/preview-boards.png) | ![](docs/preview-mood.png) | ![](docs/preview-market.png) |
+
+| Patterns | Candles + MACD | Daily Plan |
+| --- | --- | --- |
+| ![](docs/preview-patterns.png) | ![](docs/preview-stock.png) | ![](docs/preview-daily.png) |
+
+![Quant models](docs/preview-models.png)
+
+### Run
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cd frontend && npm install && npm run build && cd ..
+.venv/bin/python main.py
+```
+
+Data: `~/Library/Application Support/StockDesk` on macOS, `%LOCALAPPDATA%\StockDesk` on Windows.
