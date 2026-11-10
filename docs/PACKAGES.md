@@ -2,7 +2,7 @@
 
 ## Container (GHCR)
 
-`stockdesk-akshare-us` is published to GitHub Container Registry.
+`stockdesk-akshare-us` is published to GitHub Container Registry: https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us
 
 ```bash
 docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
