@@ -13,6 +13,9 @@ This README contains Chinese and English inline · [US Edition](docs/US-MARKET.m
 
 ---
 
+<details open>
+<summary><b>中文</b></summary>
+
 ## 中文
 
 ### 项目简介
@@ -132,6 +135,11 @@ stockdesk-akshare/
 本项目不提供投资建议。行情可能延迟、缺失或错误；据此交易的风险由使用者自行承担。
 
 ---
+
+</details>
+
+<details>
+<summary><b>English</b></summary>
 
 ## English
 
@@ -277,3 +285,5 @@ Not investment advice. Quotes may be delayed, missing, or incorrect. Trading dec
 ### License
 
 MIT License. See [LICENSE](LICENSE).
+
+</details>
