@@ -2,6 +2,8 @@
 
 [中文](#中文) · [English](#english)
 
+想先看完整使用流程？[使用教程与流程](../docs/GUIDE.md) · New here? Read the [Guide & Workflow](../docs/GUIDE.md).
+
 ## 中文
 
 一个为个人投资者打造的**本地优先**股票投资工作台：行情、持仓记账、收益复盘、策略回测、选股与个股筹码分析，全部跑在自己电脑上。
