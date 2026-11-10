@@ -1,8 +1,5 @@
 # StockDesk · 个人股票投资台
 
-<details open>
-<summary><b>中文</b></summary>
-
 一个为个人投资者打造的**本地优先**股票投资工作台：行情、持仓记账、收益复盘、策略回测、选股与个股筹码分析，全部跑在自己电脑上。
 界面默认 **「指挥舱 HUD」**：深色圆形资产中枢、左侧 3 个放大银色斜切按键、右侧 4 个功能模块环绕、管理员名片并入左列下方；三种主题（指挥舱 / 明亮 / 深色）共用同一套 HUB 首页交互，仅切换背景、顶栏和边框配色；支持 **中文 / English** 切换。
 数据来自东方财富公开行情接口，账户数据只保存在本地 SQLite 中。界面顶栏可切换 **中文 / English**；HUB、导航、设置与美股版文案已双语化，行情数据保持数据源原文。
@@ -287,11 +284,6 @@ stockdesk/
 
 ---
 
-</details>
-
-<details>
-<summary><b>English</b></summary>
-
 ## English
 
 ### Overview
@@ -336,5 +328,3 @@ cd frontend && npm install && npm run build && cd ..
 ```
 
 Data: `~/Library/Application Support/StockDesk` on macOS, `%LOCALAPPDATA%\StockDesk` on Windows.
-
-</details>

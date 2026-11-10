@@ -1,8 +1,5 @@
 # StockDesk US / 美股版
 
-<details open>
-<summary><b>English</b></summary>
-
 Standalone US equity dashboard.
 
 ```bash
@@ -18,10 +15,6 @@ Open http://127.0.0.1:8770.
 - Local ECharts bundle; no build step.
 - Independent from the A-share desktop app.
 
-</details>
-
-<details>
-<summary><b>中文</b></summary>
 
 ## 中文
 
@@ -43,5 +36,3 @@ python run.py
 ```
 
 打开 http://127.0.0.1:8770
-
-</details>
