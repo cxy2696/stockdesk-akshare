@@ -3,7 +3,7 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md)
+[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Publish](docs/PUBLISH.md)
 
 ![Mac HUB](screenshots/mac-hub.png)
 
