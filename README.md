@@ -122,7 +122,7 @@ stockdesk-akshare/
 ### 版本
 
 - macOS：1.9.0
-- iOS：3.5 (26)
+- iOS：3.6 (27)
 - US：1.0.0
 
 ### 免责声明
@@ -242,7 +242,7 @@ stockdesk-akshare/
 ### Versions
 
 - macOS: 1.9.0
-- iOS: 3.5 (26)
+- iOS: 3.6 (27)
 - US: 1.0.0
 
 ### Disclaimer

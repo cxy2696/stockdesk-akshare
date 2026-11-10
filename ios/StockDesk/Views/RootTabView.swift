@@ -282,7 +282,7 @@ struct MoreView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("StockDesk").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
-                                Text("v3.5 · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
+                                Text("v3.6 · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
                                 Text("当前 \(ctx.date.formatted(.dateTime.hour().minute().second())) · 数据更新 \(store.lastRefresh.isEmpty ? "--:--:--" : store.lastRefresh)")
                                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.textDim)
                             }
