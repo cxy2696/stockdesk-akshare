@@ -211,7 +211,7 @@ function updateVideo() {
 v?.addEventListener('timeupdate', updateVideo);
 v?.addEventListener('loadedmetadata', updateVideo);
 v?.addEventListener('play', updateVideo); v?.addEventListener('pause', updateVideo);
-document.querySelector('.video-progress')?.addEventListener('click', e => {
+document.querySelector('.player-track')?.addEventListener('click', e => {
   if (!v || !v.duration) return;
   const r = e.currentTarget.getBoundingClientRect();
   v.currentTime = Math.max(0, Math.min(1, (e.clientX-r.left)/r.width)) * v.duration;
@@ -247,3 +247,49 @@ document.querySelectorAll('.tabs,.chapters').forEach(group => {
 document.querySelector('.scroll-cue')?.addEventListener('click', () => toast(lang === 'zh' ? '正在前往影片' : 'Heading to the film'));
 
 apply();
+
+
+/* ---- Bilibili-like player controls ---- */
+const music = document.getElementById('filmMusic');
+const miniPlay = document.getElementById('miniPlay');
+const soundBtn = document.getElementById('soundBtn');
+const fullBtn = document.getElementById('fullBtn');
+const frame = document.querySelector('.video-frame');
+let soundOn = false;
+function syncSound() {
+  if (!music || !v) return;
+  if (soundOn) {
+    if (Math.abs(music.currentTime - v.currentTime) > .4) music.currentTime = v.currentTime || 0;
+    if (v.paused) music.pause(); else music.play().catch(()=>{});
+  } else music.pause();
+}
+function syncMini() {
+  if (!miniPlay || !v) return;
+  miniPlay.textContent = v.paused ? '▶' : '❚❚';
+  if (videoState) videoState.textContent = v.paused ? 'PAUSED' : 'PLAYING';
+  syncSound();
+}
+v?.addEventListener('play', syncMini); v?.addEventListener('pause', syncMini);
+v?.addEventListener('seeked', () => { if (soundOn && music && v) music.currentTime = v.currentTime; });
+miniPlay?.addEventListener('click', () => { hideCoach(); if (v.paused) v.play().catch(()=>{}); else v.pause(); });
+soundBtn?.addEventListener('click', () => {
+  soundOn = !soundOn;
+  soundBtn.textContent = soundOn ? '♪' : '♪';
+  soundBtn.classList.toggle('on', soundOn);
+  soundBtn.setAttribute('aria-pressed', String(soundOn));
+  syncSound();
+  toast(soundOn ? (lang === 'zh' ? '声音已开启' : 'Sound on') : (lang === 'zh' ? '声音已关闭' : 'Sound off'));
+});
+fullBtn?.addEventListener('click', () => {
+  if (!frame) return;
+  if (document.fullscreenElement) document.exitFullscreen?.();
+  else frame.requestFullscreen?.().catch(()=>{});
+});
+document.getElementById('menuBtn')?.addEventListener('click', e => {
+  e.stopPropagation();
+  const m = document.getElementById('mobileMenu'); if (!m) return;
+  const open = m.classList.toggle('show');
+  document.getElementById('menuBtn').setAttribute('aria-expanded', String(open));
+});
+document.querySelectorAll('#mobileMenu a').forEach(a => a.addEventListener('click', () => document.getElementById('mobileMenu')?.classList.remove('show')));
+document.addEventListener('click', e => { if (!e.target.closest('#mobileMenu') && !e.target.closest('#menuBtn')) document.getElementById('mobileMenu')?.classList.remove('show'); });
