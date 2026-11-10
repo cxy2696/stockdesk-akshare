@@ -30,6 +30,18 @@ export async function sharePageImage() {
     })
     const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
     if (!blob) throw new Error('图片生成失败')
+    const w = window as any
+    if (w.pywebview?.api?.share_image) {
+      try {
+        const res = await w.pywebview.api.share_image(canvas.toDataURL('image/png'))
+        if (res?.ok) {
+          message.success('已保存并打开系统分享')
+          return
+        }
+      } catch {
+        /* fall through to the browser/download path */
+      }
+    }
     const file = new File([blob], `stockdesk-${Date.now()}.png`, { type: 'image/png' })
     const mobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
     if (mobile && navigator.canShare?.({ files: [file] })) {
