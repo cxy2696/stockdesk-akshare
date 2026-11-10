@@ -3,159 +3,182 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>StockDesk · 本地优先的股票投资台</title>
-<meta name="description" content="StockDesk — a local-first equity desk for macOS, Windows, iOS and US markets.">
+<title>StockDesk · A quiet desk for the whole market</title>
+<meta name="description" content="StockDesk — a local-first equity desk for macOS, Windows, iOS and US markets. One quiet screen for market, portfolio and models.">
 <link rel="stylesheet" href="./site.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b0f0e'/%3E%3Cpath d='M14 40l10-10 8 6 16-16' stroke='%23e2c34a' stroke-width='5' fill='none'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2312140f'/%3E%3Cpath d='M14 40l10-10 8 6 16-16' stroke='%23c9a72a' stroke-width='5' fill='none'/%3E%3C/svg%3E">
 </head>
 <body>
 <div class="progress"><i id="progress"></i></div>
-<canvas id="orbit" aria-hidden="true"></canvas>
-<div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
-<div class="page">
-  <header class="nav">
-    <a class="brand" href="#top">
-      <span class="mark">S</span>
-      <span><b>STOCKDESK</b><small data-i18n="navTag">本地优先 · 个人投资台</small></span>
-    </a>
-    <nav>
-      <a href="#screens" data-i18n="navScreens">界面</a>
-      <a href="#editions" data-i18n="navEditions">版本</a>
-      <a href="#start" data-i18n="navStart">开始</a>
-      <a href="https://github.com/cxy2696/stockdesk-akshare">GitHub ↗</a>
-      <button id="lang" class="lang">EN</button>
-    </nav>
-  </header>
+<header class="nav">
+  <a class="brand" href="#top"><span class="mark">S</span><b>STOCKDESK</b><small data-i18n="navTag">个人投资台</small></a>
+  <nav>
+    <a href="#film" data-i18n="navFilm">影片</a>
+    <a href="#desk" data-i18n="navDesk">界面</a>
+    <a href="#editions" data-i18n="navEditions">版本</a>
+    <a href="#start" data-i18n="navStart">开始</a>
+    <a class="gh" href="https://github.com/cxy2696/stockdesk-akshare">GitHub ↗</a>
+    <button id="lang" class="lang">EN</button>
+  </nav>
+</header>
 
-  <main id="top">
-    <section class="hero">
-      <div class="hero-copy">
-        <div class="eyebrow">LOCAL-FIRST · A-SHARE + US EQUITIES</div>
-        <h1 data-i18n="heroTitle">把行情、持仓和模型<br>放在一张安静的桌面上。</h1>
-        <p data-i18n="heroText">StockDesk 是一个本地优先的个人股票投资台。HUD 负责看全局，每日策略负责今天，HMM 与渗流负责仓位和行业。账户数据只留在你的电脑或手机里。</p>
-        <div class="cta">
-          <a class="btn primary" href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0" data-i18n="download">下载桌面版</a>
-          <a class="btn" href="https://github.com/cxy2696/stockdesk-akshare" data-i18n="source">查看源码</a>
-          <a class="btn ghost" href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" data-i18n="guide">使用教程</a>
-        </div>
-        <div class="meta">
-          <span>macOS 1.9</span><span>Windows 1.9</span><span>iOS 3.6</span><span>US 1.0</span><span>MIT</span>
-        </div>
+<main id="top">
+  <section class="hero">
+    <div class="hero-text">
+      <div class="eyebrow">LOCAL-FIRST EQUITY DESK · A-SHARE + US</div>
+      <h1 data-i18n="heroTitle">One quiet desk<br>for the whole market.</h1>
+      <p data-i18n="heroText">StockDesk puts the market, your positions and the models on one calm screen. It runs on your machine, keeps your account local, and helps you answer three questions before you trade.</p>
+      <div class="cta">
+        <a class="btn dark" href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0" data-i18n="download">Download</a>
+        <a class="btn" href="https://github.com/cxy2696/stockdesk-akshare" data-i18n="source">View source</a>
+        <a class="link" href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" data-i18n="guide">Read the guide →</a>
       </div>
-      <div class="hero-shot">
+      <div class="meta"><span>macOS 1.9</span><span>Windows 1.9</span><span>iOS 3.6</span><span>US 1.0</span><span>MIT</span></div>
+    </div>
+    <div class="hero-visual">
+      <div class="frame">
+        <div class="frame-top"><i></i><i></i><i></i><span>STOCKDESK / HUB</span></div>
         <img src="./assets/hub.png" alt="StockDesk HUB">
-        <div class="glow"></div>
       </div>
-    </section>
+      <div class="float-note"><b data-i18n="floatA">本地优先</b><span data-i18n="floatB">账户数据不上传</span></div>
+    </div>
+  </section>
 
-    <section class="video-section section reveal" id="demo">
-      <div class="section-head">
-        <div><div class="eyebrow">60-SECOND TOUR</div><h2 data-i18n="videoTitle">先看它怎么动，再决定要不要用。</h2></div>
-        <p data-i18n="videoText">从 HUB 到每日策略，再到量化模型和地域。没有剪辑花活，就是实际界面。</p>
-      </div>
-      <div class="video-frame">
-        <video id="demoVideo" poster="./assets/hub.png" muted loop playsinline preload="metadata">
-          <source src="./assets/demo.webm" type="video/webm">
-        </video>
-        <button class="video-play" id="playDemo" aria-label="Play demo">▶</button>
-        <div class="video-bar"><span data-i18n="videoCaption">HUB → 每日策略 → 量化模型 → 地域</span><span id="videoState">PAUSED</span></div>
-      </div>
-    </section>
+  <section class="manifesto">
+    <div class="eyebrow">THE IDEA</div>
+    <p data-i18n="manifesto">Most investing tools add more noise. StockDesk removes it: one HUB, one daily plan, one honest view of your positions — then the models, only when you need them.</p>
+  </section>
 
-    <section class="strip">
-      <div><b>7</b><span data-i18n="stripEntries">HUB 入口</span></div>
-      <div><b>100–150%</b><span data-i18n="stripScale">字体缩放</span></div>
-      <div><b>5</b><span data-i18n="stripModels">A 股指数 HMM</span></div>
-      <div><b>2</b><span data-i18n="stripPackages">GHCR 容器</span></div>
-      <div><b>0</b><span data-i18n="stripCloud">云端账户</span></div>
-    </section>
+  <section id="film" class="film">
+    <div class="section-label"><span>01</span><span data-i18n="filmLabel">PRODUCT FILM</span></div>
+    <div class="film-head">
+      <h2 data-i18n="filmTitle">Watch the desk move.</h2>
+      <p data-i18n="filmText">A short, unedited walk through the HUB, the daily plan, the portfolio and the models. No mockups.</p>
+    </div>
+    <div class="video-frame">
+      <video id="demoVideo" poster="./assets/hub.png" muted loop playsinline preload="metadata">
+        <source src="./assets/demo-film.webm" type="video/webm">
+      </video>
+      <button class="play" id="playDemo" aria-label="Play film"><span>▶</span></button>
+      <div class="video-hud"><span>STOCKDESK / PRODUCT FILM</span><span id="videoState">PAUSED</span></div>
+    </div>
+    <div class="chapters" id="chapters">
+      <button data-t="3" class="active"><b>01</b><span data-i18n="chHub">The HUB</span></button>
+      <button data-t="11"><b>02</b><span data-i18n="chDaily">Daily plan</span></button>
+      <button data-t="16"><b>03</b><span data-i18n="chPortfolio">Portfolio</span></button>
+      <button data-t="23"><b>04</b><span data-i18n="chModels">Models</span></button>
+      <button data-t="31"><b>05</b><span data-i18n="chUS">US edition</span></button>
+    </div>
+  </section>
 
-    <section id="screens" class="section reveal">
-      <div class="section-head">
-        <div><div class="eyebrow">THE DESK</div><h2 data-i18n="screensTitle">先看全局，再做决定。</h2></div>
-        <p data-i18n="screensText">HUB 是首页；点进每日策略、持仓、板块或量化模型，看到的都是当前数据，而不是一张静态截图。</p>
+  <section id="desk" class="desk">
+    <div class="section-label"><span>02</span><span data-i18n="deskLabel">THE DESK</span></div>
+    <div class="desk-head">
+      <h2 data-i18n="deskTitle">Three questions.<br>One place to answer them.</h2>
+      <p data-i18n="deskText">Use the tabs to see how the same desk changes with the question you are asking.</p>
+    </div>
+    <div class="tabs" id="deskTabs">
+      <button class="active" data-k="market"><span>01</span><b data-i18n="tabMarket">How is the market?</b></button>
+      <button data-k="portfolio"><span>02</span><b data-i18n="tabPortfolio">How is my book?</b></button>
+      <button data-k="models"><span>03</span><b data-i18n="tabModels">What do the models say?</b></button>
+    </div>
+    <div class="desk-view">
+      <div class="desk-copy">
+        <h3 id="deskTitle" data-i18n="marketH">Breadth, mood and the day's plan.</h3>
+        <p id="deskBody" data-i18n="marketP">Daily Plan opens with the market state, breadth and tomorrow's levels. It tells you whether today is a day to press or a day to wait.</p>
+        <ul id="deskList">
+          <li data-i18n="marketL1">Index trend, RSI and support/resistance</li>
+          <li data-i18n="marketL2">Breadth, turnover and the strongest sectors</li>
+          <li data-i18n="marketL3">A position range, not a prediction</li>
+        </ul>
       </div>
-      <div class="gallery">
-        <figure class="wide clickable"><img src="./assets/models.png" alt="Quant models"><figcaption data-i18n="capModels">HMM 状态 + 渗流 + 个股仓位建议</figcaption></figure>
-        <figure class="clickable"><img src="./assets/us.png" alt="US edition"><figcaption data-i18n="capUS">独立的美股仪表盘</figcaption></figure>
-        <figure class="clickable"><img src="./assets/ios.png" alt="iOS app"><figcaption data-i18n="capIOS">iPhone 原生 HUB</figcaption></figure>
-      </div>
-    </section>
+      <figure class="desk-shot"><img id="deskImg" src="./assets/models.png" alt=""><figcaption id="deskCap" data-i18n="capMarket">Daily Plan + sector breadth</figcaption></figure>
+    </div>
+  </section>
 
-    <section id="editions" class="section reveal">
-      <div class="section-head">
-        <div><div class="eyebrow">EDITIONS</div><h2 data-i18n="editionsTitle">选一个适合你的入口。</h2></div>
+  <section class="duo">
+    <div class="duo-copy">
+      <div class="eyebrow">POSITIONS / REVIEW</div>
+      <h2 data-i18n="bookTitle">Your book, without the noise.</h2>
+      <p data-i18n="bookText">Cost, support, pressure, chip distribution and realized P&L in one place. The review page turns the trades into a story you can learn from.</p>
+      <div class="duo-stats">
+        <div><b data-i18n="bookS1">Cost + chips</b><span data-i18n="bookS1n">Where the crowd is trapped</span></div>
+        <div><b data-i18n="bookS2">NAV + drawdown</b><span data-i18n="bookS2n">What the risk actually looked like</span></div>
       </div>
-      <div class="cards">
-        <article><span class="pill">macOS</span><h3 data-i18n="macTitle">原生窗口，双击即用</h3><p data-i18n="macText">pywebview + WebKit，窗口从主屏左上角打开；聊天、笔记、行情互不打扰。</p></article>
-        <article><span class="pill">Windows</span><h3 data-i18n="winTitle">单文件 exe</h3><p data-i18n="winText">Windows 10/11 使用 Edge WebView2 原生窗口；Win7/8 会自动退回浏览器。</p></article>
-        <article><span class="pill">iOS</span><h3 data-i18n="iosTitle">装在口袋里的 HUB</h3><p data-i18n="iosText">SwiftUI + Swift Charts，数据在手机本地；支持 100/120/150% 字体缩放。</p></article>
-        <article><span class="pill">US</span><h3 data-i18n="usTitle">美股独立版</h3><p data-i18n="usText">道指、纳指、标普、自选、K 线、异动榜；独立端口，不碰 A 股数据。</p></article>
-        <article><span class="pill">Docker</span><h3 data-i18n="dockerTitle">A 股 / 美股容器</h3><p data-i18n="dockerText">两个 GHCR 镜像，挂载一个数据卷就能跑；适合 NAS 或服务器。</p></article>
-        <article><span class="pill">MIT</span><h3 data-i18n="openTitle">代码是开放的</h3><p data-i18n="openText">可以读、改、自己打包；欢迎提 issue 或 PR。</p></article>
-      </div>
-    </section>
+    </div>
+    <div class="duo-shots">
+      <img src="./assets/portfolio.png" alt="Portfolio">
+      <img src="./assets/models.png" alt="Quant models">
+    </div>
+  </section>
 
-    <section id="start" class="section start reveal">
-      <div class="section-head">
-        <div><div class="eyebrow">QUICK START</div><h2 data-i18n="startTitle">最短的一条路。</h2></div>
-        <p data-i18n="startText">不想看长文档？先下载 Release，或者用 Docker 跑起来。</p>
-      </div>
-      <div class="code-grid">
-        <div class="code-card">
-          <div class="code-title">macOS / Windows</div>
-          <pre><code># 下载 Release 中的
-# StockDesk-macOS-1.9.0.zip
-# StockDesk-Windows-1.9.0.exe
+  <section class="split">
+    <div>
+      <div class="eyebrow">MODELS / DISCIPLINE</div>
+      <h2 data-i18n="modelTitle">Models describe.<br>They do not predict.</h2>
+      <p data-i18n="modelText">A 3-state HMM on five A-share indices suggests total exposure. Percolation looks for the largest connected cluster of rising stocks, so you can tell diffusion from a few isolated spikes. Per-stock guidance follows your actual holdings.</p>
+    </div>
+    <div class="model-figure"><img src="./assets/models.png" alt="Models"></div>
+  </section>
 
-# 解压 / 双击即可</code></pre>
+  <section id="editions" class="editions">
+    <div class="section-label"><span>03</span><span data-i18n="edLabel">EDITIONS</span></div>
+    <div class="ed-grid">
+      <div class="ed"><span>macOS</span><b data-i18n="edMac">Native window. Double-click.</b></div>
+      <div class="ed"><span>Windows</span><b data-i18n="edWin">One-file exe, WebView2.</b></div>
+      <div class="ed"><span>iOS</span><b data-i18n="edIOS">The HUB in your pocket.</b></div>
+      <div class="ed"><span>US</span><b data-i18n="edUS">A separate US dashboard.</b></div>
+      <div class="ed"><span>Docker</span><b data-i18n="edDocker">A-share and US images.</b></div>
+    </div>
+  </section>
+
+  <section id="start" class="start">
+    <div class="section-label"><span>04</span><span data-i18n="startLabel">START HERE</span></div>
+    <div class="start-grid">
+      <div>
+        <h2 data-i18n="startTitle">Pick the shortest path.</h2>
+        <p data-i18n="startText">Download a release, run a container, or build from source. The guide covers the first five minutes and the daily routine.</p>
+        <div class="start-links">
+          <a href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0" data-i18n="dl">Releases →</a>
+          <a href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" data-i18n="gd">Guide →</a>
+          <a href="https://cxy2696.github.io/stockdesk-akshare/" data-i18n="site">This site</a>
         </div>
-        <div class="code-card">
-          <div class="code-title">A-share · Docker</div>
-          <pre><code>docker run --rm -p 8765:8765 \
+      </div>
+      <pre><code># A-share container
+docker run --rm -p 8765:8765 \
   -v stockdesk-data:/data \
-  ghcr.io/cxy2696/stockdesk-akshare-a-share:latest</code></pre>
-        </div>
-        <div class="code-card">
-          <div class="code-title">US · Docker</div>
-          <pre><code>docker run --rm -p 8770:8770 \
-  ghcr.io/cxy2696/stockdesk-akshare-us:latest</code></pre>
-        </div>
-        <div class="code-card">
-          <div class="code-title">From source</div>
-          <pre><code>git clone https://github.com/cxy2696/stockdesk-akshare
+  ghcr.io/cxy2696/stockdesk-akshare-a-share:latest
+
+# US dashboard
+docker run --rm -p 8770:8770 \
+  ghcr.io/cxy2696/stockdesk-akshare-us:latest
+
+# From source
 cd stockdesk-akshare/desktop
-python -m venv .venv
-source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cd frontend && npm ci && npm run build
 cd .. && python main.py</code></pre>
-        </div>
-      </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="section final reveal">
-      <div>
-        <div class="eyebrow">STAY CURIOUS</div>
-        <h2 data-i18n="finalTitle">工具应该让你更专注，而不是更忙。</h2>
-        <p data-i18n="finalText">行情只用于研究，不构成投资建议。把 HMM 和渗流当作纪律和风险提示，而不是预测明天的答案。</p>
-      </div>
-      <div class="final-links">
-        <a href="https://github.com/cxy2696/stockdesk-akshare">GitHub</a>
-        <a href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0">Release</a>
-        <a href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md">Guide</a>
-        <a href="https://github.com/cxy2696/stockdesk-akshare/pkgs">Packages</a>
-      </div>
-    </section>
-  </main>
+  <section class="closing">
+    <div class="eyebrow">STAY CURIOUS</div>
+    <h2 data-i18n="closeTitle">A tool should make you calmer,<br>not busier.</h2>
+    <p data-i18n="closeText">Quotes are for research. HMM and percolation are discipline and risk context, not tomorrow's answer.</p>
+    <div class="closing-links">
+      <a href="https://github.com/cxy2696/stockdesk-akshare">GitHub</a>
+      <a href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0">Release</a>
+      <a href="https://github.com/cxy2696/stockdesk-akshare/pkgs">Packages</a>
+    </div>
+  </section>
+</main>
 
-  <footer>
-    <span>StockDesk · local-first equity desk</span>
-    <span id="localStats">LOCAL SESSION · --</span>
-    <span>MIT License · quotes are not investment advice</span>
-  </footer>
-</div>
-<div class="lightbox" id="lightbox"><button id="lightboxClose" aria-label="Close">×</button><img id="lightboxImg" alt=""><div id="lightboxCap"></div></div>
+<footer>
+  <span>StockDesk · local-first equity desk</span>
+  <span id="localStats">LOCAL SESSION · --</span>
+  <span>MIT · not investment advice</span>
+</footer>
 <script src="./site.js"></script>
 </body>
 </html>
