@@ -10,6 +10,8 @@
 </head>
 <body>
 <div class="progress"><i id="progress"></i></div>
+<div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+<div class="ripple-layer" id="rippleLayer" aria-hidden="true"></div>
 <header class="nav">
   <a class="brand" href="#top"><span class="mark">S</span><b>STOCKDESK</b><small data-i18n="navTag">个人投资台</small></a>
   <nav>
@@ -34,6 +36,7 @@
         <a class="link" href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" data-i18n="guide">Read the guide →</a>
       </div>
       <div class="meta"><span>macOS 1.9</span><span>Windows 1.9</span><span>iOS 3.6</span><span>US 1.0</span><span>MIT</span></div>
+      <a class="scroll-cue" href="#film"><i></i><span data-i18n="scrollHint">向下滚动，先看 41 秒影片</span></a>
     </div>
     <div class="hero-visual">
       <div class="frame">
@@ -60,14 +63,15 @@
         <source src="./assets/demo-film.webm" type="video/webm">
       </video>
       <button class="play" id="playDemo" aria-label="Play film"><span>▶</span></button>
-      <div class="video-hud"><span>STOCKDESK / PRODUCT FILM</span><span id="videoState">PAUSED</span></div>
+      <div class="video-hud"><span>STOCKDESK / PRODUCT FILM</span><span id="videoTime">00:00 / 00:41</span><span id="videoState">PAUSED</span></div>
+      <div class="video-progress"><i id="videoFill"></i></div>
     </div>
     <div class="chapters" id="chapters">
-      <button data-t="3" class="active"><b>01</b><span data-i18n="chHub">The HUB</span></button>
-      <button data-t="11"><b>02</b><span data-i18n="chDaily">Daily plan</span></button>
-      <button data-t="16"><b>03</b><span data-i18n="chPortfolio">Portfolio</span></button>
-      <button data-t="23"><b>04</b><span data-i18n="chModels">Models</span></button>
-      <button data-t="31"><b>05</b><span data-i18n="chUS">US edition</span></button>
+      <button data-t="3" class="active" role="tab" aria-selected="true"><b>01</b><span data-i18n="chHub">The HUB</span></button>
+      <button data-t="11" role="tab" aria-selected="false"><b>02</b><span data-i18n="chDaily">Daily plan</span></button>
+      <button data-t="16" role="tab" aria-selected="false"><b>03</b><span data-i18n="chPortfolio">Portfolio</span></button>
+      <button data-t="23" role="tab" aria-selected="false"><b>04</b><span data-i18n="chModels">Models</span></button>
+      <button data-t="31" role="tab" aria-selected="false"><b>05</b><span data-i18n="chUS">US edition</span></button>
     </div>
   </section>
 
@@ -78,9 +82,9 @@
       <p data-i18n="deskText">Use the tabs to see how the same desk changes with the question you are asking.</p>
     </div>
     <div class="tabs" id="deskTabs">
-      <button class="active" data-k="market"><span>01</span><b data-i18n="tabMarket">How is the market?</b></button>
-      <button data-k="portfolio"><span>02</span><b data-i18n="tabPortfolio">How is my book?</b></button>
-      <button data-k="models"><span>03</span><b data-i18n="tabModels">What do the models say?</b></button>
+      <button class="active" data-k="market" role="tab" aria-selected="true"><span>01</span><b data-i18n="tabMarket">How is the market?</b></button>
+      <button data-k="portfolio" role="tab" aria-selected="false"><span>02</span><b data-i18n="tabPortfolio">How is my book?</b></button>
+      <button data-k="models" role="tab" aria-selected="false"><span>03</span><b data-i18n="tabModels">What do the models say?</b></button>
     </div>
     <div class="desk-view">
       <div class="desk-copy">
@@ -174,6 +178,18 @@ cd .. && python main.py</code></pre>
   </section>
 </main>
 
+<button class="guide-btn" id="guideBtn" aria-expanded="false" aria-controls="guidePanel">?</button>
+<div class="guide-panel" id="guidePanel" hidden>
+  <div class="guide-head"><b data-i18n="guideTitle">怎么逛这个页面</b><button id="guideClose" aria-label="Close">×</button></div>
+  <ol>
+    <li data-i18n="guide1">向下滚动，影片会自动播放；也可以点中间的播放键。</li>
+    <li data-i18n="guide2">点影片下面的 01–05 章节，会跳到对应功能。</li>
+    <li data-i18n="guide3">在「三个问题」里切换标签，看同一张桌子的不同视角。</li>
+    <li data-i18n="guide4">右上角 EN / 中 随时切换语言。</li>
+  </ol>
+</div>
+<div class="coach" id="coach"><span data-i18n="coach">向下滚动，先看 41 秒影片</span><button id="coachClose" aria-label="Close">×</button></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <footer>
   <span>StockDesk · local-first equity desk</span>
   <span id="localStats">LOCAL SESSION · --</span>
