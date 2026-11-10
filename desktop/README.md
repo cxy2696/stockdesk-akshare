@@ -2,7 +2,7 @@
 
 一个为个人投资者打造的**本地优先**股票投资工作台：行情、持仓记账、收益复盘、策略回测、选股与个股筹码分析，全部跑在自己电脑上。
 界面默认 **「指挥舱 HUD」**：深色圆形资产中枢、左侧 3 个放大银色斜切按键、右侧 4 个功能模块环绕、管理员名片并入左列下方；三种主题（指挥舱 / 明亮 / 深色）共用同一套 HUB 首页交互，仅切换背景、顶栏和边框配色；支持 **中文 / English** 切换。
-数据来自东方财富公开行情接口，账户数据只保存在本地 SQLite 中。
+数据来自东方财富公开行情接口，账户数据只保存在本地 SQLite 中。界面顶栏可切换 **中文 / English**；HUB、导航、设置与美股版文案已双语化，行情数据保持数据源原文。
 
 ![指挥舱 HUD](docs/preview-hud.png)
 
@@ -14,9 +14,9 @@
 
 ![HUD 每日策略](docs/preview-hud-daily.png)
 
-| 持仓账簿（含支撑/压力） | 个股筹码 / 黄金分割 | 收益复盘 |
+| 持仓账簿（含支撑/压力） | 个股筹码分布 | 收益复盘 |
 | --- | --- | --- |
-| ![持仓](docs/preview-portfolio.png) | ![个股](docs/preview-stock.png) | ![复盘](docs/preview-analytics.png) |
+| ![持仓](docs/preview-portfolio.png) | ![筹码](docs/preview-chips.png) | ![复盘](docs/preview-analytics.png) |
 
 | 板块跟踪 | 市场情绪 | 个股热图 |
 | --- | --- | --- |
@@ -24,7 +24,7 @@
 
 | 形态选股 | K 线 MACD + 九转 | 每日策略 |
 | --- | --- | --- |
-| ![形态](docs/preview-patterns.png) | ![MACD](docs/preview-stock.png) | ![每日](docs/preview-daily.png) |
+| ![形态](docs/preview-patterns.png) | ![K线 MACD](docs/preview-stock.png) | ![每日](docs/preview-daily.png) |
 
 | 明亮 HUB | 深色 HUB |
 | --- | --- |

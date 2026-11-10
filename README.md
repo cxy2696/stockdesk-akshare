@@ -241,6 +241,12 @@ stockdesk-akshare/
 └── .github/        CI
 ```
 
+### Desktop details / 桌面端详情
+
+See [desktop/README.md](desktop/README.md) for the full HUB guide, screenshots, build steps and module descriptions.
+
+桌面端完整说明、交互截图、构建步骤与模块介绍：[desktop/README.md](desktop/README.md)
+
 ### Releases & Packages
 
 - **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0
