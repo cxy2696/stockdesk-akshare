@@ -34,7 +34,7 @@ Use the files in `screenshots/`:
 
 ## Before making it public
 
-1. Add a `LICENSE` (MIT/Apache-2.0/private).
+1. `LICENSE` is already MIT; keep the copyright notice.
 2. Remove any personal account data, databases, logs and signing credentials.
 3. Check that screenshots do not contain a real account balance or UID.
 4. Keep the disclaimer visible in README and the app.

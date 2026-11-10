@@ -1,5 +1,7 @@
 # StockDesk · akshare
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
@@ -249,4 +251,4 @@ Not investment advice. Quotes may be delayed, missing, or incorrect. Trading dec
 
 ### License
 
-No license has been granted yet. Add a `LICENSE` file before publishing publicly.
+MIT License. See [LICENSE](LICENSE).
