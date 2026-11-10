@@ -4,7 +4,7 @@
 
 ## 中文
 
-StockDesk 不是单一语言的小工具，桌面端、iOS 和美股版各自用了更合适的语言和框架。
+StockDesk 桌面端、iOS 和美股版各自用了更合适的语言和框架。
 
 | 语言 | 主要用途 | 位置 |
 | --- | --- | --- |
@@ -33,7 +33,7 @@ GitHub 侧边栏的 Languages 由 Linguist 自动索引；如果暂时没有显�
 
 ## English
 
-StockDesk is not a single-language project. The desktop app, iOS app and US edition each use the language and framework that fit best.
+StockDesk desktop app, iOS app and US edition each use the language and framework that fit best.
 
 | Language | Used for | Where |
 | --- | --- | --- |
