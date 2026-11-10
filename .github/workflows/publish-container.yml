@@ -19,11 +19,13 @@ jobs:
             file: desktop/Dockerfile
             version: '1.9.0'
             port: '8765'
+            health: 'api/health'
           - name: us
             image: stockdesk-akshare-us
             file: us/Dockerfile
             version: '1.0.0'
             port: '8770'
+            health: 'api/us/health'
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
@@ -42,11 +44,14 @@ jobs:
       - name: Smoke test
         run: |
           docker run -d --rm --name sd-${{ matrix.name }} -p ${{ matrix.port }}:${{ matrix.port }} ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ matrix.version }}
-          for i in $(seq 1 20); do
+          ok=0
+          for i in $(seq 1 30); do
             sleep 3
-            if curl -fsS http://127.0.0.1:${{ matrix.port }}/api/${HEALTH_PATH:-health}; then break; fi
+            if curl -fsS "http://127.0.0.1:${{ matrix.port }}/${{ matrix.health }}"; then ok=1; break; fi
           done
-          curl -fsS http://127.0.0.1:${{ matrix.port }}/api/health
+          if [ "$ok" != "1" ]; then
+            docker logs sd-${{ matrix.name }}
+            docker stop sd-${{ matrix.name }} || true
+            exit 1
+          fi
           docker stop sd-${{ matrix.name }}
-        env:
-          HEALTH_PATH: ${{ matrix.name == 'us' && 'us/health' || 'health' }}
