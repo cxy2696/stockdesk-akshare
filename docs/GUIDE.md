@@ -4,6 +4,12 @@
 
 ## 中文
 
+### 写在前面
+
+如果你刚打开这个项目，不用急着把每个页面都点一遍。StockDesk 想解决的是一个很具体的问题：让你在一个安静的地方，把“市场怎么样、我的仓位怎么样、今天要不要动手”想清楚。
+
+第一次使用，建议只做三件事：设置初始资产、记一笔真实交易、看一次每日策略。剩下的功能，等你真的需要时再打开。
+
 ### 先选一个适合自己的版本
 
 | 你的情况 | 建议使用 | 怎么开始 |
@@ -134,6 +140,12 @@ open StockDesk.xcodeproj
 - **想重新开始**：退出 App，备份并移走数据目录，再启动会创建新的空账户。
 
 ## English
+
+### Before you start
+
+If you just opened this project, you do not need to click through every screen. StockDesk is built around one specific question: “How is the market, how is my portfolio, and do I need to do anything today?”
+
+For the first run, just do three things: set your initial assets, record one real trade, and read the Daily Plan once. The rest can wait until you actually need it.
 
 ### Pick the edition that fits you
 
