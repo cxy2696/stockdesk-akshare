@@ -6,6 +6,8 @@
 
 ![指挥舱 HUD](docs/preview-hud.png)
 
+![HUD English](docs/preview-hud-en.png)
+
 ![HUD 每日策略](docs/preview-hud-daily.png)
 
 | 持仓账簿（含支撑/压力） | 个股筹码 / 黄金分割 | 收益复盘 |
