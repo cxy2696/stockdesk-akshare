@@ -5,7 +5,7 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
+[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Guide](docs/GUIDE.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
 
 ![Mac HUB](screenshots/mac-hub.png)
 
@@ -44,6 +44,8 @@ StockDesk 是一个本地优先、单用户的股票投资工作台。它把持�
 | 缩放 | 100% / 120% / 150%，文字自动换行、增行 |
 
 ### 快速开始
+
+想先看完整使用流程？[使用教程与流程](docs/GUIDE.md) 把第一次打开、每天的使用顺序、数据备份和发布流程都写在一起。
 
 #### macOS
 
@@ -165,6 +167,8 @@ This repository, **stockdesk-akshare**, is the documented source snapshot for:
 | Scaling | 100% / 120% / 150%, text reflows and rows grow automatically |
 
 ### Quick start
+
+Want the full walkthrough? [Guide & Workflow](docs/GUIDE.md) covers first launch, the daily routine, backups and the release flow.
 
 #### macOS
 
