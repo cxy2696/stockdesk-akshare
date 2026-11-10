@@ -9,6 +9,9 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b0f0e'/%3E%3Cpath d='M14 40l10-10 8 6 16-16' stroke='%23e2c34a' stroke-width='5' fill='none'/%3E%3C/svg%3E">
 </head>
 <body>
+<div class="progress"><i id="progress"></i></div>
+<canvas id="orbit" aria-hidden="true"></canvas>
+<div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
 <div class="page">
   <header class="nav">
     <a class="brand" href="#top">
@@ -45,6 +48,20 @@
       </div>
     </section>
 
+    <section class="video-section section reveal" id="demo">
+      <div class="section-head">
+        <div><div class="eyebrow">60-SECOND TOUR</div><h2 data-i18n="videoTitle">先看它怎么动，再决定要不要用。</h2></div>
+        <p data-i18n="videoText">从 HUB 到每日策略，再到量化模型和地域。没有剪辑花活，就是实际界面。</p>
+      </div>
+      <div class="video-frame">
+        <video id="demoVideo" poster="./assets/hub.png" muted loop playsinline preload="metadata">
+          <source src="./assets/demo.webm" type="video/webm">
+        </video>
+        <button class="video-play" id="playDemo" aria-label="Play demo">▶</button>
+        <div class="video-bar"><span data-i18n="videoCaption">HUB → 每日策略 → 量化模型 → 地域</span><span id="videoState">PAUSED</span></div>
+      </div>
+    </section>
+
     <section class="strip">
       <div><b>7</b><span data-i18n="stripEntries">HUB 入口</span></div>
       <div><b>100–150%</b><span data-i18n="stripScale">字体缩放</span></div>
@@ -53,19 +70,19 @@
       <div><b>0</b><span data-i18n="stripCloud">云端账户</span></div>
     </section>
 
-    <section id="screens" class="section">
+    <section id="screens" class="section reveal">
       <div class="section-head">
         <div><div class="eyebrow">THE DESK</div><h2 data-i18n="screensTitle">先看全局，再做决定。</h2></div>
         <p data-i18n="screensText">HUB 是首页；点进每日策略、持仓、板块或量化模型，看到的都是当前数据，而不是一张静态截图。</p>
       </div>
       <div class="gallery">
-        <figure class="wide"><img src="./assets/models.png" alt="Quant models"><figcaption data-i18n="capModels">HMM 状态 + 渗流 + 个股仓位建议</figcaption></figure>
-        <figure><img src="./assets/us.png" alt="US edition"><figcaption data-i18n="capUS">独立的美股仪表盘</figcaption></figure>
-        <figure><img src="./assets/ios.png" alt="iOS app"><figcaption data-i18n="capIOS">iPhone 原生 HUB</figcaption></figure>
+        <figure class="wide clickable"><img src="./assets/models.png" alt="Quant models"><figcaption data-i18n="capModels">HMM 状态 + 渗流 + 个股仓位建议</figcaption></figure>
+        <figure class="clickable"><img src="./assets/us.png" alt="US edition"><figcaption data-i18n="capUS">独立的美股仪表盘</figcaption></figure>
+        <figure class="clickable"><img src="./assets/ios.png" alt="iOS app"><figcaption data-i18n="capIOS">iPhone 原生 HUB</figcaption></figure>
       </div>
     </section>
 
-    <section id="editions" class="section">
+    <section id="editions" class="section reveal">
       <div class="section-head">
         <div><div class="eyebrow">EDITIONS</div><h2 data-i18n="editionsTitle">选一个适合你的入口。</h2></div>
       </div>
@@ -79,7 +96,7 @@
       </div>
     </section>
 
-    <section id="start" class="section start">
+    <section id="start" class="section start reveal">
       <div class="section-head">
         <div><div class="eyebrow">QUICK START</div><h2 data-i18n="startTitle">最短的一条路。</h2></div>
         <p data-i18n="startText">不想看长文档？先下载 Release，或者用 Docker 跑起来。</p>
@@ -117,7 +134,7 @@ cd .. && python main.py</code></pre>
       </div>
     </section>
 
-    <section class="section final">
+    <section class="section final reveal">
       <div>
         <div class="eyebrow">STAY CURIOUS</div>
         <h2 data-i18n="finalTitle">工具应该让你更专注，而不是更忙。</h2>
@@ -134,9 +151,11 @@ cd .. && python main.py</code></pre>
 
   <footer>
     <span>StockDesk · local-first equity desk</span>
+    <span id="localStats">LOCAL SESSION · --</span>
     <span>MIT License · quotes are not investment advice</span>
   </footer>
 </div>
+<div class="lightbox" id="lightbox"><button id="lightboxClose" aria-label="Close">×</button><img id="lightboxImg" alt=""><div id="lightboxCap"></div></div>
 <script src="./site.js"></script>
 </body>
 </html>
