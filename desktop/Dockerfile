@@ -17,4 +17,4 @@ COPY --from=web /web/dist ./frontend/dist
 ENV STOCKDESK_DATA=/data PYTHONUNBUFFERED=1
 VOLUME ["/data"]
 EXPOSE 8765
-CMD ["python", "main.py", "--headless", "--port", "8765"]
+CMD ["python", "main.py", "--headless", "--port", "8765", "--host", "0.0.0.0"]
