@@ -6,4 +6,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY us/ /app/
 EXPOSE 8770
 ENV PYTHONUNBUFFERED=1
-CMD ["python", "run.py", "--no-browser", "--port", "8770"]
+CMD ["python", "run.py", "--no-browser", "--port", "8770", "--host", "0.0.0.0"]
