@@ -1,6 +1,7 @@
 const T = {
   zh: {
     navTag:'个人投资台', navFilm:'影片', navDesk:'界面', navEditions:'版本', navStart:'开始',
+    scrollHint:'向下滚动，先看 41 秒影片', guideTitle:'怎么逛这个页面', guide1:'向下滚动，影片会自动播放；也可以点中间的播放键。', guide2:'点影片下面的 01–05 章节，会跳到对应功能。', guide3:'在「三个问题」里切换标签，看同一张桌子的不同视角。', guide4:'右上角 EN / 中 随时切换语言。', coach:'向下滚动，先看 41 秒影片', toastTab:'已切换到「{x}」', toastChapter:'影片跳到 {x}', toastLang:'语言已切换',
     heroTitle:'一张安静的桌子，<br>看完整市场。', heroText:'StockDesk 把市场、持仓和模型放在一张安静的屏幕上。它跑在你自己的电脑里，账户数据留在本地，帮你在交易前回答三个问题。',
     download:'下载', source:'查看源码', guide:'阅读教程 →',
     floatA:'本地优先', floatB:'账户数据不上传',
@@ -27,6 +28,7 @@ const T = {
   },
   en: {
     navTag:'personal equity desk', navFilm:'Film', navDesk:'Desk', navEditions:'Editions', navStart:'Start',
+    scrollHint:'Scroll to watch the 41-second film', guideTitle:'How to explore this page', guide1:'Scroll down — the film starts automatically, or press the play button.', guide2:'Click chapters 01–05 below the film to jump to a feature.', guide3:'Switch the tabs under “Three questions” to see the same desk from another angle.', guide4:'Use EN / 中 at the top right to change language.', coach:'Scroll down — start with the 41-second film', toastTab:'Switched to “{x}”', toastChapter:'Jumped to {x}', toastLang:'Language switched',
     heroTitle:'One quiet desk<br>for the whole market.', heroText:'StockDesk puts the market, your positions and the models on one calm screen. It runs on your machine, keeps your account local, and helps you answer three questions before you trade.',
     download:'Download', source:'View source', guide:'Read the guide →',
     floatA:'LOCAL-FIRST', floatB:'account data stays here',
@@ -71,7 +73,8 @@ function apply() {
 function setTab(k) {
   const c = content[k];
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.k === k));
-  document.getElementById('deskImg').src = c.img;
+  const shot = document.querySelector('.desk-shot'); shot.classList.add('swap');
+  setTimeout(() => { document.getElementById('deskImg').src = c.img; shot.classList.remove('swap'); }, 90);
   document.getElementById('deskImg').alt = T[lang][c.title];
   document.getElementById('deskTitle').innerHTML = T[lang][c.title];
   document.getElementById('deskBody').textContent = T[lang][c.body];
@@ -139,4 +142,108 @@ try {
   addEventListener('scroll', () => { depth = Math.max(depth, (scrollY + innerHeight) / document.documentElement.scrollHeight * 100); update(); }, {passive:true});
   update();
 } catch {}
+
+/* ---- feedback / guidance layer ---- */
+const toastEl = document.getElementById('toast');
+let toastTimer;
+function toast(msg) {
+  if (!toastEl) return;
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1900);
+}
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const dot = document.getElementById('cursorDot');
+if (dot && matchMedia('(pointer:fine)').matches) {
+  document.body.classList.add('has-cursor');
+  addEventListener('pointermove', e => { dot.style.left = e.clientX + 'px'; dot.style.top = e.clientY + 'px'; }, {passive:true});
+  document.querySelectorAll('a,button,.ed,.frame,.duo-shots img').forEach(el => {
+    el.addEventListener('pointerenter', () => document.body.classList.add('cursor-hover'));
+    el.addEventListener('pointerleave', () => document.body.classList.remove('cursor-hover'));
+  });
+}
+const rippleLayer = document.getElementById('rippleLayer');
+document.querySelectorAll('.btn,button,.start-links a,nav a,.ed').forEach(el => {
+  el.addEventListener('click', e => {
+    if (!rippleLayer || reduce) return;
+    const r = document.createElement('span'); r.className = 'ripple';
+    const rect = el.getBoundingClientRect();
+    r.style.left = (e.clientX || rect.left + rect.width/2) + 'px';
+    r.style.top = (e.clientY || rect.top + rect.height/2) + 'px';
+    rippleLayer.appendChild(r); setTimeout(() => r.remove(), 650);
+  });
+});
+
+const guideBtn = document.getElementById('guideBtn');
+const guidePanel = document.getElementById('guidePanel');
+function setGuide(open) {
+  if (!guidePanel || !guideBtn) return;
+  guidePanel.hidden = !open;
+  guideBtn.setAttribute('aria-expanded', String(open));
+  document.body.classList.toggle('guide-open', open);
+}
+guideBtn?.addEventListener('click', () => setGuide(guidePanel.hidden));
+document.getElementById('guideClose')?.addEventListener('click', () => setGuide(false));
+const coach = document.getElementById('coach');
+if (coach && !localStorage.getItem('sd-guide-seen')) {
+  setTimeout(() => coach.classList.add('show'), 1400);
+}
+function hideCoach() { coach?.classList.remove('show'); localStorage.setItem('sd-guide-seen', '1'); }
+document.getElementById('coachClose')?.addEventListener('click', hideCoach);
+addEventListener('scroll', () => { if (scrollY > 180) hideCoach(); }, {passive:true, once:true});
+
+const v = document.getElementById('demoVideo');
+const play = document.getElementById('playDemo');
+const fill = document.getElementById('videoFill');
+const vtime = document.getElementById('videoTime');
+const fmtTime = t => `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+function updateVideo() {
+  if (!v) return;
+  if (fill) fill.style.width = `${v.duration ? v.currentTime/v.duration*100 : 0}%`;
+  if (vtime) vtime.textContent = `${fmtTime(v.currentTime||0)} / ${fmtTime(v.duration||0)}`;
+  if (play) {
+    play.classList.toggle('playing', !v.paused);
+    play.querySelector('span').textContent = v.paused ? '▶' : '❚❚';
+  }
+  videoState && (videoState.textContent = v.paused ? 'PAUSED' : 'PLAYING');
+}
+v?.addEventListener('timeupdate', updateVideo);
+v?.addEventListener('loadedmetadata', updateVideo);
+v?.addEventListener('play', updateVideo); v?.addEventListener('pause', updateVideo);
+document.querySelector('.video-progress')?.addEventListener('click', e => {
+  if (!v || !v.duration) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  v.currentTime = Math.max(0, Math.min(1, (e.clientX-r.left)/r.width)) * v.duration;
+  hideCoach(); v.play().catch(()=>{});
+});
+play?.addEventListener('click', () => { hideCoach(); if (v.paused) v.play().catch(()=>{}); else v.pause(); });
+
+document.querySelectorAll('.chapters button').forEach(b => b.addEventListener('click', () => {
+  const label = b.querySelector('span')?.textContent || '';
+  hideCoach();
+  toast((T[lang].toastChapter || 'Jumped to {x}').replace('{x}', label));
+}));
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  const label = b.querySelector('b')?.textContent || '';
+  hideCoach();
+  toast((T[lang].toastTab || 'Switched to “{x}”').replace('{x}', label));
+}));
+document.getElementById('lang')?.addEventListener('click', () => { hideCoach(); setTimeout(() => toast(T[lang].toastLang), 30); });
+
+/* keyboard: arrow keys on tab rows */
+document.querySelectorAll('.tabs,.chapters').forEach(group => {
+  group.addEventListener('keydown', e => {
+    if (!['ArrowLeft','ArrowRight'].includes(e.key)) return;
+    const items = [...group.querySelectorAll('button')];
+    const i = items.indexOf(document.activeElement);
+    if (i < 0) return;
+    e.preventDefault();
+    items[(i + (e.key === 'ArrowRight' ? 1 : items.length-1)) % items.length].focus();
+  });
+});
+
+/* scroll cue toast */
+document.querySelector('.scroll-cue')?.addEventListener('click', () => toast(lang === 'zh' ? '正在前往影片' : 'Heading to the film'));
+
 apply();
