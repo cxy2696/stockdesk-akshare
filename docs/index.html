@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StockDesk · 本地优先的股票投资台</title>
+<meta name="description" content="StockDesk — a local-first equity desk for macOS, Windows, iOS and US markets.">
+<link rel="stylesheet" href="./site.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b0f0e'/%3E%3Cpath d='M14 40l10-10 8 6 16-16' stroke='%23e2c34a' stroke-width='5' fill='none'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="page">
+  <header class="nav">
+    <a class="brand" href="#top">
+      <span class="mark">S</span>
+      <span><b>STOCKDESK</b><small data-i18n="navTag">本地优先 · 个人投资台</small></span>
+    </a>
+    <nav>
+      <a href="#screens" data-i18n="navScreens">界面</a>
+      <a href="#editions" data-i18n="navEditions">版本</a>
+      <a href="#start" data-i18n="navStart">开始</a>
+      <a href="https://github.com/cxy2696/stockdesk-akshare">GitHub ↗</a>
+      <button id="lang" class="lang">EN</button>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">LOCAL-FIRST · A-SHARE + US EQUITIES</div>
+        <h1 data-i18n="heroTitle">把行情、持仓和模型<br>放在一张安静的桌面上。</h1>
+        <p data-i18n="heroText">StockDesk 是一个本地优先的个人股票投资台。HUD 负责看全局，每日策略负责今天，HMM 与渗流负责仓位和行业。账户数据只留在你的电脑或手机里。</p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0" data-i18n="download">下载桌面版</a>
+          <a class="btn" href="https://github.com/cxy2696/stockdesk-akshare" data-i18n="source">查看源码</a>
+          <a class="btn ghost" href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" data-i18n="guide">使用教程</a>
+        </div>
+        <div class="meta">
+          <span>macOS 1.9</span><span>Windows 1.9</span><span>iOS 3.6</span><span>US 1.0</span><span>MIT</span>
+        </div>
+      </div>
+      <div class="hero-shot">
+        <img src="./assets/hub.png" alt="StockDesk HUB">
+        <div class="glow"></div>
+      </div>
+    </section>
+
+    <section class="strip">
+      <div><b>7</b><span data-i18n="stripEntries">HUB 入口</span></div>
+      <div><b>100–150%</b><span data-i18n="stripScale">字体缩放</span></div>
+      <div><b>5</b><span data-i18n="stripModels">A 股指数 HMM</span></div>
+      <div><b>2</b><span data-i18n="stripPackages">GHCR 容器</span></div>
+      <div><b>0</b><span data-i18n="stripCloud">云端账户</span></div>
+    </section>
+
+    <section id="screens" class="section">
+      <div class="section-head">
+        <div><div class="eyebrow">THE DESK</div><h2 data-i18n="screensTitle">先看全局，再做决定。</h2></div>
+        <p data-i18n="screensText">HUB 是首页；点进每日策略、持仓、板块或量化模型，看到的都是当前数据，而不是一张静态截图。</p>
+      </div>
+      <div class="gallery">
+        <figure class="wide"><img src="./assets/models.png" alt="Quant models"><figcaption data-i18n="capModels">HMM 状态 + 渗流 + 个股仓位建议</figcaption></figure>
+        <figure><img src="./assets/us.png" alt="US edition"><figcaption data-i18n="capUS">独立的美股仪表盘</figcaption></figure>
+        <figure><img src="./assets/ios.png" alt="iOS app"><figcaption data-i18n="capIOS">iPhone 原生 HUB</figcaption></figure>
+      </div>
+    </section>
+
+    <section id="editions" class="section">
+      <div class="section-head">
+        <div><div class="eyebrow">EDITIONS</div><h2 data-i18n="editionsTitle">选一个适合你的入口。</h2></div>
+      </div>
+      <div class="cards">
+        <article><span class="pill">macOS</span><h3 data-i18n="macTitle">原生窗口，双击即用</h3><p data-i18n="macText">pywebview + WebKit，窗口从主屏左上角打开；聊天、笔记、行情互不打扰。</p></article>
+        <article><span class="pill">Windows</span><h3 data-i18n="winTitle">单文件 exe</h3><p data-i18n="winText">Windows 10/11 使用 Edge WebView2 原生窗口；Win7/8 会自动退回浏览器。</p></article>
+        <article><span class="pill">iOS</span><h3 data-i18n="iosTitle">装在口袋里的 HUB</h3><p data-i18n="iosText">SwiftUI + Swift Charts，数据在手机本地；支持 100/120/150% 字体缩放。</p></article>
+        <article><span class="pill">US</span><h3 data-i18n="usTitle">美股独立版</h3><p data-i18n="usText">道指、纳指、标普、自选、K 线、异动榜；独立端口，不碰 A 股数据。</p></article>
+        <article><span class="pill">Docker</span><h3 data-i18n="dockerTitle">A 股 / 美股容器</h3><p data-i18n="dockerText">两个 GHCR 镜像，挂载一个数据卷就能跑；适合 NAS 或服务器。</p></article>
+        <article><span class="pill">MIT</span><h3 data-i18n="openTitle">代码是开放的</h3><p data-i18n="openText">可以读、改、自己打包；欢迎提 issue 或 PR。</p></article>
+      </div>
+    </section>
+
+    <section id="start" class="section start">
+      <div class="section-head">
+        <div><div class="eyebrow">QUICK START</div><h2 data-i18n="startTitle">最短的一条路。</h2></div>
+        <p data-i18n="startText">不想看长文档？先下载 Release，或者用 Docker 跑起来。</p>
+      </div>
+      <div class="code-grid">
+        <div class="code-card">
+          <div class="code-title">macOS / Windows</div>
+          <pre><code># 下载 Release 中的
+# StockDesk-macOS-1.9.0.zip
+# StockDesk-Windows-1.9.0.exe
+
+# 解压 / 双击即可</code></pre>
+        </div>
+        <div class="code-card">
+          <div class="code-title">A-share · Docker</div>
+          <pre><code>docker run --rm -p 8765:8765 \
+  -v stockdesk-data:/data \
+  ghcr.io/cxy2696/stockdesk-akshare-a-share:latest</code></pre>
+        </div>
+        <div class="code-card">
+          <div class="code-title">US · Docker</div>
+          <pre><code>docker run --rm -p 8770:8770 \
+  ghcr.io/cxy2696/stockdesk-akshare-us:latest</code></pre>
+        </div>
+        <div class="code-card">
+          <div class="code-title">From source</div>
+          <pre><code>git clone https://github.com/cxy2696/stockdesk-akshare
+cd stockdesk-akshare/desktop
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cd frontend && npm ci && npm run build
+cd .. && python main.py</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section final">
+      <div>
+        <div class="eyebrow">STAY CURIOUS</div>
+        <h2 data-i18n="finalTitle">工具应该让你更专注，而不是更忙。</h2>
+        <p data-i18n="finalText">行情只用于研究，不构成投资建议。把 HMM 和渗流当作纪律和风险提示，而不是预测明天的答案。</p>
+      </div>
+      <div class="final-links">
+        <a href="https://github.com/cxy2696/stockdesk-akshare">GitHub</a>
+        <a href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0">Release</a>
+        <a href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md">Guide</a>
+        <a href="https://github.com/cxy2696/stockdesk-akshare/pkgs">Packages</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>StockDesk · local-first equity desk</span>
+    <span>MIT License · quotes are not investment advice</span>
+  </footer>
+</div>
+<script src="./site.js"></script>
+</body>
+</html>
