@@ -245,9 +245,14 @@ stockdesk-akshare/
 - **macOS**: `StockDesk-macOS-1.9.0.zip`
 - **Windows**: `StockDesk-Windows-1.9.0.exe`
 - **iOS**: `StockDesk-iOS-3.6-unsigned.ipa`
+- **A-share container**: `ghcr.io/cxy2696/stockdesk-akshare-a-share:latest`
 - **US container**: `ghcr.io/cxy2696/stockdesk-akshare-us:latest`
 
 ```bash
+# A-share web app (port 8765)
+docker run --rm -p 8765:8765 -v stockdesk-data:/data ghcr.io/cxy2696/stockdesk-akshare-a-share:latest
+
+# US dashboard (port 8770)
 docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 ```
 

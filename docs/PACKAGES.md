@@ -11,8 +11,9 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 Open `http://127.0.0.1:8770`.
 
 - Image: `ghcr.io/cxy2696/stockdesk-akshare-us`
-- Tags: `1.0.0`, `latest`
-- Contents: US edition (FastAPI + static dashboard)
+- A-share tags: `1.9.0`, `latest`
+- US tags: `1.0.0`, `latest`
+- Contents: A-share web app and US edition
 - No account data is baked into the image.
 
 The image is built by `.github/workflows/publish-container.yml` using `us/Dockerfile`.
