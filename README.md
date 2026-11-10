@@ -17,6 +17,16 @@ Mac · Windows · iOS · US Equities
 
 ---
 
+## 项目展示页 / Project site
+
+**https://cxy2696.github.io/stockdesk-akshare/**
+
+一个独立的项目主页，包含产品影片、HUB / 量化模型 / 美股 / iOS 截图、版本入口和快速开始。页面支持中英切换。
+
+An independent project site with the product film, HUB / models / US / iOS screenshots, editions and quick start. It has a Chinese / English switch.
+
+---
+
 ## 中文
 
 ### 项目简介
