@@ -1,0 +1,19 @@
+# Let GitHub recognize the main languages explicitly
+*.py linguist-language=Python
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
+*.swift linguist-language=Swift
+*.js linguist-language=JavaScript
+*.css linguist-language=CSS
+*.html linguist-language=HTML
+
+# Third-party bundles are not project source
+desktop/frontend/public/vendor/* linguist-vendored
+us/static/echarts.min.js linguist-vendored
+
+# Screenshots and binaries
+*.png binary
+*.jpg binary
+*.webp binary
+*.ipa binary
+*.exe binary
