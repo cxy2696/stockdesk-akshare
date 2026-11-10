@@ -162,3 +162,50 @@ body.guide-open .coach{display:none}
 @media (pointer:coarse){.cursor-dot{display:none}.scroll-cue{display:none}}
 @media (prefers-reduced-motion:reduce){.scroll-cue i::after{animation:none}.cursor-dot{display:none}.coach{display:none}}
 @media(max-width:620px){.guide-btn{left:14px;bottom:14px}.guide-panel{left:14px;right:14px;width:auto}.coach{right:14px;bottom:14px}.toast{width:max-content;max-width:90vw}}
+/* larger, more editorial type + responsive player */
+body{font-size:16px}
+main,footer{max-width:1320px}
+.hero h1{font-size:clamp(42px,5.3vw,72px)}
+.hero-text p{font-size:16px;line-height:1.8;max-width:540px}
+.eyebrow,.section-label{font-size:9.5px}
+nav{font-size:12px;gap:28px}
+.brand b{font-size:12px}.brand small{font-size:10px}
+.cta .btn,.cta .link{font-size:12.5px;padding:12px 17px}
+.meta{font-size:9.5px}
+.manifesto p{font-size:clamp(24px,3vw,40px)}
+.film-head p,.desk-head p{font-size:13.5px;max-width:410px}
+h2{font-size:clamp(32px,3.8vw,50px)}
+.chapters button{padding:16px 14px}
+.chapters span{font-size:11.5px}.chapters b{font-size:9px}
+.tabs button{font-size:12.5px;padding:17px 15px}
+.desk-copy h3{font-size:30px}.desk-copy p{font-size:14px}.desk-copy li{font-size:12.5px}
+.duo-copy p,.split p,.start p,.closing p{font-size:14px}
+.duo-stats b{font-size:12.5px}.duo-stats span{font-size:10.5px}
+.ed b{font-size:12px}.ed span{font-size:9px}
+pre{font-size:11px;line-height:1.9}
+footer{font-size:9px;padding-top:18px;padding-bottom:28px}
+.player-controls{display:flex;align-items:center;gap:10px;padding:9px 10px;border-top:1px solid #202820;background:#080c0a;color:#aeb9b0}
+.player-controls button{border:0;background:none;color:#d9dfd6;font-size:11px;cursor:pointer;width:24px;height:24px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.12)}
+.player-controls button:hover{color:#e2c34a;border-color:#e2c34a}
+.player-controls #videoTime{font-family:var(--mono);font-size:9px;color:#8e9a91;min-width:78px}
+.player-track{flex:1;height:3px;background:rgba(255,255,255,.12);cursor:pointer;position:relative}
+.player-track i{display:block;height:100%;width:0;background:#e2c34a}
+.video-hud .hd{color:#6f7b70}
+.menu-btn{display:none;border:1px solid var(--line);background:transparent;color:var(--ink);font-size:15px;width:30px;height:30px;cursor:pointer}
+.mobile-menu{display:none;position:fixed;left:0;right:0;top:57px;z-index:49;background:rgba(245,244,239,.98);border-bottom:1px solid var(--line);padding:10px 20px;flex-direction:column;gap:12px;font-size:13px}
+.mobile-menu.show{display:flex}
+@media(max-width:980px){.hero h1{font-size:clamp(38px,6vw,54px)}.hero-text p{font-size:15px}.desk-copy h3{font-size:27px}h2{font-size:clamp(30px,4.5vw,42px)}.duo-copy p,.split p,.start p,.closing p{font-size:13.5px}}
+@media(max-width:620px){.menu-btn{display:grid;place-items:center}nav .gh{display:none}nav{gap:10px}.hero h1{font-size:40px;line-height:1.06}.hero-text p{font-size:14.5px}.cta .btn,.cta .link{font-size:12px}.manifesto{padding:34px 0 48px}.manifesto p{font-size:25px}.section{padding-top:52px}.ed-grid{grid-template-columns:1fr 1fr}.ed{padding:16px 10px}.ed b{font-size:11px}.duo{padding:54px 0}.split{padding:54px 0}.start{padding:54px 0}.closing{padding:54px 0}.chapters{gap:0}.chapters button{padding:12px 10px}.chapters span{font-size:11px}.player-controls{gap:7px}.player-controls button{width:22px;height:22px;font-size:10px}.player-controls #videoTime{min-width:70px;font-size:8px}footer{display:flex;flex-direction:column;align-items:flex-start;gap:7px;font-size:8px}.desk-copy h3{font-size:25px}.desk-copy p{font-size:13.5px}.desk-copy li{font-size:12px}}
+@media(max-width:420px){.ed-grid{grid-template-columns:1fr}.ed{border-right:0;border-bottom:1px solid var(--line)}}
+.player-controls button.on{color:#e2c34a;border-color:#e2c34a;box-shadow:0 0 10px rgba(226,195,74,.18)}
+.video-frame:fullscreen{background:#000;padding:0;display:flex;flex-direction:column;justify-content:center}
+.video-frame:fullscreen video{height:calc(100vh - 44px);object-fit:contain}
+.video-frame:fullscreen .play{display:none}
+.nav-guide{border:1px solid var(--line);background:transparent;color:var(--muted);width:24px;height:24px;font-family:var(--mono);font-size:10px;cursor:pointer;transition:.2s}
+.nav-guide:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.guide-panel{top:88px;right:38px;left:auto;bottom:auto;width:310px}
+.coach{position:static;display:none;margin-top:14px;background:var(--ink);color:var(--paper);padding:9px 12px;font-size:10px;align-items:center;gap:10px;width:max-content;max-width:100%}
+.coach.show{display:flex;opacity:1;transform:none;pointer-events:auto}
+.coach button{border:0;background:none;color:#aeb6aa;font-size:15px;cursor:pointer;padding:0}
+@media(max-width:980px){.guide-panel{right:24px;top:78px}}
+@media(max-width:620px){.nav-guide{display:grid;place-items:center}.guide-panel{left:14px;right:14px;top:66px;width:auto}.coach{font-size:10.5px}.chapters{display:flex;overflow-x:auto;border-bottom:1px solid var(--line);scrollbar-width:none}.chapters::-webkit-scrollbar{display:none}.chapters button{min-width:118px;flex:0 0 auto;border-bottom:0}.chapters button:last-child{border-right:0}footer{display:flex;flex-direction:column;align-items:flex-start;gap:7px}footer #localStats{display:block}}
