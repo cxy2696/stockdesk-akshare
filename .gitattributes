@@ -1,8 +1,13 @@
-# Explicit paths for GitHub's language bar
-desktop/backend/* linguist-language=Python
-desktop/frontend/src/* linguist-language=TypeScript
-desktop/frontend/src/**/* linguist-language=TypeScript
-ios/StockDesk/** linguist-language=Swift
+# Explicit language mapping for GitHub's language bar.
+# Extensions are mapped narrowly so CSS/HTML assets are not misclassified.
+desktop/backend/*.py linguist-language=Python
+desktop/frontend/src/*.ts linguist-language=TypeScript
+desktop/frontend/src/*.tsx linguist-language=TypeScript
+desktop/frontend/src/**/*.ts linguist-language=TypeScript
+desktop/frontend/src/**/*.tsx linguist-language=TypeScript
+desktop/frontend/src/*.css linguist-language=CSS
+desktop/frontend/src/*.html linguist-language=HTML
+ios/StockDesk/**/*.swift linguist-language=Swift
 us/*.py linguist-language=Python
 us/static/*.js linguist-language=JavaScript
 us/static/*.css linguist-language=CSS
