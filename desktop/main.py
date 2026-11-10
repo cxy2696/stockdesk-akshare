@@ -73,6 +73,7 @@ def main():
     ap = argparse.ArgumentParser(description="StockDesk")
     ap.add_argument("--headless", action="store_true", help="run the API server only")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--host", default="127.0.0.1", help="bind address (use 0.0.0.0 in containers)")
     ap.add_argument("--browser", action="store_true", help="open in the default browser instead of a native window")
     ap.add_argument("--production", action="store_true", help="use the bundled frontend build")
     ap.add_argument("--check-webview", action="store_true", help="verify native webview import and exit")
@@ -93,7 +94,7 @@ def main():
     import uvicorn
     from backend.app import create
 
-    cfg = uvicorn.Config(create(), host="127.0.0.1", port=port, log_level="warning", access_log=False)
+    cfg = uvicorn.Config(create(), host=args.host, port=port, log_level="warning", access_log=False)
     server = uvicorn.Server(cfg)
     t = threading.Thread(target=server.run, name="api-server", daemon=True)
     t.start()
