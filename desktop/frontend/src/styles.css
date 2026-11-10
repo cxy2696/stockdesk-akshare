@@ -2550,7 +2550,7 @@ html, body { overflow-x: hidden; }
 }
 .hud-left-stack {
   width: 300px;
-  padding-top: 132px;
+  padding-top: 115px;
   gap: 9px;
   align-items: flex-end;
 }
@@ -2619,4 +2619,4 @@ html, body { overflow-x: hidden; }
   flex-wrap: wrap;
   bottom: auto;
 }
-.font-scale-150 .hud-left-stack { padding-top: 146px; }
+.font-scale-150 .hud-left-stack { padding-top: 115px; }
