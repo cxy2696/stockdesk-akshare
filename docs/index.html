@@ -21,6 +21,8 @@
     <a href="#start" data-i18n="navStart">开始</a>
     <a class="gh" href="https://github.com/cxy2696/stockdesk-akshare">GitHub ↗</a>
     <button id="lang" class="lang">EN</button>
+    <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
+    <button class="nav-guide" id="guideBtn" aria-expanded="false" aria-controls="guidePanel">?</button>
   </nav>
 </header>
 
@@ -37,6 +39,7 @@
       </div>
       <div class="meta"><span>macOS 1.9</span><span>Windows 1.9</span><span>iOS 3.6</span><span>US 1.0</span><span>MIT</span></div>
       <a class="scroll-cue" href="#film"><i></i><span data-i18n="scrollHint">向下滚动，先看 41 秒影片</span></a>
+      <div class="coach" id="coach"><span data-i18n="coach">向下滚动，先看 41 秒影片</span><button id="coachClose" aria-label="Close">×</button></div>
     </div>
     <div class="hero-visual">
       <div class="frame">
@@ -63,8 +66,15 @@
         <source src="./assets/demo-film.webm" type="video/webm">
       </video>
       <button class="play" id="playDemo" aria-label="Play film"><span>▶</span></button>
-      <div class="video-hud"><span>STOCKDESK / PRODUCT FILM</span><span id="videoTime">00:00 / 00:42</span><span id="videoState">PAUSED</span></div>
-      <div class="video-progress"><i id="videoFill"></i></div>
+      <div class="video-hud"><span>STOCKDESK / PRODUCT FILM</span><span id="videoState">PAUSED</span><span class="hd">HD · 16:9</span></div>
+      <div class="player-controls">
+        <button id="miniPlay" aria-label="Play">▶</button>
+        <span id="videoTime">00:00 / 00:42</span>
+        <div class="player-track" id="videoTrack"><i id="videoFill"></i></div>
+        <button id="soundBtn" aria-label="Sound">♪</button>
+        <button id="fullBtn" aria-label="Fullscreen">⛶</button>
+      </div>
+      <audio id="filmMusic" src="./assets/film-music.wav" preload="none" loop></audio>
     </div>
     <div class="chapters" id="chapters">
       <button data-t="3" class="active" role="tab" aria-selected="true"><b>01</b><span data-i18n="chHub">The HUB</span></button>
@@ -178,7 +188,13 @@ cd .. && python main.py</code></pre>
   </section>
 </main>
 
-<button class="guide-btn" id="guideBtn" aria-expanded="false" aria-controls="guidePanel">?</button>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#film" data-i18n="navFilm">影片</a>
+  <a href="#desk" data-i18n="navDesk">界面</a>
+  <a href="#editions" data-i18n="navEditions">版本</a>
+  <a href="#start" data-i18n="navStart">开始</a>
+  <a href="https://github.com/cxy2696/stockdesk-akshare">GitHub ↗</a>
+</div>
 <div class="guide-panel" id="guidePanel" hidden>
   <div class="guide-head"><b data-i18n="guideTitle">怎么逛这个页面</b><button id="guideClose" aria-label="Close">×</button></div>
   <ol>
@@ -188,7 +204,6 @@ cd .. && python main.py</code></pre>
     <li data-i18n="guide4">右上角 EN / 中 随时切换语言。</li>
   </ol>
 </div>
-<div class="coach" id="coach"><span data-i18n="coach">向下滚动，先看 41 秒影片</span><button id="coachClose" aria-label="Close">×</button></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <footer>
   <span>StockDesk · local-first equity desk</span>
