@@ -1,9 +1,9 @@
 # StockDesk for iOS
 
 完全独立的原生 iOS 股票投资 App：**不依赖 Mac 后端**，行情、K 线、财务、持仓、复盘、回测、选股、提醒全部在 iPhone 本地完成。
-SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切换明亮/深色。
+SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切换明亮/深色；设置内可切换中文 / English。
 
-**v3.5 与 macOS 版功能对齐**：HUB 精简为 3+4；分享只在进入子页面后出现，滚动内容自动拼接为完整长图，可经系统分享到微信/Notes；HMM/渗流新增个股建议、行业临界和最大连通簇理由；资产快照缓存；资产分析含资金分配、交易偏好、趋势与交易习惯；投资建议含历史总结、未来趋势与标的推荐；指数分析覆盖 7 个指数；顶部放大镜/星号/信封/铃铛；底部显示当前时间与数据更新时间。，持仓、复盘、总览、自选、回测、设置全部收进「投资」；K 线可拖动查看每日数据；公司概况补全；九转/底部钝化、7/20/30/60 日分析、行业趋势、行情要闻与指标说明。
+**v3.6 与 macOS 版功能对齐**：HUB 精简为 3+4；分享只在进入子页面后出现，滚动内容自动拼接为完整长图，可经系统分享到微信/Notes；HMM/渗流新增个股建议、行业临界和最大连通簇理由；资产快照缓存；资产分析含资金分配、交易偏好、趋势与交易习惯；投资建议含历史总结、未来趋势与标的推荐；指数分析覆盖 7 个指数；顶部放大镜/星号/信封/铃铛；底部显示当前时间与数据更新时间。，持仓、复盘、总览、自选、回测、设置全部收进「投资」；K 线可拖动查看每日数据；公司概况补全；九转/底部钝化、7/20/30/60 日分析、行业趋势、行情要闻与指标说明。
 
 | 每日策略（多周期/行业） | 板块跟踪 | 投资 HUD |
 | --- | --- | --- |
@@ -143,3 +143,26 @@ StockDesk/
 ## License
 
 个人学习与研究用途，不构成投资建议。
+
+
+---
+
+## English
+
+StockDesk for iOS is a fully standalone SwiftUI app. It does **not** require the Mac backend: quotes, candles, fundamentals, portfolio, review, backtest, screening and alerts all run on the iPhone.
+
+- SwiftUI + Swift Charts
+- HUB home with three left actions and four right modules
+- 100% / 120% / 150% font scaling; 150% uses a single-column HUB
+- Built-in Chinese / English switch in Settings
+- Full-page image sharing via the system share sheet (WeChat, Notes, Files)
+- HMM and percolation models with per-stock position guidance
+- Local-only storage; no login and no uploads
+
+### Install
+
+1. Open `StockDesk.xcodeproj`
+2. Select your team under Signing & Capabilities
+3. Run on a simulator or a device
+
+The unsigned IPA can be re-signed with Sideloadly, AltStore or Xcode. A free Apple ID signature expires after 7 days.
