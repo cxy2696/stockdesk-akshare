@@ -111,7 +111,7 @@ export default function App() {
   const status = overview?.status
 
   return (
-    <div className={`shell ${mode === 'hud' ? 'hud-mode' : ''} font-scale-${Math.round(scale * 100)}`}>
+    <div className={`shell hud-mode font-scale-${Math.round(scale * 100)}`}>
       <aside className="sider">
         <div className="brand">
           <div className="brand-logo">S</div>
@@ -153,7 +153,7 @@ export default function App() {
 
       <div className="main">
         <header className="topbar">
-          {mode === 'hud' && loc.pathname !== '/' && (
+          {loc.pathname !== '/' && (
             <button className="hud-back" onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/') }} aria-label="返回">
               <ArrowLeftOutlined />
             </button>
