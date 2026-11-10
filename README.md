@@ -19,8 +19,6 @@ Mac · Windows · iOS · US Equities
 
 An independent project site with the product film, HUB / models / US / iOS screenshots, editions and quick start. It has a Chinese / English switch.
 
-
-
 ![Mac HUB](screenshots/mac-hub.png)
 
 ![Mac HUB English](screenshots/mac-hub-en.png)
