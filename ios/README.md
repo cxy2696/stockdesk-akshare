@@ -2,6 +2,8 @@
 
 [中文](#中文) · [English](#english)
 
+使用流程与常见问题：[使用教程与流程](../docs/GUIDE.md) · Walkthrough: [Guide & Workflow](../docs/GUIDE.md).
+
 ## 中文
 
 完全独立的原生 iOS 股票投资 App：**不依赖 Mac 后端**，行情、K 线、财务、持仓、复盘、回测、选股、提醒全部在 iPhone 本地完成。
