@@ -2,6 +2,8 @@
 
 [中文](#中文) · [English](#english)
 
+完整使用流程：[使用教程与流程](../docs/GUIDE.md) · Full walkthrough: [Guide & Workflow](../docs/GUIDE.md).
+
 ## 中文
 
 这是一个可以放在自己电脑上运行的美股仪表盘。它不依赖 Mac 后端，也不会碰 A 股桌面版的数据；打开后就是一个独立的本地网页。
