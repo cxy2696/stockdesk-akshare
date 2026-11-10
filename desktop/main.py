@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import os
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -51,6 +53,53 @@ def warm_spot():
         print("[stockdesk] market snapshot warmed")
     except Exception as e:
         print("[stockdesk] warm-up skipped:", e)
+
+
+_SHARE_PICKERS = []
+
+
+class ShareApi:
+    """Small pywebview API for reliable native image sharing."""
+
+    def _save(self, data_url: str) -> str:
+        raw = data_url.split(",", 1)[-1]
+        data = base64.b64decode(raw)
+        out = Path.home() / "Downloads"
+        if not out.exists():
+            out = Path.home()
+        out.mkdir(parents=True, exist_ok=True)
+        path = out / f"StockDesk-{time.strftime('%Y%m%d-%H%M%S')}.png"
+        path.write_bytes(data)
+        return str(path)
+
+    def share_image(self, data_url: str) -> dict:
+        path = self._save(data_url)
+        try:
+            if sys.platform == "darwin":
+                from AppKit import NSApplication, NSMakeRect, NSSharingServicePicker, NSURL
+                from PyObjCTools import AppHelper
+
+                def show():
+                    app = NSApplication.sharedApplication()
+                    win = app.keyWindow() or (app.windows()[0] if app.windows() else None)
+                    if not win:
+                        subprocess.run(["open", path])
+                        return
+                    picker = NSSharingServicePicker.alloc().initWithItems_([NSURL.fileURLWithPath_(path)])
+                    _SHARE_PICKERS.append(picker)
+                    picker.showRelativeToRect_ofView_preferredEdge_(NSMakeRect(0, 0, 1, 1), win.contentView(), 1)
+
+                AppHelper.callAfter(show)
+            elif sys.platform == "win32":
+                subprocess.Popen(["explorer", "/select,", path])
+            else:
+                subprocess.run(["xdg-open", path])
+        except Exception:
+            try:
+                subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", path])
+            except Exception:
+                pass
+        return {"ok": True, "path": path}
 
 
 def _setup_frozen_logging():
@@ -144,6 +193,7 @@ def main():
             min_size=(1100, 720),
             background_color="#0B0F17",
             text_select=True,
+            js_api=ShareApi(),
         )
         def _place_window():
             try:
