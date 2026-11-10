@@ -11,12 +11,6 @@ Mac · Windows · iOS · US Equities
 
 [中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
 
-![Mac HUB](screenshots/mac-hub.png)
-
-![Mac HUB English](screenshots/mac-hub-en.png)
-
----
-
 ## 项目展示页 / Project site
 
 **https://cxy2696.github.io/stockdesk-akshare/**
@@ -24,6 +18,12 @@ Mac · Windows · iOS · US Equities
 一个独立的项目主页，包含产品影片、HUB / 量化模型 / 美股 / iOS 截图、版本入口和快速开始。页面支持中英切换。
 
 An independent project site with the product film, HUB / models / US / iOS screenshots, editions and quick start. It has a Chinese / English switch.
+
+
+
+![Mac HUB](screenshots/mac-hub.png)
+
+![Mac HUB English](screenshots/mac-hub-en.png)
 
 ---
 
