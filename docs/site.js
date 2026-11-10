@@ -88,7 +88,7 @@ document.getElementById('lang').addEventListener('click', () => {
 });
 document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => setTab(b.dataset.k)));
 document.querySelectorAll('.chapters button').forEach(b => {
-  b.dataset.k = {3:'chHub',8:'chDaily',13:'chPortfolio',18:'chModels',24:'chUS'}[b.dataset.t];
+  b.dataset.k = {3:'chHub',11:'chDaily',16:'chPortfolio',23:'chModels',31:'chUS'}[b.dataset.t];
   b.addEventListener('click', () => { const v = document.getElementById('demoVideo'); v.currentTime = Number(b.dataset.t); v.play().catch(()=>{}); });
 });
 
