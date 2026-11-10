@@ -2,6 +2,8 @@
 
 [中文](#中文) · [English](#english)
 
+> 第一次使用建议先看 [使用教程与流程](GUIDE.md)。 / First time here? Start with the [Guide & Workflow](GUIDE.md).
+
 ## 中文
 
 ### 你需要准备
