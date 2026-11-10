@@ -9,6 +9,8 @@ Mac · Windows · iOS · US Equities
 
 ![Mac HUB](screenshots/mac-hub.png)
 
+![Mac HUB English](screenshots/mac-hub-en.png)
+
 ---
 
 ## 中文
