@@ -1,3 +1,46 @@
+const I18N = {
+  zh: {
+    brandSub: '美股投资台 · US EQUITIES DESK', watch: '自选美股',
+    watchHint: '点击代码查看详情 · 数据来自东方财富公开行情', breadth: '市场宽度',
+    breadthHint: '按成交额居前的美股样本统计，仅作市场温度参考。', movers: '异动榜',
+    gainers: '涨幅', losers: '跌幅', up: '上涨', flat: '平盘', down: '下跌',
+    search: '搜索代码 / 公司，如 AAPL', equity: 'US EQUITY · NASDAQ / NYSE',
+    data: '数据', disclaimer: '行情仅供研究，不构成投资建议 · Not investment advice',
+    open: '开盘', high: '最高', low: '最低', volume: '成交量', cap: '市值', pe: '市盈率',
+    noData: '暂无数据', chart: '日线 · 前复权', loading: '加载中'
+  },
+  en: {
+    brandSub: 'US EQUITIES DESK · LOCAL-FIRST', watch: 'US Watchlist',
+    watchHint: 'Tap a symbol for details · Eastmoney public market data', breadth: 'Market Breadth',
+    breadthHint: 'Top-turnover US sample; a market-temperature gauge, not an exchange statistic.', movers: 'Movers',
+    gainers: 'Gainers', losers: 'Losers', up: 'Up', flat: 'Flat', down: 'Down',
+    search: 'Search symbol / company, e.g. AAPL', equity: 'US EQUITY · NASDAQ / NYSE',
+    data: 'Data', disclaimer: 'For research only · Not investment advice',
+    open: 'Open', high: 'High', low: 'Low', volume: 'Volume', cap: 'Mkt cap', pe: 'P/E',
+    noData: 'No data', chart: 'Daily · adjusted', loading: 'Loading'
+  }
+};
+const EN_NAMES = { AAPL:'Apple', MSFT:'Microsoft', NVDA:'NVIDIA', TSLA:'Tesla', AMZN:'Amazon', META:'Meta Platforms', GOOGL:'Alphabet', SPY:'SPDR S&P 500 ETF' };
+let lang = localStorage.getItem('stockdesk-us-lang') || 'zh';
+const L = (k) => I18N[lang][k] || k;
+function displayName(q) {
+  if (!q) return '';
+  if (lang === 'en') {
+    if (EN_NAMES[q.symbol]) return EN_NAMES[q.symbol];
+    if (q.name && /[\u4e00-\u9fff]/.test(q.name)) return q.symbol;
+  }
+  return q.name || q.symbol || '';
+}
+function applyLang() {
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  $$('[data-i18n]').forEach(el => { el.textContent = L(el.dataset.i18n); });
+  $$('[data-i18n-ph]').forEach(el => { el.placeholder = L(el.dataset.i18nPh); });
+  const b = $('#lang'); b.textContent = lang === 'zh' ? 'EN' : '中';
+  b.title = lang === 'zh' ? 'Switch to English' : '切换中文';
+  if (state.overview) { renderBreadth(state.overview.breadth || {}); renderMovers((state.movers === 'gainers' ? state.overview.gainers : state.overview.losers) || []); }
+  if (state.quotes[state.selected]) renderDetail(state.quotes[state.selected]);
+  renderWatch();
+}
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const state = {
@@ -56,22 +99,22 @@ function renderWatch() {
 
 function renderDetail(q) {
   if (!q) return;
-  $('#detail-name').textContent = q.name || q.symbol;
+  $('#detail-name').textContent = displayName(q) || q.symbol;
   $('#detail-symbol').textContent = q.symbol;
-  $('#detail-market').textContent = 'US EQUITY · NASDAQ / NYSE';
+  $('#detail-market').textContent = L('equity');
   $('#detail-price').textContent = fmt.price(q.price);
   const c = $('#detail-change');
   c.textContent = `${q.change > 0 ? '+' : ''}${q.change == null ? '--' : Number(q.change).toFixed(2)}  ${fmt.pct(q.pct)}`;
   c.className = 'change ' + fmt.cls(q.pct);
   const stats = [
-    ['开盘', fmt.price(q.open)], ['最高', fmt.price(q.high)], ['最低', fmt.price(q.low)],
-    ['成交量', fmt.big(q.volume)], ['市值', fmt.big(q.market_cap)], ['市盈率', q.pe == null ? '--' : Number(q.pe).toFixed(1)]
+    [L('open'), fmt.price(q.open)], [L('high'), fmt.price(q.high)], [L('low'), fmt.price(q.low)],
+    [L('volume'), fmt.big(q.volume)], [L('cap'), fmt.big(q.market_cap)], [L('pe'), q.pe == null ? '--' : Number(q.pe).toFixed(1)]
   ];
   $('#detail-stats').innerHTML = stats.map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 }
 
 function renderBreadth(b) {
-  $('#breadth-ratio').textContent = `${b.ratio ?? '--'}% UP`;
+  $('#breadth-ratio').textContent = `${b.ratio ?? '--'}% ${lang === 'en' ? 'UP' : '上涨'}`;
   $('#b-up').textContent = b.up; $('#b-flat').textContent = b.flat; $('#b-down').textContent = b.down;
   const total = Math.max(b.up + b.flat + b.down, 1);
   $('#breadth-up').style.width = `${b.up/total*100}%`;
@@ -81,11 +124,11 @@ function renderBreadth(b) {
 
 function renderMovers(rows) {
   const box = $('#movers'); box.innerHTML = '';
-  if (!rows?.length) { box.innerHTML = '<div class="loading">暂无数据</div>'; return; }
+  if (!rows?.length) { box.innerHTML = `<div class="loading">${L('noData')}</div>`; return; }
   for (const m of rows) {
     const d = document.createElement('div'); d.className = 'mover';
     d.innerHTML = `<span class="s">${m.symbol}</span><span class="p">${fmt.price(m.price)}</span>
-      <span class="n">${m.name || ''}</span><span class="c ${fmt.cls(m.pct)}">${fmt.pct(m.pct)}</span>`;
+      <span class="n">${displayName(m)}</span><span class="c ${fmt.cls(m.pct)}">${fmt.pct(m.pct)}</span>`;
     d.onclick = () => selectSymbol(m.symbol);
     box.appendChild(d);
   }
@@ -153,7 +196,7 @@ async function loadChart() {
         { type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: vols, barWidth: '55%' }
       ]
     }, true);
-    $('#chart-note').textContent = `${d.name || sym} · 日线 · 前复权`;
+    $('#chart-note').textContent = `${lang === 'en' ? (EN_NAMES[sym] || sym) : (d.name || sym)} · ${L('chart')}`;
   } catch (e) { console.error(e); }
 }
 
@@ -164,7 +207,7 @@ async function loadOverview() {
     setIndices(d.indices || []);
     renderBreadth(d.breadth || {});
     renderMovers((state.movers === 'gainers' ? d.gainers : d.losers) || []);
-    $('#data-time').textContent = `数据 ${fmt.time(d.updated)}`;
+    $('#data-time').textContent = `${L('data')} ${fmt.time(d.updated)}`;
   } catch (e) { console.error(e); }
 }
 
@@ -203,6 +246,8 @@ $$('.switch button').forEach(b => b.onclick = () => {
 
 function clock() { $('#clock').textContent = new Date().toLocaleTimeString('en-GB', { hour12: false }); }
 setInterval(clock, 1000); clock();
+$('#lang').onclick = () => { lang = lang === 'zh' ? 'en' : 'zh'; localStorage.setItem('stockdesk-us-lang', lang); applyLang(); };
+applyLang();
 renderWatch();
 selectSymbol('AAPL');
 refresh();

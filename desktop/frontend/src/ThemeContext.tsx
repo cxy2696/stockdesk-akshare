@@ -9,6 +9,9 @@ interface Ctx {
   setMode: (m: ThemeMode) => void
   scale: number
   setScale: (s: number) => void
+  lang: 'zh' | 'en'
+  setLang: (l: 'zh' | 'en') => void
+  toggleLang: () => void
 }
 
 const ThemeCtx = createContext<Ctx>({
@@ -18,10 +21,14 @@ const ThemeCtx = createContext<Ctx>({
   setMode: () => {},
   scale: 1,
   setScale: () => {},
+  lang: 'zh',
+  setLang: () => {},
+  toggleLang: () => {},
 })
 
 const KEY = 'stockdesk-theme'
 const SCALE_KEY = 'stockdesk-ui-scale'
+const LANG_KEY = 'stockdesk-lang'
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(() => {
@@ -49,6 +56,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(SCALE_KEY, String(scale))
   }, [scale])
 
+  const [lang, setLangState] = useState<'zh' | 'en'>(() => (localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'zh'))
+
+  useEffect(() => {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'
+    localStorage.setItem(LANG_KEY, lang)
+  }, [lang])
+
+  const setLang = useCallback((l: 'zh' | 'en') => setLangState(l), [])
+  const toggleLang = useCallback(() => setLangState((l) => (l === 'zh' ? 'en' : 'zh')), [])
   const setMode = useCallback((m: ThemeMode) => setModeState(m), [])
   const setScale = useCallback((s: number) => setScaleState(s), [])
   const toggle = useCallback(
@@ -57,8 +73,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   )
 
   const value = useMemo(
-    () => ({ mode, colors: chartPalette(mode), toggle, setMode, scale, setScale }),
-    [mode, toggle, setMode, scale, setScale],
+    () => ({ mode, colors: chartPalette(mode), toggle, setMode, scale, setScale, lang, setLang, toggleLang }),
+    [mode, toggle, setMode, scale, setScale, lang, setLang, toggleLang],
   )
   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>
 }

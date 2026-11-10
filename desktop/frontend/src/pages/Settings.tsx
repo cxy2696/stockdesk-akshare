@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const [form] = Form.useForm()
   const [saving, setSaving] = useState(false)
   const [clearing, setClearing] = useState(false)
-  const { mode, setMode, scale, setScale } = useTheme()
+  const { mode, setMode, scale, setScale, lang, setLang } = useTheme()
   const initialAdmin = getAdmin()
   const [adminName, setAdminName] = useState(initialAdmin.name)
   const [adminUid, setAdminUid] = useState(initialAdmin.uid)
@@ -117,6 +117,12 @@ export default function SettingsPage() {
             </div>
           </Card>
         </div>
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        <Card title={lang === 'en' ? 'Language' : '语言'} desc={lang === 'en' ? 'Switch the interface language' : '切换界面语言'}>
+          <Segmented value={lang} onChange={(v) => setLang(v as 'zh' | 'en')} options={[{ label: '中文', value: 'zh' }, { label: 'English', value: 'en' }]} />
+        </Card>
       </div>
 
       <div style={{ marginTop: 14 }}>

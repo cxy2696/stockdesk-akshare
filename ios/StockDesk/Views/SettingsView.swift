@@ -7,11 +7,20 @@ struct SettingsView: View {
     @AppStorage("stockdesk.admin.name") private var adminName = "StockDesk"
     @AppStorage("stockdesk.admin.uid") private var adminUid = "LOCAL-0001"
     @AppStorage("stockdesk.uiScale") private var uiScale = 1.0
+    @AppStorage("stockdesk.lang") private var lang = "zh"
     @State private var showAccount = false
     @State private var clearing = false
 
     var body: some View {
         List {
+            Section("Language / 语言") {
+                Picker("Language", selection: $lang) {
+                    Text("中文").tag("zh")
+                    Text("English").tag("en")
+                }
+                .pickerStyle(.segmented)
+            }
+
             Section("外观") {
                 Picker("主题", selection: $themeRaw) {
                     Text("指挥舱 HUD").tag("hud")

@@ -14,15 +14,16 @@
       <div class="brand-mark">S</div>
       <div>
         <div class="brand-title">STOCKDESK <span>US</span></div>
-        <div class="brand-sub">美股投资台 · US EQUITIES DESK</div>
+        <div class="brand-sub" data-i18n="brandSub">美股投资台 · US EQUITIES DESK</div>
       </div>
     </div>
     <div class="ticker" id="indices"></div>
     <div class="top-actions">
       <div class="search-wrap">
-        <input id="search" placeholder="搜索代码 / 公司，如 AAPL" autocomplete="off" />
+        <input id="search" data-i18n-ph="search" placeholder="搜索代码 / 公司，如 AAPL" autocomplete="off" />
         <div id="suggest" class="suggest"></div>
       </div>
+      <button id="lang" class="lang-btn" title="Language">EN</button>
       <div class="live"><i></i> LIVE</div>
       <div class="clock" id="clock">--:--:--</div>
     </div>
@@ -33,19 +34,19 @@
       <div class="panel-head">
         <div>
           <div class="eyebrow">WATCHLIST</div>
-          <h2>自选美股</h2>
+          <h2 data-i18n="watch">自选美股</h2>
         </div>
         <span class="badge" id="watch-count">0</span>
       </div>
       <div id="watchlist" class="watchlist"></div>
-      <div class="hint">点击代码查看详情 · 数据来自东方财富公开行情</div>
+      <div class="hint" data-i18n="watchHint">点击代码查看详情 · 数据来自东方财富公开行情</div>
     </aside>
 
     <section class="center">
       <div class="hero">
         <div class="hero-top">
           <div>
-            <div class="eyebrow" id="detail-market">US EQUITY</div>
+            <div class="eyebrow" id="detail-market" data-i18n="equity">US EQUITY</div>
             <h1 id="detail-name">Apple</h1>
             <div class="symbol" id="detail-symbol">AAPL</div>
           </div>
@@ -72,24 +73,24 @@
     <aside class="right">
       <div class="panel breadth-panel">
         <div class="panel-head">
-          <div><div class="eyebrow">BREADTH</div><h2>市场宽度</h2></div>
+          <div><div class="eyebrow">BREADTH</div><h2 data-i18n="breadth">市场宽度</h2></div>
           <span class="badge" id="breadth-ratio">--</span>
         </div>
         <div class="breadth-bar"><i id="breadth-up"></i><i id="breadth-flat"></i><i id="breadth-down"></i></div>
         <div class="breadth-legend">
-          <span class="up">上涨 <b id="b-up">--</b></span>
-          <span class="flat">平盘 <b id="b-flat">--</b></span>
-          <span class="down">下跌 <b id="b-down">--</b></span>
+          <span class="up"><span data-i18n="up">上涨</span> <b id="b-up">--</b></span>
+          <span class="flat"><span data-i18n="flat">平盘</span> <b id="b-flat">--</b></span>
+          <span class="down"><span data-i18n="down">下跌</span> <b id="b-down">--</b></span>
         </div>
-        <div class="hint">按成交额居前的美股样本统计，仅作市场温度参考。</div>
+        <div class="hint" data-i18n="breadthHint">按成交额居前的美股样本统计，仅作市场温度参考。</div>
       </div>
 
       <div class="panel movers-panel">
         <div class="panel-head">
-          <div><div class="eyebrow">MOMENTUM</div><h2>异动榜</h2></div>
+          <div><div class="eyebrow">MOMENTUM</div><h2 data-i18n="movers">异动榜</h2></div>
           <div class="switch">
-            <button class="active" data-kind="gainers">涨幅</button>
-            <button data-kind="losers">跌幅</button>
+            <button class="active" data-kind="gainers" data-i18n="gainers">涨幅</button>
+            <button data-kind="losers" data-i18n="losers">跌幅</button>
           </div>
         </div>
         <div id="movers" class="movers"></div>
@@ -100,7 +101,7 @@
   <footer class="footer">
     <span><i></i> StockDesk US v1.0</span>
     <span id="data-time">数据 --:--:--</span>
-    <span>行情仅供研究，不构成投资建议 · Not investment advice</span>
+    <span data-i18n="disclaimer">行情仅供研究，不构成投资建议 · Not investment advice</span>
   </footer>
 </div>
 <script src="/static/echarts.min.js"></script>

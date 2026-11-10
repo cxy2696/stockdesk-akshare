@@ -10,6 +10,7 @@ struct InvestHudHeader: View {
     @Binding var path: [String]
     @EnvironmentObject private var store: AppStore
     @State private var showSearch = false
+    @AppStorage("stockdesk.lang") private var lang = "zh"
     @AppStorage("stockdesk.uiScale") private var uiScale = 1.0
     @State private var showHub = false
     @AppStorage("stockdesk.admin.name") private var adminName = "StockDesk"
@@ -118,9 +119,12 @@ struct InvestHudHeader: View {
     }
 
     private func itemLabel(_ data: (String, String, String)) -> some View {
-        HStack(spacing: 7) {
+        let en = ["每日策略": "Daily Plan", "板块跟踪": "Sectors", "收益复盘": "Review",
+                  "策略回测": "Backtest", "地域": "Regions", "行业要闻": "Industry News",
+                  "量化模型": "Quant Models"][data.0] ?? data.0
+        return HStack(spacing: 7) {
             Image(systemName: data.1).font(.system(size: 12)).foregroundStyle(.black).frame(width: 16)
-            Text(data.0).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(.black).lineLimit(1)
+            Text(lang == "en" ? en : data.0).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(.black).lineLimit(1)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 10)
@@ -195,8 +199,8 @@ struct InvestHudHeader: View {
                 .background(LinearGradient(colors: [Theme.accent, Color(hex: 0x8A6D14)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .clipShape(Hexagon())
             VStack(alignment: .leading, spacing: 2) {
-                Text(adminName + " 管理员").font(.system(size: 11.5, weight: .semibold)).foregroundStyle(Theme.text)
-                Text("UID: \(adminUid) · 资产等级 \(assetLevel)").font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
+                Text(adminName + (lang == "en" ? "  Admin" : " 管理员")).font(.system(size: 11.5, weight: .semibold)).foregroundStyle(Theme.text)
+                Text("UID: \(adminUid) · \(lang == "en" ? "Asset level" : "资产等级") \(assetLevel)").font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
                 GeometryReader { geo in
                     Capsule().fill(Theme.borderSoft).frame(height: 3)
                         .overlay(alignment: .leading) { Capsule().fill(Theme.accent).frame(width: geo.size.width * 0.62, height: 3) }
@@ -205,7 +209,7 @@ struct InvestHudHeader: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text("总资产 ¥" + store.summary.total.fmt()).font(.system(size: 10, weight: .semibold, design: .rounded)).foregroundStyle(Theme.text)
+                Text((lang == "en" ? "Total assets ¥" : "总资产 ¥") + store.summary.total.fmt()).font(.system(size: 10, weight: .semibold, design: .rounded)).foregroundStyle(Theme.text)
                 Text(store.summary.totalPct.pct()).font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.trendColor(store.summary.totalPct))
             }
         }
@@ -250,6 +254,7 @@ struct Hexagon: Shape {
 
 struct MoreView: View {
     @EnvironmentObject private var store: AppStore
+    @AppStorage("stockdesk.lang") private var lang = "zh"
     @State private var path: [String] = []
     @State private var shareImage: UIImage?
     @State private var showShare = false
@@ -311,7 +316,7 @@ struct MoreView: View {
             .sheet(isPresented: $showShare) {
                 if let shareImage { ActivityView(items: [shareImage]) }
             }
-            .navigationTitle("投资")
+            .navigationTitle(lang == "en" ? "Invest" : "投资")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: String.self) { route in
                 switch route {

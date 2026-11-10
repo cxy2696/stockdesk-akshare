@@ -101,3 +101,5 @@ h2 { font-size: 14px; font-weight: 600; margin-top: 4px; }
   .chart { height: 320px; }
   .footer { flex-direction: column; gap: 5px; }
 }
+.lang-btn { border: 1px solid var(--line); background: transparent; color: var(--accent); font-family: var(--mono); font-size: 10px; padding: 4px 7px; cursor: pointer; }
+.lang-btn:hover { border-color: var(--accent); }
