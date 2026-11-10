@@ -5,7 +5,7 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Publish](docs/PUBLISH.md)
+[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Publish](docs/PUBLISH.md) · [Packages](docs/PACKAGES.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)
 
 ![Mac HUB](screenshots/mac-hub.png)
 
