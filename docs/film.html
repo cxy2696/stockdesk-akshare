@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:1440px;height:810px;overflow:hidden;background:#070a08;color:#f1f3eb;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC',sans-serif}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(900px 600px at 70% 10%,rgba(226,195,74,.12),transparent 60%),radial-gradient(800px 500px at 10% 90%,rgba(85,214,160,.06),transparent 60%);z-index:0}
+.grain{position:fixed;inset:0;opacity:.08;z-index:5;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
+.frame-line{position:fixed;left:38px;right:38px;top:26px;height:1px;background:rgba(241,243,235,.16);z-index:6}
+.brand{position:fixed;left:38px;top:38px;z-index:8;font-family:monospace;font-size:10px;letter-spacing:.24em;color:#c9a72a}
+.brand b{color:#f1f3eb;letter-spacing:.18em}
+.counter{position:fixed;right:38px;top:38px;z-index:8;font-family:monospace;font-size:9px;letter-spacing:.18em;color:#8d9a90}
+.scene{position:fixed;inset:0;z-index:2;display:grid;place-items:center;opacity:0;transition:opacity .8s ease;pointer-events:none}
+.scene.active{opacity:1}
+.intro{text-align:center}
+.intro .kicker{font-family:monospace;font-size:10px;letter-spacing:.24em;color:#c9a72a;margin-bottom:22px;opacity:0;transform:translateY(12px);transition:.7s .15s}
+.intro h1{font-size:78px;line-height:1.02;letter-spacing:-.045em;font-weight:620;margin:0;opacity:0;transform:translateY(16px);transition:.8s .25s}
+.intro p{font-size:14px;color:#9aa69c;margin:22px 0 0;letter-spacing:.02em;opacity:0;transform:translateY(10px);transition:.7s .45s}
+.intro .rule{width:52px;height:1px;background:#c9a72a;margin:26px auto 0;opacity:0;transition:.7s .55s}
+.scene.active .intro .kicker,.scene.active .intro h1,.scene.active .intro p,.scene.active .intro .rule{opacity:1;transform:none}
+.media{display:grid;grid-template-columns:390px 1fr;gap:54px;align-items:center;width:1320px;margin:0 auto}
+.media-copy .num{font-family:monospace;color:#c9a72a;font-size:10px;letter-spacing:.2em}
+.media-copy h2{font-size:55px;line-height:1.05;letter-spacing:-.04em;font-weight:600;margin:15px 0 18px}
+.media-copy p{font-size:14px;line-height:1.8;color:#9aa69c;margin:0;max-width:340px}
+.media-copy ul{list-style:none;padding:0;margin:22px 0 0;border-top:1px solid rgba(255,255,255,.12)}
+.media-copy li{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.09);font-size:11px;color:#b7c0b8}
+.shot{background:#0a0e0b;border:1px solid rgba(226,195,74,.22);padding:7px;box-shadow:0 30px 90px rgba(0,0,0,.55);transform:scale(1.055);transition:transform 8s linear}
+.scene.active .shot{transform:scale(1)}
+.shot img{display:block;width:100%;max-height:650px;object-fit:cover;object-position:top}
+.wide-scene{width:1320px;height:640px;position:relative;background:#0a0e0b;border:1px solid rgba(226,195,74,.22);padding:7px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.55);transform:scale(1.04);transition:transform 7s linear}
+.scene.active .wide-scene{transform:scale(1)}
+.wide-scene img{width:100%;height:100%;object-fit:cover;object-position:top}
+.caption{position:absolute;left:36px;bottom:34px;right:36px;display:flex;justify-content:space-between;align-items:flex-end;gap:30px;z-index:3}
+.caption b{font-size:34px;letter-spacing:-.03em;font-weight:600;display:block}
+.caption span{font-family:monospace;font-size:9px;letter-spacing:.18em;color:#c9a72a}
+.caption p{margin:8px 0 0;color:#9aa69c;font-size:12px;max-width:520px}
+.duo{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;width:1320px;align-items:end}
+.duo img{width:100%;display:block;border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 70px rgba(0,0,0,.45)}
+.duo img:last-child{transform:translateY(-42px)}
+.end{text-align:center}
+.end .kicker{font-family:monospace;font-size:10px;letter-spacing:.24em;color:#c9a72a;margin-bottom:18px}
+.end h2{font-size:66px;line-height:1.05;letter-spacing:-.045em;margin:0;font-weight:620}
+.end p{color:#9aa69c;font-size:13px;margin:20px 0 0}
+.end .links{display:flex;gap:20px;justify-content:center;margin-top:26px;font-family:monospace;font-size:9px;color:#c9a72a;letter-spacing:.1em}
+.progressbar{position:fixed;left:38px;right:38px;bottom:30px;height:1px;background:rgba(255,255,255,.12);z-index:8}
+.progressbar i{display:block;height:100%;width:0;background:#c9a72a;transition:width .2s linear}
+</style>
+</head>
+<body>
+<div class="grain"></div><div class="frame-line"></div>
+<div class="brand"><b>STOCKDESK</b> / PRODUCT FILM</div>
+<div class="counter" id="counter">00 / 07</div>
+<div class="progressbar"><i id="bar"></i></div>
+
+<section class="scene intro active" data-dur="4.6">
+  <div class="intro">
+    <div class="kicker">A LOCAL-FIRST EQUITY DESK</div>
+    <h1>One quiet desk<br>for the whole market.</h1>
+    <p>Market. Positions. Models. One calm screen.</p>
+    <div class="rule"></div>
+  </div>
+</section>
+
+<section class="scene" data-dur="7">
+  <div class="media">
+    <div class="media-copy">
+      <div class="num">01 / THE HUB</div>
+      <h2>See the whole<br>board first.</h2>
+      <p>A dark, quiet HUB for the market, your book and the day's plan.</p>
+      <ul><li>Seven entries, no clutter</li><li>Local-first account data</li><li>Chinese / English</li></ul>
+    </div>
+    <div class="shot"><img src="./assets/hub.png" alt=""></div>
+  </div>
+</section>
+
+<section class="scene" data-dur="6.4">
+  <div class="wide-scene"><img src="./assets/daily.png" alt="">
+    <div class="caption"><div><span>02 / DAILY PLAN</span><b>Attack or wait.</b><p>Breadth, turnover, the strongest sectors — and a position range, not a prediction.</p></div></div>
+  </div>
+</section>
+
+<section class="scene" data-dur="6.4">
+  <div class="media">
+    <div class="media-copy">
+      <div class="num">03 / YOUR BOOK</div>
+      <h2>Cost, pressure,<br>chips.</h2>
+      <p>Every position with support, resistance, chip distribution and realized P&amp;L.</p>
+      <ul><li>Where the crowd is trapped</li><li>NAV and drawdown</li><li>Trades become experience</li></ul>
+    </div>
+    <div class="duo"><img src="./assets/portfolio.png" alt=""><img src="./assets/chips.png" alt=""></div>
+  </div>
+</section>
+
+<section class="scene" data-dur="7">
+  <div class="wide-scene"><img src="./assets/models.png" alt="">
+    <div class="caption"><div><span>04 / MODELS</span><b>Describe. Don't predict.</b><p>Three-state HMM for exposure. Percolation for connected strength. Per-stock guidance for the book you actually hold.</p></div></div>
+  </div>
+</section>
+
+<section class="scene" data-dur="5.4">
+  <div class="media" style="grid-template-columns:1fr 1fr;gap:24px">
+    <div class="shot"><img src="./assets/us.png" alt=""></div>
+    <div class="shot"><img src="./assets/ios.png" alt=""></div>
+  </div>
+</section>
+
+<section class="scene end" data-dur="4.2">
+  <div class="end">
+    <div class="kicker">STOCKDESK · LOCAL-FIRST</div>
+    <h2>A quieter way<br>to look at the market.</h2>
+    <p>macOS · Windows · iOS · US edition</p>
+    <div class="links"><span>GITHUB</span><span>RELEASES</span><span>GUIDE</span></div>
+  </div>
+</section>
+
+<script>
+const scenes=[...document.querySelectorAll('.scene')];
+const total=scenes.reduce((a,s)=>a+Number(s.dataset.dur),0);
+let idx=0, elapsed=0, start=performance.now();
+function show(i){scenes.forEach((s,j)=>s.classList.toggle('active',j===i)); document.getElementById('counter').textContent=String(i+1).padStart(2,'0')+' / '+String(scenes.length).padStart(2,'0');}
+function tick(now){
+  const t=(now-start)/1000;
+  const p=Math.min(1,t/total); document.getElementById('bar').style.width=(p*100)+'%';
+  let acc=0; let cur=0;
+  for(let i=0;i<scenes.length;i++){acc+=Number(scenes[i].dataset.dur); if(t<acc){cur=i;break;} cur=scenes.length-1;}
+  if(cur!==idx){idx=cur;show(idx);}
+  if(t<total+0.4) requestAnimationFrame(tick);
+}
+show(0); requestAnimationFrame(tick);
+</script>
+</body>
+</html>
