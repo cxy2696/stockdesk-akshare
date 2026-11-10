@@ -259,8 +259,15 @@ let soundOn = false;
 function syncSound() {
   if (!music || !v) return;
   if (soundOn) {
-    if (Math.abs(music.currentTime - v.currentTime) > .4) music.currentTime = v.currentTime || 0;
-    if (v.paused) music.pause(); else music.play().catch(()=>{});
+    const start = () => {
+      if (!soundOn) return;
+      music.currentTime = v.currentTime || 0;
+      if (v.paused) music.pause(); else music.play().catch(()=>{});
+    };
+    if (music.readyState < 1) {
+      music.addEventListener('canplay', start, {once:true});
+      music.load();
+    } else start();
   } else music.pause();
 }
 function syncMini() {
@@ -270,6 +277,7 @@ function syncMini() {
   syncSound();
 }
 v?.addEventListener('play', syncMini); v?.addEventListener('pause', syncMini);
+v?.addEventListener('timeupdate', () => { if (soundOn && music && Math.abs(music.currentTime - v.currentTime) > .5) music.currentTime = v.currentTime; });
 v?.addEventListener('seeked', () => { if (soundOn && music && v) music.currentTime = v.currentTime; });
 miniPlay?.addEventListener('click', () => { hideCoach(); if (v.paused) v.play().catch(()=>{}); else v.pause(); });
 soundBtn?.addEventListener('click', () => {
