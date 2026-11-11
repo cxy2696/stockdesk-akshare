@@ -4,6 +4,15 @@
 
 ## 中文
 
+### 1.10.2
+
+- KDJ 入口移到 HUB 右侧「行业要闻」下方，和其他右侧白色按键一致。
+- 移除全局右侧悬浮按钮和抽屉，改为独立 `/kdj` 页面。
+- 上轨 `J ≥ 118` 超买区 → 参考动作：减仓 / 卖出。
+- 下轨 `J ≤ -14` 超卖区 → 参考动作：买入 / 低吸。
+- 阈值判断改为包含等号；新增中证1000。
+- macOS / Windows 重新构建，下载更新到 1.10.2。
+
 ### 1.10.1
 
 - KDJ 极值预警移出「量化模型」，改为全局右侧固定白色按键，点击打开独立抽屉。
@@ -32,6 +41,15 @@
 - macOS 窗口固定从主屏左上角打开；Windows 单文件使用 WebView2。
 
 ## English
+
+### 1.10.2
+
+- Moved the KDJ entry into the HUB right column, directly under Industry News.
+- Removed the global floating button and drawer; KDJ is now a dedicated `/kdj` page.
+- `J >= 118` overbought → reference action: reduce / sell.
+- `J <= -14` oversold → reference action: buy / accumulate.
+- Threshold checks now include equality; CSI 1000 added.
+- Rebuilt macOS / Windows; downloads updated to 1.10.2.
 
 ### 1.10.1
 
