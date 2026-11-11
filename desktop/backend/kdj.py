@@ -164,9 +164,32 @@ def _kdj(rows: list[dict], n: int = 9) -> dict:
         k = (2 * k + rsv) / 3
         d = (2 * d + k) / 3
         j = 3 * k - 2 * d
-        out.append({**r, "j": round(j, 2), "k": round(k, 2), "d": round(d, 2)})
+        out.append({**r, "j": round(j, 2), "k": round(k, 2), "d": round(d, 2), "rsv": round(rsv, 2)})
     last = out[-1]
-    return {"j": last["j"], "k": last["k"], "d": last["d"], "series": out[-90:]}
+    prev = out[-2] if len(out) > 1 else last
+    closes = [x["close"] for x in rows]
+    ma5 = sum(closes[-5:]) / 5 if len(closes) >= 5 else None
+    ma20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else None
+    vols = [x.get("volume") or 0 for x in rows]
+    avg_vol = sum(vols[-20:]) / 20 if len(vols) >= 20 else None
+    vol_ratio = (vols[-1] / avg_vol) if avg_vol else None
+    def cross(prev_j, cur_j):
+        if prev_j <= UPPER < cur_j: return "上穿超买"
+        if prev_j >= UPPER > cur_j: return "回落超买"
+        if prev_j >= LOWER > cur_j: return "下穿超卖"
+        if prev_j <= LOWER < cur_j: return "回升超卖"
+        return "极值持续" if cur_j >= UPPER or cur_j <= LOWER else "区间内"
+    trend = "多头" if ma5 and ma20 and closes[-1] > ma5 > ma20 else "空头" if ma5 and ma20 and closes[-1] < ma5 < ma20 else "震荡"
+    metrics = {
+        "k": last["k"], "d": last["d"], "j": last["j"], "rsv": last.get("rsv"),
+        "j_prev": prev["j"], "j_change": round(last["j"] - prev["j"], 2),
+        "cross": cross(prev["j"], last["j"]),
+        "ma5": round(ma5, 2) if ma5 else None, "ma20": round(ma20, 2) if ma20 else None,
+        "above_ma20": bool(ma20 and closes[-1] > ma20),
+        "vol_ratio": round(vol_ratio, 2) if vol_ratio else None,
+        "trend": trend,
+    }
+    return {"j": last["j"], "k": last["k"], "d": last["d"], "series": out[-90:], "metrics": metrics}
 
 
 def _zone(rows: list[dict], lookback: int = 80) -> dict | None:
@@ -196,7 +219,8 @@ def _zone(rows: list[dict], lookback: int = 80) -> dict | None:
 def _one(t: dict) -> dict:
     base = {"key": t["key"], "name": t["name"], "kind": t["kind"], "j5": None, "j30": None,
             "alert5": None, "alert30": None, "series5": [], "series30": [],
-            "zone5": None, "zone30": None, "price": None, "pct": None, "source5": "", "source30": "",
+            "zone5": None, "zone30": None, "metrics5": None, "metrics30": None,
+            "price": None, "pct": None, "source5": "", "source30": "",
             "proxy": False, "error": ""}
     try:
         d5 = _fetch(t, "5")
@@ -212,12 +236,19 @@ def _one(t: dict) -> dict:
             base[f"zone{suffix}"] = _zone(d["rows"])
             j = kdj["j"]
             base[f"alert{suffix}"] = "超买" if j is not None and j >= UPPER else "超卖" if j is not None and j <= LOWER else "正常"
+            base[f"metrics{suffix}"] = kdj.get("metrics")
             base[f"source{suffix}"] = d.get("source", "")
             base["proxy"] = base["proxy"] or bool(d.get("proxy"))
             base["price"] = base["price"] or d["rows"][-1]["close"]
             base["pct"] = base["pct"] if base["pct"] is not None else d["rows"][-1]["pct"]
         elif d.get("error"):
             errors.append(f"{suffix}m: {d['error']}")
+    for suffix in ("5", "30"):
+        m = base.get(f"metrics{suffix}")
+        z = base.get(f"zone{suffix}")
+        if m and z and z.get("upper") != z.get("lower"):
+            price = base.get("price") or 0
+            m["zone_pos"] = round(max(0, min(1, (price - z["lower"]) / (z["upper"] - z["lower"]))) * 100, 1)
     if errors:
         base["error"] = "；".join(errors)[:2400]
     base["alert"] = any(x in ("超买", "超卖") for x in (base["alert5"], base["alert30"]))

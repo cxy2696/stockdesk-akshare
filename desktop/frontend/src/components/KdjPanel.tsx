@@ -6,7 +6,7 @@ import { fmt, trendClass } from '../utils'
 import EChart from './EChart'
 
 type Target = {
-  key: string; name: string; kind: string; source5?: string; source30?: string; proxy?: boolean
+  key: string; name: string; kind: string; source5?: string; source30?: string; proxy?: boolean; metrics5?: any; metrics30?: any
   j5: number | null; j30: number | null; alert5: string | null; alert30: string | null
   alert: boolean; direction: string; price: number | null; pct: number | null
   series5: any[]; series30: any[]; zone5: any; zone30: any; error?: string
@@ -45,7 +45,9 @@ function chartOption(t: Target, period: '5' | '30') {
         itemStyle: { color: '#ff6b6b', color0: '#55d6a0', borderColor: '#ff6b6b', borderColor0: '#55d6a0' },
         markArea: zoneArea.length ? { silent: true, data: zoneArea, label: { show: true, position: 'insideTopLeft', color: '#b99a1f', fontSize: 8, formatter: '中枢' } } : undefined,
       },
-      { name: 'J', type: 'line', data: j, xAxisIndex: 1, yAxisIndex: 1, showSymbol: false, lineStyle: { width: 1.2, color: '#e2c34a' }, itemStyle: { color: '#e2c34a' } },
+      { name: 'K', type: 'line', data: series.map((x) => x.k), xAxisIndex: 1, yAxisIndex: 1, showSymbol: false, lineStyle: { width: 1, color: '#6ea8ff' }, itemStyle: { color: '#6ea8ff' } },
+      { name: 'D', type: 'line', data: series.map((x) => x.d), xAxisIndex: 1, yAxisIndex: 1, showSymbol: false, lineStyle: { width: 1, color: '#b08cff' }, itemStyle: { color: '#b08cff' } },
+      { name: 'J', type: 'line', data: j, xAxisIndex: 1, yAxisIndex: 1, showSymbol: false, lineStyle: { width: 1.4, color: '#e2c34a' }, itemStyle: { color: '#e2c34a' } },
       {
         name: '阈值', type: 'line', data: [], xAxisIndex: 1, yAxisIndex: 1, silent: true, showSymbol: false,
         markLine: { silent: true, symbol: 'none', label: { color: '#8e9a91', fontSize: 8 }, lineStyle: { color: 'rgba(242,201,76,.5)', type: 'dashed' }, data: [{ yAxis: UPPER }, { yAxis: LOWER }] },
@@ -61,6 +63,8 @@ function ChartCard({ title, period, target }: { title: string; period: '5' | '30
   const zone = period === '5' ? target.zone5 : target.zone30
   const series = (period === '5' ? target.series5 : target.series30) || []
   const source = period === '5' ? target.source5 : target.source30
+  const m = period === '5' ? target.metrics5 : target.metrics30
+  const num = (v: any, digits = 2) => v == null ? '--' : Number(v).toFixed(digits)
   return (
     <div className="kdj-chart-card">
       <div className="kdj-chart-head">
@@ -71,6 +75,14 @@ function ChartCard({ title, period, target }: { title: string; period: '5' | '30
         </div>
       </div>
       {series.length ? <EChart option={option as any} height={250} /> : <div className="kdj-empty">该周期暂无行情数据</div>}
+      {m && (
+        <div className="kdj-metrics">
+          <span>K <b>{num(m.k)}</b></span><span>D <b>{num(m.d)}</b></span><span>J <b>{num(m.j)}</b></span><span>RSV <b>{num(m.rsv)}</b></span>
+          <span>MA5 <b>{num(m.ma5)}</b></span><span>MA20 <b>{num(m.ma20)}</b></span>
+          <span>量比 <b>{num(m.vol_ratio)}</b></span><span>中枢位置 <b>{num(m.zone_pos, 1)}%</b></span>
+          <span>J变化 <b>{m.j_change > 0 ? '+' : ''}{num(m.j_change)}</b></span><span>拐头 <b>{m.cross}</b></span><span>趋势 <b>{m.trend}</b></span>
+        </div>
+      )}
       <div className="kdj-source">{source || '等待行情'} · {series.length ? `${series.length} 根` : '无数据'}</div>
     </div>
   )
@@ -167,8 +179,14 @@ export default function KdjPanel() {
             <div><span>J ≤ -14</span> 超卖区 → 参考动作：<strong>买入 / 低吸</strong>，不恐慌；等 J 拐头、价格止跌或放量承接。</div>
             <div><span>5m + 30m</span> 同向先后触发：参考权重更高；单周期触发只作为盘中提示。</div>
           </div>
+          <div className="kdj-method">
+            <b>指标说明 <em>KDJ(9,3,3)</em></b>
+            <p>RSV = (收盘 − N日最低) / (N日最高 − N日最低) × 100；K = 2/3 前K + 1/3 RSV；D = 2/3 前D + 1/3 K；J = 3K − 2D。J 值会超出 0–100，极端区用 118 / -14 过滤噪音。</p>
+            <p>参考指标：MA5 / MA20 判断趋势，量比判断参与度，中枢位置判断价格在震荡区间的相对高低，J 变化与拐头判断极值是否仍在延续。5m 偏即时、30m 偏质量；同向触发权重更高。</p>
+            <p>局限：KDJ 滞后，强趋势中 J 可长期钝化，单次极值不是买卖指令。中枢为最近摆动高低点重叠区的近似值，不是严格缠论中枢。</p>
+          </div>
           <div className="muted small kdj-note">
-            中枢为最近摆动高低点重叠区的近似值，用于看价格重心，不是严格缠论中枢。5 分钟偏即时，30 分钟偏质量；同向先后触发时参考权重更高。阈值按常规方向：上轨超买、下轨超卖。
+            阈值按常规方向：上轨超买、下轨超卖。行业板块被限流时使用对应行业 ETF 代理，并在图表底部标注。
           </div>
         </>
       ) : <div className="kdj-empty">暂无标的</div>}
@@ -194,6 +212,12 @@ export default function KdjPanel() {
         .kdj-chart-head .muted{font-size:9px}
         .kdj-empty{padding:30px;text-align:center;color:var(--text-sub);font-size:11px}
         .kdj-source{margin-top:4px;font-family:'SF Mono',monospace;font-size:8px;color:var(--text-sub);opacity:.7}
+        .kdj-metrics{display:flex;flex-wrap:wrap;gap:4px 9px;margin-top:6px;font-family:'SF Mono',monospace;font-size:8px;color:var(--text-sub)}
+        .kdj-metrics b{color:var(--text);font-weight:500}
+        .kdj-method{margin-top:10px;border:1px solid var(--border-soft);padding:9px 11px;font-size:10px;line-height:1.75;color:var(--text-sub)}
+        .kdj-method>b{color:var(--text);font-size:11px;display:block;margin-bottom:3px}
+        .kdj-method>b em{font-style:normal;font-size:8px;font-weight:400;color:var(--text-sub);margin-left:6px}
+        .kdj-method p{margin:4px 0}
         .kdj-live{margin:5px 0 0;font-family:'SF Mono',monospace;font-size:8px;color:var(--up);letter-spacing:.02em}
         .kdj-live span{color:var(--text-sub);margin-left:8px}
         .kdj-advice{margin-top:12px;border:1px solid var(--border-soft);padding:9px 11px;background:rgba(255,255,255,.018);font-size:10.5px;line-height:1.8;color:var(--text-sub)}
