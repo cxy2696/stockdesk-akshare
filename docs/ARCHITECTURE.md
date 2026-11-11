@@ -46,14 +46,14 @@ HMM 的输入是五个 A 股指数的日对数收益，输出强势 / 震荡 / �
 
 - `backend/kdj.py` 拉取 5m / 30m K 线，按 `RSV → K → D → J` 递推；上轨 118、下轨 -14。
 - 中枢用最近摆动高低点的重叠区近似，不是严格缠论。
-- `frontend/src/components/KdjPanel.tsx` 是独立面板；`App.tsx` 在右侧挂固定白色按键与 Drawer。
+- `frontend/src/components/KdjPanel.tsx` 是独立面板；`HudHome.tsx` 把 KDJ 入口放在右侧「行业要闻」下方，`/kdj` 为独立页面。
 - 只做提示，不产生交易信号。
 
 ### KDJ alerts
 
 - `backend/kdj.py` fetches 5m / 30m candles and recurses `RSV → K → D → J`; upper 118, lower -14.
 - The central zone is an approximation from recent swing-high/low overlap, not strict Chan theory.
-- `frontend/src/components/KdjPanel.tsx` is the panel; `App.tsx` mounts the fixed white right-rail button and drawer.
+- `frontend/src/components/KdjPanel.tsx` is the panel; `HudHome.tsx` places the KDJ entry under Industry News; `/kdj` is a dedicated page.
 - Alerts only; no trade signal is generated.
 
 ### iOS
