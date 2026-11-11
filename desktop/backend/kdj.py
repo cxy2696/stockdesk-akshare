@@ -7,6 +7,7 @@ Chan-theory construction.
 """
 from __future__ import annotations
 
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
@@ -79,8 +80,8 @@ def _one(t: dict) -> dict:
     result = {**base, "j5": None, "j30": None, "alert5": None, "alert30": None,
               "series5": [], "series30": [], "zone5": None, "zone30": None, "price": None, "pct": None}
     try:
-        m5 = market.klines(t["secid"], period="5m", limit=180, adjust="", secid_override=t["secid"])
-        m30 = market.klines(t["secid"], period="30m", limit=180, adjust="", secid_override=t["secid"])
+        m5 = market.klines(t["secid"], period="5m", limit=180, adjust="", secid_override=t["secid"], timeout=5.0)
+        m30 = market.klines(t["secid"], period="30m", limit=180, adjust="", secid_override=t["secid"], timeout=5.0)
     except Exception:
         return {**result, "error": "行情暂不可用"}
     if m5:
@@ -100,9 +101,20 @@ def _one(t: dict) -> dict:
     return result
 
 
-def snapshot() -> dict:
-    with ThreadPoolExecutor(max_workers=4) as ex:
+_CACHE: dict = {"ts": 0.0, "data": None}
+_CACHE_LOCK = __import__("threading").Lock()
+
+
+def snapshot(force: bool = False) -> dict:
+    now = time.time()
+    with _CACHE_LOCK:
+        if not force and _CACHE["data"] is not None and now - _CACHE["ts"] < 60:
+            return _CACHE["data"]
+    with ThreadPoolExecutor(max_workers=8) as ex:
         targets = list(ex.map(_one, TARGETS))
-    return {"thresholds": {"upper": UPPER, "lower": LOWER}, "targets": targets,
+    data = {"thresholds": {"upper": UPPER, "lower": LOWER}, "targets": targets,
             "zones_note": "中枢为最近摆动高低点重叠区的近似值，不是严格缠论中枢。",
-            "updated": __import__("time").time()}
+            "updated": time.time()}
+    with _CACHE_LOCK:
+        _CACHE.update(ts=time.time(), data=data)
+    return data
