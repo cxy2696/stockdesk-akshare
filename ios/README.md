@@ -9,7 +9,7 @@
 完全独立的原生 iOS 股票投资 App：**不依赖 Mac 后端**，行情、K 线、财务、持仓、复盘、回测、选股、提醒全部在 iPhone 本地完成。
 SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切换明亮/深色；设置内可切换中文 / English。
 
-**v3.6 与 macOS 版功能对齐**：HUB 精简为 3+4；分享只在进入子页面后出现，滚动内容自动拼接为完整长图，可经系统分享到微信/Notes；HMM/渗流新增个股建议、行业临界和最大连通簇理由；资产快照缓存；资产分析含资金分配、交易偏好、趋势与交易习惯；投资建议含历史总结、未来趋势与标的推荐；指数分析覆盖 7 个指数；顶部放大镜/星号/信封/铃铛；底部显示当前时间与数据更新时间。，持仓、复盘、总览、自选、回测、设置全部收进「投资」；K 线可拖动查看每日数据；公司概况补全；九转/底部钝化、7/20/30/60 日分析、行业趋势、行情要闻与指标说明。
+**v3.6**：HUB 为 3+4；分享只在子页面出现，滚动内容自动拼接为长图；HMM/渗流含个股建议、行业临界和最大连通簇理由；资产快照缓存；资产分析覆盖资金分配、交易偏好和习惯；投资建议含历史总结、未来趋势与标的；指数分析覆盖 7 个指数；K 线可拖动查看；公司概况、九转/底部钝化、7/20/30/60 日分析、行业趋势和行情要闻齐备。
 
 | 每日策略（多周期/行业） | 板块跟踪 | 投资 HUD |
 | --- | --- | --- |
@@ -18,10 +18,6 @@ SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切
 | 指数分析 | 投资 HUD 横屏 | 设置（主题 / 横屏） |
 | --- | --- |
 | ![指数](docs/ios-index.png) | ![横屏](docs/ios-landscape.png) | ![设置](docs/ios-settings.png) |
-
-| 设置（主题 / 横屏） |
-| --- |
-| ![设置](docs/ios-settings.png) |
 
 | 个股热图 | 黄金分割 + 筹码 | 复盘总结 |
 | --- | --- | --- |
@@ -32,6 +28,12 @@ SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切
 | ![持仓](docs/ios-portfolio.png) | ![自选](docs/ios-watch.png) | ![回测](docs/ios-backtest.png) |
 
 ---
+
+## 版本
+
+- iOS：3.6 (27)
+- 下载：[StockDesk-iOS-3.6-unsigned.ipa](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.1/StockDesk-iOS-3.6-unsigned.ipa)
+- 桌面端下载：[项目展示页](https://cxy2696.github.io/stockdesk-akshare/#download)
 
 ## 交付物
 
@@ -173,4 +175,8 @@ StockDesk for iOS is a fully standalone SwiftUI app. It does **not** require the
 3. Run on a simulator or a device
 
 The unsigned IPA can be re-signed with Sideloadly, AltStore or Xcode. A free Apple ID signature expires after 7 days.
+
+### Version
+
+iOS **3.6 (27)** · [Download the unsigned IPA](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.1/StockDesk-iOS-3.6-unsigned.ipa) · [All downloads](https://cxy2696.github.io/stockdesk-akshare/#download)
 
