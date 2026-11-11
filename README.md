@@ -9,7 +9,7 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
+[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.1) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
 
 ## 项目展示页 / Project site
 
@@ -31,7 +31,7 @@ An independent project site with a 43-second product film, five screening chapte
 
 StockDesk 是一个本地优先、单用户的股票投资工作台。它把持仓、行情、复盘、策略、HMM/渗流模型和地域/行业数据放在一个 HUD 风格的界面里，账户与行情缓存只保存在本机。
 
-最新版本 **1.10.0** 新增 KDJ 极值预警：半导体、通信设备与五个 A 股指数，5 分钟 / 30 分钟双周期，绘制近似中枢。
+最新版本 **1.10.1** 新增 KDJ 极值预警：半导体、通信设备与五个 A 股指数，5 分钟 / 30 分钟双周期，绘制近似中枢。
 
 本仓库是 **stockdesk-akshare** 项目文档与源码整理版，包含：
 
@@ -269,7 +269,7 @@ See [desktop/README.md](desktop/README.md) for the full HUB guide, screenshots, 
 
 ### Releases & Packages
 
-- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.0
+- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.1
 - **macOS**: `StockDesk-macOS-1.9.0.zip`
 - **Windows**: `StockDesk-Windows-1.9.0.exe`
 - **iOS**: `StockDesk-iOS-3.6-unsigned.ipa`
@@ -286,7 +286,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 
 ### Versions
 
-- macOS: 1.10.0
+- macOS: 1.10.1
 - iOS: 3.6 (27)
 - US: 1.0.0
 
