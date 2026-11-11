@@ -2,163 +2,531 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>StockDesk · A quiet desk for the whole market</title>
-<meta name="description" content="StockDesk — a local-first equity desk for macOS, Windows, iOS and US markets. One quiet screen for market, portfolio and models.">
+<meta name="description" content="StockDesk — a local-first equity desk for macOS, Windows, iOS and US markets. One quiet screen for the market, your positions and the models.">
+<meta name="theme-color" content="#0b0c09">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://cxy2696.github.io/stockdesk-akshare/">
+<meta property="og:title" content="StockDesk · A quiet desk for the whole market">
+<meta property="og:description" content="One quiet screen for the market, your positions and the models.">
+<meta property="og:image" content="https://cxy2696.github.io/stockdesk-akshare/assets/film/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0c09'/%3E%3Crect x='1' y='1' width='62' height='62' fill='none' stroke='%23c9ad72' stroke-opacity='.45'/%3E%3Cpath d='M22 19h19l-14 13h15L22 45h20' fill='none' stroke='%23f4eee2' stroke-width='3.2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preload" href="./assets/fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./assets/fonts/instrument-serif-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="./site.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2312140f'/%3E%3Cpath d='M14 40l10-10 8 6 16-16' stroke='%23c9a72a' stroke-width='5' fill='none'/%3E%3C/svg%3E">
+<script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
-<div class="progress"><i id="progress"></i></div>
-<div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
-<div class="ripple-layer" id="rippleLayer" aria-hidden="true"></div>
-<header class="nav">
-  <a class="brand" href="#top"><span class="mark">S</span><b>STOCKDESK</b><small data-i18n="navTag">个人投资台</small></a>
-  <nav>
-    <a href="#film" data-i18n="navFilm">影片</a>
-    <a href="#desk" data-i18n="navDesk">界面</a>
-    <a href="#editions" data-i18n="navEditions">版本</a>
-    <a href="#start" data-i18n="navStart">开始</a>
-    <a class="gh" href="https://github.com/cxy2696/stockdesk-akshare">GitHub ↗</a>
-    <button id="lang" class="lang">EN</button>
-    <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
-    <button class="nav-guide" id="guideBtn" aria-expanded="false" aria-controls="guidePanel">?</button>
-  </nav>
+<a class="skip-link" href="#idea">跳到正文 / Skip to content</a>
+<div class="grain" aria-hidden="true"></div>
+<div class="page-progress" aria-hidden="true"><i id="pageProgress"></i></div>
+
+<header class="site-header" id="siteHeader" data-theme="dark">
+  <div class="header-inner">
+    <a class="brand" href="#top" aria-label="StockDesk">
+      <span class="brand-mark" aria-hidden="true"><span>S</span></span>
+      <span class="brand-words">
+        <strong>STOCKDESK</strong>
+        <span data-i18n="navTag">个人投资台</span>
+      </span>
+    </a>
+
+    <nav class="primary-nav" aria-label="主导航">
+      <a href="#film" data-i18n="navFilm">影片</a>
+      <a href="#desk" data-i18n="navDesk">界面</a>
+      <a href="#editions" data-i18n="navEditions">版本</a>
+      <a href="#start" data-i18n="navStart">开始</a>
+    </nav>
+
+    <div class="header-actions">
+      <button class="lang-button" type="button" data-lang-toggle aria-label="Switch to English">EN</button>
+      <button class="sound-button" type="button" data-sound-toggle aria-pressed="false" aria-label="Open background music">
+        <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="sound-label" data-sound-label>SND OFF</span>
+      </button>
+      <a class="github-link" href="https://github.com/cxy2696/stockdesk-akshare" target="_blank" rel="noopener">
+        GitHub
+        <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 10 10 2M4 2h6v6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </a>
+      <button class="menu-button" id="menuButton" type="button" aria-expanded="false" aria-controls="mobileMenu">
+        <span class="menu-lines" aria-hidden="true"><i></i><i></i></span>
+        <span class="sr-only">Menu</span>
+      </button>
+    </div>
+  </div>
 </header>
 
+<div class="mobile-menu" id="mobileMenu" aria-hidden="true" inert>
+  <div class="mobile-head">
+    <span class="micro">STOCKDESK / INDEX</span>
+    <button class="mobile-close" id="mobileClose" type="button" aria-label="Close menu">×</button>
+  </div>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <a href="#film"><span>01</span><b data-i18n="navFilm">影片</b><em>The Film</em></a>
+    <a href="#desk"><span>02</span><b data-i18n="navDesk">界面</b><em>The Desk</em></a>
+    <a href="#editions"><span>03</span><b data-i18n="navEditions">版本</b><em>Editions</em></a>
+    <a href="#start"><span>04</span><b data-i18n="navStart">开始</b><em>Start here</em></a>
+  </nav>
+  <div class="mobile-actions">
+    <button class="lang-button" type="button" data-lang-toggle aria-label="Switch to English">EN</button>
+    <button class="mobile-sound" type="button" data-sound-toggle aria-pressed="false">
+      <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span data-sound-label data-i18n="musicLabel">背景音乐</span>
+    </button>
+  </div>
+  <div class="mobile-foot">
+    <p data-i18n="mobileFoot">本地优先 · 账户数据留在本机<br>由 StockDesk 与一次安静的坚持构成。</p>
+    <a href="https://github.com/cxy2696/stockdesk-akshare" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</div>
+
 <main id="top">
-  <section class="hero">
-    <div class="hero-text">
-      <div class="eyebrow">LOCAL-FIRST EQUITY DESK · A-SHARE + US</div>
-      <h1 data-i18n="heroTitle">One quiet desk<br>for the whole market.</h1>
-      <p data-i18n="heroText">StockDesk puts the market, your positions and the models on one calm screen. It runs on your machine, keeps your account local, and helps you answer three questions before you trade.</p>
-      <div class="cta">
-        <a class="btn dark" href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0" data-i18n="download">Download</a>
-        <a class="btn" href="https://github.com/cxy2696/stockdesk-akshare" data-i18n="source">View source</a>
-        <a class="link" href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" data-i18n="guide">Read the guide →</a>
-      </div>
-      <div class="meta"><span>macOS 1.9</span><span>Windows 1.9</span><span>iOS 3.6</span><span>US 1.0</span><span>MIT</span></div>
-      <a class="scroll-cue" href="#film"><i></i><span data-i18n="scrollHint">向下滚动，先看 41 秒影片</span></a>
-      <div class="coach" id="coach"><span data-i18n="coach">向下滚动，先看 41 秒影片</span><button id="coachClose" aria-label="Close">×</button></div>
+  <!-- 01 — HERO -->
+  <section class="hero" data-theme="dark">
+    <div class="hero-ambient" aria-hidden="true">
+      <span class="hero-glow"></span>
+      <span class="hero-rule"></span>
+      <span class="hero-ghost">quiet</span>
+      <span class="hero-side">A STOCKDESK FILM · MMXXVI</span>
     </div>
-    <div class="hero-visual">
-      <div class="frame">
-        <div class="frame-top"><i></i><i></i><i></i><span>STOCKDESK / HUB</span></div>
-        <img src="./assets/hub.png" alt="StockDesk HUB">
-      </div>
-      <div class="float-note"><b data-i18n="floatA">本地优先</b><span data-i18n="floatB">账户数据不上传</span></div>
-    </div>
-  </section>
 
-  <section class="manifesto">
-    <div class="eyebrow">THE IDEA</div>
-    <p data-i18n="manifesto">Most investing tools add more noise. StockDesk removes it: one HUB, one daily plan, one honest view of your positions — then the models, only when you need them.</p>
-  </section>
+    <div class="hero-wrap">
+      <div class="hero-main">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> LOCAL-FIRST EQUITY DESK <span class="eyebrow-slash">/</span> A-SHARE + US</p>
+          <h1 class="hero-title" data-i18n="heroTitle">一张安静的<br>桌子，<br>看完整市场。</h1>
+          <p class="hero-alt" data-i18n="heroAlt">One quiet desk for the whole market.</p>
+          <p class="hero-text" data-i18n="heroText">StockDesk 把市场、持仓和模型放在一张安静的屏幕上。它跑在你自己的电脑里，账户数据留在本地，帮你在交易前回答三个问题。</p>
 
-  <section id="film" class="film">
-    <div class="section-label"><span>01</span><span data-i18n="filmLabel">PRODUCT FILM</span></div>
-    <div class="film-head">
-      <h2 data-i18n="filmTitle">Watch the desk move.</h2>
-      <p data-i18n="filmText">A short, unedited walk through the HUB, the daily plan, the portfolio and the models. No mockups.</p>
-    </div>
-    <div class="video-frame">
-      <video id="demoVideo" autoplay muted poster="./assets/hub.png" loop playsinline preload="metadata">
-        <source src="./assets/demo-film.webm" type="video/webm">
-      </video>
-      <button class="play" id="playDemo" aria-label="Play film"><span>▶</span></button>
-      <div class="video-hud"><span>STOCKDESK / PRODUCT FILM</span><span id="videoState">PAUSED</span><span class="hd">HD · 16:9</span></div>
-      <div class="player-controls">
-        <button id="miniPlay" aria-label="Play">▶</button>
-        <span id="videoTime">00:00 / 00:42</span>
-        <div class="player-track" id="videoTrack"><i id="videoFill"></i></div>
-        <button id="soundBtn" aria-label="Sound">♪</button>
-        <button id="fullBtn" aria-label="Fullscreen">⛶</button>
-      </div>
-      <audio id="filmMusic" src="./assets/film-music.mp3" preload="auto" loop></audio>
-    </div>
-    <div class="chapters" id="chapters">
-      <button data-t="3" class="active" role="tab" aria-selected="true"><b>01</b><span data-i18n="chHub">The HUB</span></button>
-      <button data-t="12" role="tab" aria-selected="false"><b>02</b><span data-i18n="chDaily">Daily plan</span></button>
-      <button data-t="18" role="tab" aria-selected="false"><b>03</b><span data-i18n="chPortfolio">Portfolio</span></button>
-      <button data-t="24" role="tab" aria-selected="false"><b>04</b><span data-i18n="chModels">Models</span></button>
-      <button data-t="31" role="tab" aria-selected="false"><b>05</b><span data-i18n="chUS">US edition</span></button>
-    </div>
-  </section>
+          <div class="hero-actions">
+            <button class="watch-cta" type="button" data-open-film data-time="0">
+              <span class="watch-disc" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M7 4.5 15 10l-8 5.5z" fill="currentColor"/></svg></span>
+              <span class="watch-copy">
+                <b data-i18n="watchFilm">放映影片</b>
+                <small><span data-i18n="filmLength">43 秒</span> · <span data-i18n="withSound">建议开启声音</span></small>
+              </span>
+            </button>
+            <a class="button button-solid" href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0" data-i18n="download">下载</a>
+            <div class="hero-links">
+              <a href="https://github.com/cxy2696/stockdesk-akshare" target="_blank" rel="noopener" data-i18n="source">查看源码</a>
+              <a href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" target="_blank" rel="noopener" data-i18n="guide">阅读教程 →</a>
+            </div>
+          </div>
 
-  <section id="desk" class="desk">
-    <div class="section-label"><span>02</span><span data-i18n="deskLabel">THE DESK</span></div>
-    <div class="desk-head">
-      <h2 data-i18n="deskTitle">Three questions.<br>One place to answer them.</h2>
-      <p data-i18n="deskText">Use the tabs to see how the same desk changes with the question you are asking.</p>
-    </div>
-    <div class="tabs" id="deskTabs">
-      <button class="active" data-k="market" role="tab" aria-selected="true"><span>01</span><b data-i18n="tabMarket">How is the market?</b></button>
-      <button data-k="portfolio" role="tab" aria-selected="false"><span>02</span><b data-i18n="tabPortfolio">How is my book?</b></button>
-      <button data-k="models" role="tab" aria-selected="false"><span>03</span><b data-i18n="tabModels">What do the models say?</b></button>
-    </div>
-    <div class="desk-view">
-      <div class="desk-copy">
-        <h3 id="deskTitle" data-i18n="marketH">Breadth, mood and the day's plan.</h3>
-        <p id="deskBody" data-i18n="marketP">Daily Plan opens with the market state, breadth and tomorrow's levels. It tells you whether today is a day to press or a day to wait.</p>
-        <ul id="deskList">
-          <li data-i18n="marketL1">Index trend, RSI and support/resistance</li>
-          <li data-i18n="marketL2">Breadth, turnover and the strongest sectors</li>
-          <li data-i18n="marketL3">A position range, not a prediction</li>
-        </ul>
-      </div>
-      <figure class="desk-shot"><img id="deskImg" src="./assets/models.png" alt=""><figcaption id="deskCap" data-i18n="capMarket">Daily Plan + sector breadth</figcaption></figure>
-    </div>
-  </section>
+          <div class="hero-meta">
+            <span>macOS 1.9</span><span>Windows 1.9</span><span>iOS 3.6</span><span>US 1.0</span><span>MIT</span>
+          </div>
+        </div>
 
-  <section class="duo">
-    <div class="duo-copy">
-      <div class="eyebrow">POSITIONS / REVIEW</div>
-      <h2 data-i18n="bookTitle">Your book, without the noise.</h2>
-      <p data-i18n="bookText">Cost, support, pressure, chip distribution and realized P&L in one place. The review page turns the trades into a story you can learn from.</p>
-      <div class="duo-stats">
-        <div><b data-i18n="bookS1">Cost + chips</b><span data-i18n="bookS1n">Where the crowd is trapped</span></div>
-        <div><b data-i18n="bookS2">NAV + drawdown</b><span data-i18n="bookS2n">What the risk actually looked like</span></div>
-      </div>
-    </div>
-    <div class="duo-shots">
-      <img src="./assets/portfolio.png" alt="Portfolio">
-      <img src="./assets/models.png" alt="Quant models">
-    </div>
-  </section>
-
-  <section class="split">
-    <div>
-      <div class="eyebrow">MODELS / DISCIPLINE</div>
-      <h2 data-i18n="modelTitle">Models describe.<br>They do not predict.</h2>
-      <p data-i18n="modelText">A 3-state HMM on five A-share indices suggests total exposure. Percolation looks for the largest connected cluster of rising stocks, so you can tell diffusion from a few isolated spikes. Per-stock guidance follows your actual holdings.</p>
-    </div>
-    <div class="model-figure"><img src="./assets/models.png" alt="Models"></div>
-  </section>
-
-  <section id="editions" class="editions">
-    <div class="section-label"><span>03</span><span data-i18n="edLabel">EDITIONS</span></div>
-    <div class="ed-grid">
-      <div class="ed"><span>macOS</span><b data-i18n="edMac">Native window. Double-click.</b></div>
-      <div class="ed"><span>Windows</span><b data-i18n="edWin">One-file exe, WebView2.</b></div>
-      <div class="ed"><span>iOS</span><b data-i18n="edIOS">The HUB in your pocket.</b></div>
-      <div class="ed"><span>US</span><b data-i18n="edUS">A separate US dashboard.</b></div>
-      <div class="ed"><span>Docker</span><b data-i18n="edDocker">A-share and US images.</b></div>
-    </div>
-  </section>
-
-  <section id="start" class="start">
-    <div class="section-label"><span>04</span><span data-i18n="startLabel">START HERE</span></div>
-    <div class="start-grid">
-      <div>
-        <h2 data-i18n="startTitle">Pick the shortest path.</h2>
-        <p data-i18n="startText">Download a release, run a container, or build from source. The guide covers the first five minutes and the daily routine.</p>
-        <div class="start-links">
-          <a href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0" data-i18n="dl">Releases →</a>
-          <a href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" data-i18n="gd">Guide →</a>
-          <a href="https://cxy2696.github.io/stockdesk-akshare/" data-i18n="site">This site</a>
+        <div class="hero-visual">
+          <span class="visual-caption">SOUND RECOMMENDED · STEREO · 16:9</span>
+          <figure class="film-frame" id="filmFrame">
+            <div class="frame-bar">
+              <span class="frame-live"><i aria-hidden="true"></i> PREVIEW / MUTED</span>
+              <span class="frame-title">STOCKDESK / PRODUCT FILM</span>
+              <span>HD · 16:9</span>
+            </div>
+            <div class="frame-screen">
+              <img class="preview-poster" src="./assets/film/poster.jpg" alt="StockDesk HUB 影片剧照">
+              <video id="previewVideo" muted loop playsinline preload="metadata" aria-label="StockDesk product film preview">
+                <source src="./assets/demo-film.webm" type="video/webm">
+              </video>
+              <span class="frame-vignette" aria-hidden="true"></span>
+              <button class="screen-play" type="button" data-open-film data-time="0" aria-label="Play the film with sound">
+                <svg class="orbit-text" viewBox="0 0 160 160" aria-hidden="true">
+                  <defs><path id="playOrbit" d="M80,80 m-65,0 a65,65 0 1,1 130,0 a65,65 0 1,1 -130,0"/></defs>
+                  <text><textPath href="#playOrbit">PLAY THE FILM · WITH SOUND · 00:43 · </textPath></text>
+                </svg>
+                <span class="play-orb" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M7 4.5 15 10l-8 5.5z" fill="currentColor"/></svg></span>
+              </button>
+              <span class="screen-corner screen-corner-tl" aria-hidden="true"></span>
+              <span class="screen-corner screen-corner-br" aria-hidden="true"></span>
+              <div class="frame-foot">
+                <span data-i18n="fiveChapters">五幕 · 一张桌子</span>
+                <span>00:43</span>
+              </div>
+              <div class="preview-track" aria-hidden="true"><i id="previewProgress"></i></div>
+            </div>
+            <figcaption class="frame-caption">
+              <span><i>FILM</i> STILL 01 — THE HUB</span>
+              <span>DIRECTED &amp; CUT BY STOCKDESK</span>
+            </figcaption>
+          </figure>
+          <div class="float-note">
+            <b data-i18n="floatA">本地优先</b>
+            <span data-i18n="floatB">账户数据不上传</span>
+          </div>
         </div>
       </div>
-      <pre><code># A-share container
+
+      <div class="hero-foot">
+        <a class="scroll-cue" href="#idea">
+          <span class="scroll-line" aria-hidden="true"><i></i></span>
+          <span data-i18n="scrollHint">向下滚动，先看影片</span>
+        </a>
+        <div class="hero-foot-meta">
+          <span>A-SHARE + US</span>
+          <span>LOCAL-FIRST</span>
+          <span>NO CLOUD ACCOUNT</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 — THE IDEA -->
+  <section class="idea section-light" id="idea" data-theme="light">
+    <div class="section-wrap">
+      <div class="section-rail reveal">
+        <span class="rail-no">01</span>
+        <span class="rail-label">THE IDEA</span>
+        <span class="rail-line" aria-hidden="true"></span>
+        <span class="rail-note">LOCAL-FIRST / A-SHARE + US</span>
+      </div>
+
+      <div class="idea-head">
+        <h2 class="display reveal" data-i18n="manifestoTitle">少一点噪音，<br>多一点好问题。</h2>
+        <div class="idea-copy reveal">
+          <p class="idea-lead" data-i18n="manifesto">大多数投资工具在不断加噪音。StockDesk 做的是减法：一个 HUB、一份每日策略、一个诚实的持仓视图，需要时再打开模型。</p>
+          <p class="micro">MADE FOR THE HOUR BEFORE THE MARKET OPENS</p>
+        </div>
+      </div>
+
+      <div class="idea-body">
+        <div class="question-index reveal">
+          <span class="micro" data-i18n="questionsLabel">交易前，先回答三个问题</span>
+          <ol>
+            <li><span>Q.01</span><b data-i18n="tabMarket">市场怎么样？</b><i>01</i></li>
+            <li><span>Q.02</span><b data-i18n="tabPortfolio">我的仓位怎么样？</b><i>02</i></li>
+            <li><span>Q.03</span><b data-i18n="tabModels">模型怎么说？</b><i>03</i></li>
+          </ol>
+        </div>
+        <div class="fact-grid reveal">
+          <div><b>07</b><span data-i18n="factHub">HUB 入口</span></div>
+          <div><b>05</b><span data-i18n="factIndices">A 股核心指数</span></div>
+          <div><b>00</b><span data-i18n="factCloud">云端账户</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>LESS NOISE <i>✦</i> BETTER QUESTIONS <i>✦</i> LOCAL-FIRST <i>✦</i> ONE QUIET DESK <i>✦</i></span>
+        <span>LESS NOISE <i>✦</i> BETTER QUESTIONS <i>✦</i> LOCAL-FIRST <i>✦</i> ONE QUIET DESK <i>✦</i></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 — THE FILM -->
+  <section class="film-section section-dark" id="film" data-theme="dark">
+    <div class="section-wrap">
+      <div class="section-rail reveal">
+        <span class="rail-no">02</span>
+        <span class="rail-label">THE FILM</span>
+        <span class="rail-line" aria-hidden="true"></span>
+        <span class="rail-note">43 SECONDS / FIVE CHAPTERS</span>
+      </div>
+
+      <div class="section-head film-head reveal">
+        <div>
+          <p class="eyebrow">STOCKDESK PICTURES · NO. 01</p>
+          <h2 class="display" data-i18n="filmTitle">看这张桌子<br class="mobile-break">怎么动。</h2>
+        </div>
+        <div class="head-side">
+          <p data-i18n="filmText">一段没有摆拍的短演示：HUB、每日策略、持仓和模型。</p>
+          <button class="text-link" type="button" data-open-film data-time="0">
+            <span data-i18n="watchFilm">放映影片</span>
+            <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4 14 14 4M6 4h8v8" fill="none" stroke="currentColor" stroke-width="1.1"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="film-grid">
+        <div class="film-preview reveal">
+          <div class="chapter-stage">
+            <div class="stage-images" id="stageImages">
+              <img class="is-active" src="./assets/film/hub.webp" alt="The HUB" width="1440" height="810">
+              <img src="./assets/film/daily.webp" alt="Daily Plan" width="1440" height="810" loading="lazy">
+              <img src="./assets/film/book.webp" alt="Your Book" width="1440" height="810" loading="lazy">
+              <img src="./assets/film/models.webp" alt="Models" width="1440" height="810" loading="lazy">
+              <img src="./assets/film/pocket.webp" alt="US edition and iOS" width="1440" height="810" loading="lazy">
+            </div>
+            <span class="stage-vignette" aria-hidden="true"></span>
+            <div class="stage-hud stage-hud-top">
+              <span>CHAPTER <b id="stageNo">01</b> / 05</span>
+              <span class="stage-still"><i></i> FILM STILL</span>
+            </div>
+            <button class="stage-play" id="stagePlay" type="button" data-open-film data-time="7" aria-label="Play from the first chapter">
+              <span class="stage-disc" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M7 4.5 15 10l-8 5.5z" fill="currentColor"/></svg></span>
+              <span data-i18n="playChapter">播放章节</span>
+            </button>
+            <div class="stage-hud stage-hud-bottom">
+              <span class="stage-title" id="stageTitle">The HUB</span>
+              <span><b id="stageTime">00:07</b> / 00:43</span>
+            </div>
+            <span class="corner corner-tl" aria-hidden="true"></span>
+            <span class="corner corner-br" aria-hidden="true"></span>
+          </div>
+          <div class="stage-foot">
+            <span>STOCKDESK / PRODUCT FILM</span>
+            <span>1440 × 810 · 25 FPS</span>
+          </div>
+        </div>
+
+        <div class="chapter-list reveal" id="chapterList">
+          <button class="chapter is-active" type="button" data-chapter="0" data-time="7">
+            <span class="chapter-no">01</span>
+            <span class="chapter-body"><b data-i18n="chHub">The HUB</b><small data-i18n="chHubDesc">先看全貌，再看细节。</small></span>
+            <span class="chapter-time">00:07</span>
+          </button>
+          <button class="chapter" type="button" data-chapter="1" data-time="15">
+            <span class="chapter-no">02</span>
+            <span class="chapter-body"><b data-i18n="chDaily">每日策略</b><small data-i18n="chDailyDesc">今天该进攻，还是等待。</small></span>
+            <span class="chapter-time">00:15</span>
+          </button>
+          <button class="chapter" type="button" data-chapter="2" data-time="20.5">
+            <span class="chapter-no">03</span>
+            <span class="chapter-body"><b data-i18n="chPortfolio">持仓</b><small data-i18n="chPortfolioDesc">成本、压力与筹码。</small></span>
+            <span class="chapter-time">00:20</span>
+          </button>
+          <button class="chapter" type="button" data-chapter="3" data-time="26.5">
+            <span class="chapter-no">04</span>
+            <span class="chapter-body"><b data-i18n="chModels">模型</b><small data-i18n="chModelsDesc">描述状态，不预测明天。</small></span>
+            <span class="chapter-time">00:26</span>
+          </button>
+          <button class="chapter" type="button" data-chapter="4" data-time="32.5">
+            <span class="chapter-no">05</span>
+            <span class="chapter-body"><b data-i18n="chUS">美股版</b><small data-i18n="chUSDesc">从桌面到口袋，再到美股。</small></span>
+            <span class="chapter-time">00:32</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="film-credits reveal">
+        <span>DIRECTED &amp; CUT BY STOCKDESK</span>
+        <span>MUSIC — VIACHESLAV STAROSTIN</span>
+        <span>NO MOCKUPS</span>
+        <span>00:43 · 25 FPS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 — THE DESK -->
+  <section class="desk-section section-light" id="desk" data-theme="light">
+    <div class="section-wrap">
+      <div class="section-rail reveal">
+        <span class="rail-no">03</span>
+        <span class="rail-label">THE DESK</span>
+        <span class="rail-line" aria-hidden="true"></span>
+        <span class="rail-note">MARKET / POSITIONS / MODELS</span>
+      </div>
+
+      <div class="section-head desk-head reveal">
+        <div>
+          <p class="eyebrow">ONE SCREEN · THREE ANSWERS</p>
+          <h2 class="display" data-i18n="deskTitle">三个问题，<br>一个地方回答。</h2>
+        </div>
+        <div class="head-side">
+          <p data-i18n="deskText">用下面的标签看看同一张桌子如何随问题变化。</p>
+        </div>
+      </div>
+
+      <div class="tabs reveal" id="deskTabs" role="tablist" aria-label="Desk views">
+        <button class="active" type="button" data-k="market" role="tab" aria-selected="true"><span>01</span><b data-i18n="tabMarket">市场怎么样？</b></button>
+        <button type="button" data-k="portfolio" role="tab" aria-selected="false"><span>02</span><b data-i18n="tabPortfolio">我的仓位怎么样？</b></button>
+        <button type="button" data-k="models" role="tab" aria-selected="false"><span>03</span><b data-i18n="tabModels">模型怎么说？</b></button>
+      </div>
+
+      <div class="desk-view reveal">
+        <div class="desk-copy">
+          <p class="micro">STOCKDESK / HUB</p>
+          <h3 id="deskTitle" data-i18n="marketH">宽度、情绪，和今天的计划。</h3>
+          <p id="deskBody" data-i18n="marketP">每日策略先给出市场状态、涨跌宽度和明天的关键位。它告诉你今天是该进攻，还是该等一等。</p>
+          <ul id="deskList">
+            <li data-i18n="marketL1">指数趋势、RSI 与支撑/压力</li>
+            <li data-i18n="marketL2">涨跌宽度、成交额与最强板块</li>
+            <li data-i18n="marketL3">仓位区间，而不是一句预测</li>
+          </ul>
+          <button class="inline-play" type="button" data-open-film data-time="15">
+            <span class="inline-play-dot" aria-hidden="true"></span>
+            <span data-i18n="watchChapter">在影片中查看</span>
+            <span>00:15</span>
+          </button>
+        </div>
+        <figure class="desk-visual">
+          <div class="browser-bar">
+            <span>STOCKDESK / DAILY PLAN</span>
+            <span>LIVE · LOCAL</span>
+          </div>
+          <img id="deskImg" src="./assets/daily.png" alt="StockDesk Daily Plan" width="1440" height="842">
+          <figcaption id="deskCap" data-i18n="capMarket">每日策略 + 板块宽度</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 — YOUR BOOK -->
+  <section class="book-section section-light" id="book" data-theme="light">
+    <div class="section-wrap">
+      <div class="section-rail reveal">
+        <span class="rail-no">04</span>
+        <span class="rail-label">YOUR BOOK</span>
+        <span class="rail-line" aria-hidden="true"></span>
+        <span class="rail-note">COST / PRESSURE / CHIPS</span>
+      </div>
+
+      <div class="book-grid">
+        <div class="book-copy reveal">
+          <p class="eyebrow">THE QUIET PART OF THE WORK</p>
+          <h2 class="display" data-i18n="bookTitle">你的仓位，<br>不用很吵。</h2>
+          <p data-i18n="bookText">成本、支撑、压力、筹码和已实现盈亏放在一处。复盘页把交易变成经验，而不是一张流水账。</p>
+          <dl class="book-stats">
+            <div><dt data-i18n="bookS1">成本 + 筹码</dt><dd data-i18n="bookS1n">人群被困在哪里</dd></div>
+            <div><dt data-i18n="bookS2">净值 + 回撤</dt><dd data-i18n="bookS2n">风险真正长什么样</dd></div>
+          </dl>
+          <button class="inline-play" type="button" data-open-film data-time="20.5">
+            <span class="inline-play-dot" aria-hidden="true"></span>
+            <span data-i18n="watchChapter">在影片中查看</span>
+            <span>00:20</span>
+          </button>
+        </div>
+        <div class="book-visual reveal">
+          <figure class="book-shot book-shot-wide">
+            <div class="browser-bar">
+              <span>POSITIONS / REVIEW</span>
+              <span>LOCAL DATA</span>
+            </div>
+            <img src="./assets/portfolio.png" alt="StockDesk portfolio and review" width="1440" height="802">
+          </figure>
+          <figure class="book-shot book-shot-square">
+            <img src="./assets/chips.png" alt="StockDesk chip distribution" width="691" height="691">
+            <figcaption>CHIP DISTRIBUTION / 01</figcaption>
+          </figure>
+          <span class="book-stamp" aria-hidden="true">REVIEW<br>THE<br>BOOK</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 — MODELS -->
+  <section class="models-section section-dark" id="models" data-theme="dark">
+    <div class="section-wrap">
+      <div class="section-rail reveal">
+        <span class="rail-no">05</span>
+        <span class="rail-label">THE MODELS</span>
+        <span class="rail-line" aria-hidden="true"></span>
+        <span class="rail-note">HMM / PERCOLATION / POSITIONS</span>
+      </div>
+
+      <div class="models-grid">
+        <div class="models-copy reveal">
+          <p class="eyebrow">DISCIPLINE, NOT PROPHECY</p>
+          <h2 class="display" data-i18n="modelTitle">模型描述现在，<br>不预测明天。</h2>
+          <p data-i18n="modelText">五个 A 股指数的三状态 HMM 给出总仓位；渗流寻找最大 4 邻接连通簇，区分“普涨扩散”和“少数股票在动”；个股建议跟随你的真实持仓。</p>
+          <div class="model-tags" aria-hidden="true">
+            <span>HMM · 03 STATES</span>
+            <span>PERCOLATION · 04-NEIGHBOUR</span>
+            <span>PER-STOCK</span>
+          </div>
+          <button class="inline-play inline-play-light" type="button" data-open-film data-time="26.5">
+            <span class="inline-play-dot" aria-hidden="true"></span>
+            <span data-i18n="watchChapter">在影片中查看</span>
+            <span>00:26</span>
+          </button>
+        </div>
+        <figure class="models-visual reveal">
+          <div class="browser-bar">
+            <span>QUANT / REGIME</span>
+            <span>ATTACK OR WAIT</span>
+          </div>
+          <img src="./assets/models.png" alt="StockDesk HMM and percolation models" width="1440" height="942">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 — EDITIONS -->
+  <section class="editions-section section-light" id="editions" data-theme="light">
+    <div class="section-wrap">
+      <div class="section-rail reveal">
+        <span class="rail-no">06</span>
+        <span class="rail-label">EDITIONS</span>
+        <span class="rail-line" aria-hidden="true"></span>
+        <span class="rail-note">MACOS / WINDOWS / IOS / US / DOCKER</span>
+      </div>
+
+      <div class="section-head editions-head reveal">
+        <div>
+          <p class="eyebrow">ONE DESK · FIVE WAYS IN</p>
+          <h2 class="display" data-i18n="editionsTitle">选一个入口。</h2>
+        </div>
+        <div class="head-side">
+          <p data-i18n="editionsText">macOS、Windows、iOS、美股版与容器，共用一套数据习惯。</p>
+        </div>
+      </div>
+
+      <div class="edition-grid reveal">
+        <article class="edition">
+          <span class="edition-no">01</span>
+          <span class="edition-name">macOS</span>
+          <b data-i18n="edMac">原生窗口，双击即用。</b>
+          <span class="edition-version">1.9.0</span>
+        </article>
+        <article class="edition">
+          <span class="edition-no">02</span>
+          <span class="edition-name">Windows</span>
+          <b data-i18n="edWin">单文件 exe，WebView2。</b>
+          <span class="edition-version">1.9.0</span>
+        </article>
+        <article class="edition">
+          <span class="edition-no">03</span>
+          <span class="edition-name">iOS</span>
+          <b data-i18n="edIOS">装在口袋里的 HUB。</b>
+          <span class="edition-version">3.6</span>
+        </article>
+        <article class="edition">
+          <span class="edition-no">04</span>
+          <span class="edition-name">US</span>
+          <b data-i18n="edUS">独立的美股仪表盘。</b>
+          <span class="edition-version">1.0</span>
+        </article>
+        <article class="edition">
+          <span class="edition-no">05</span>
+          <span class="edition-name">Docker</span>
+          <b data-i18n="edDocker">A 股 / 美股容器。</b>
+          <span class="edition-version">GHCR</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 — START -->
+  <section class="start-section section-light" id="start" data-theme="light">
+    <div class="section-wrap">
+      <div class="section-rail reveal">
+        <span class="rail-no">07</span>
+        <span class="rail-label">START HERE</span>
+        <span class="rail-line" aria-hidden="true"></span>
+        <span class="rail-note">DOWNLOAD / DOCKER / SOURCE</span>
+      </div>
+
+      <div class="start-grid">
+        <div class="start-copy reveal">
+          <p class="eyebrow">THE SHORTEST PATH</p>
+          <h2 class="display" data-i18n="startTitle">选最短的<br>一条路。</h2>
+          <p data-i18n="startText">下载 Release、跑一个容器，或者从源码构建。<br>教程里写了第一次打开的五分钟和每天的使用顺序。</p>
+          <div class="start-links">
+            <a href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0" data-i18n="dl">Releases →</a>
+            <a href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" data-i18n="gd">教程 →</a>
+            <a href="https://github.com/cxy2696/stockdesk-akshare" target="_blank" rel="noopener" data-i18n="source">查看源码</a>
+          </div>
+        </div>
+        <div class="terminal reveal">
+          <div class="terminal-bar">
+            <span><i></i><i></i><i></i> INSTALL.TXT</span>
+            <button class="copy-button" id="copyCode" type="button" data-i18n="copy">复制</button>
+          </div>
+          <pre><code id="installCode"># A-share container
 docker run --rm -p 8765:8765 \
   -v stockdesk-data:/data \
   ghcr.io/cxy2696/stockdesk-akshare-a-share:latest
@@ -169,47 +537,170 @@ docker run --rm -p 8770:8770 \
 
 # From source
 cd stockdesk-akshare/desktop
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv &amp;&amp; source .venv/bin/activate
 pip install -r requirements.txt
-cd frontend && npm ci && npm run build
-cd .. && python main.py</code></pre>
+cd frontend &amp;&amp; npm ci &amp;&amp; npm run build
+cd .. &amp;&amp; python main.py</code></pre>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="closing">
-    <div class="eyebrow">STAY CURIOUS</div>
-    <h2 data-i18n="closeTitle">A tool should make you calmer,<br>not busier.</h2>
-    <p data-i18n="closeText">Quotes are for research. HMM and percolation are discipline and risk context, not tomorrow's answer.</p>
-    <div class="closing-links">
-      <a href="https://github.com/cxy2696/stockdesk-akshare">GitHub</a>
-      <a href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0">Release</a>
-      <a href="https://github.com/cxy2696/stockdesk-akshare/pkgs">Packages</a>
+  <!-- 09 — END -->
+  <section class="end-section section-dark" id="end" data-theme="dark">
+    <div class="end-bg" aria-hidden="true">
+      <span class="end-glow"></span>
+      <span class="end-vignette"></span>
+    </div>
+    <div class="section-wrap end-wrap">
+      <div class="section-rail reveal">
+        <span class="rail-no">08</span>
+        <span class="rail-label">END TITLE</span>
+        <span class="rail-line" aria-hidden="true"></span>
+        <span class="rail-note">STAY CURIOUS</span>
+      </div>
+
+      <div class="end-main">
+        <p class="eyebrow reveal">A TOOL SHOULD MAKE YOU CALMER</p>
+        <h2 class="display end-title reveal" data-i18n="closeTitle">工具应该让你<br class="mobile-break">更平静，<br>而不是更忙。</h2>
+        <p class="end-note reveal" data-i18n="closeText">行情只用于研究。<br>HMM 与渗流是纪律和风险背景，不是明天的答案。</p>
+        <div class="end-actions reveal">
+          <button class="watch-cta watch-cta-light" type="button" data-open-film data-time="0">
+            <span class="watch-disc" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M7 4.5 15 10l-8 5.5z" fill="currentColor"/></svg></span>
+            <span class="watch-copy"><b data-i18n="watchAgain">再看一次</b><small data-i18n="filmLength">43 秒</small></span>
+          </button>
+          <a class="button button-outline" href="https://github.com/cxy2696/stockdesk-akshare" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
+          <a class="button button-outline" href="https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0" data-i18n="release">Releases</a>
+        </div>
+      </div>
+
+      <footer class="site-footer">
+        <div class="footer-brand">
+          <span class="brand-mark" aria-hidden="true"><span>S</span></span>
+          <div><b>STOCKDESK</b><span>LOCAL-FIRST EQUITY DESK</span></div>
+        </div>
+        <div class="footer-credit">
+          <span data-i18n="musicLabel">背景音乐</span>
+          <b>Viacheslav Starostin</b>
+        </div>
+        <div class="footer-credit">
+          <span>FILM &amp; INTERFACE</span>
+          <b>StockDesk</b>
+        </div>
+        <div class="footer-links">
+          <a href="https://github.com/cxy2696/stockdesk-akshare" target="_blank" rel="noopener">GitHub ↗</a>
+          <a href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md" target="_blank" rel="noopener" data-i18n="guideShort">教程 ↗</a>
+          <span data-i18n="legal">MIT · 行情仅供研究，不构成投资建议。</span>
+        </div>
+      </footer>
+      <div class="footer-wordmark" aria-hidden="true">STOCKDESK</div>
     </div>
   </section>
 </main>
 
-<div class="mobile-menu" id="mobileMenu">
-  <a href="#film" data-i18n="navFilm">影片</a>
-  <a href="#desk" data-i18n="navDesk">界面</a>
-  <a href="#editions" data-i18n="navEditions">版本</a>
-  <a href="#start" data-i18n="navStart">开始</a>
-  <a href="https://github.com/cxy2696/stockdesk-akshare">GitHub ↗</a>
+<aside class="now-playing" id="nowPlaying" aria-hidden="true">
+  <button class="record-button" type="button" data-sound-toggle aria-label="Pause background music">
+    <span class="record" aria-hidden="true"><span></span></span>
+  </button>
+  <span class="now-copy">
+    <span data-i18n="nowPlaying">正在播放</span>
+    <b>Background Music — Viacheslav Starostin</b>
+  </span>
+  <span class="now-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+</aside>
+
+<!-- Cinema overlay -->
+<div class="cinema" id="cinema" aria-hidden="true" inert>
+  <div class="cinema-bg" aria-hidden="true">
+    <img src="./assets/film/models.webp" alt="">
+    <span class="cinema-bg-glow"></span>
+  </div>
+  <div class="cinema-inner" role="dialog" aria-modal="true" aria-labelledby="cinemaTitle">
+    <header class="cinema-header">
+      <div class="cinema-brand">
+        <span class="brand-mark" aria-hidden="true"><span>S</span></span>
+        <span>STOCKDESK<br><small>A QUIET DESK · FILM 01</small></span>
+      </div>
+      <div class="cinema-now">
+        <span>NOW SCREENING</span>
+        <b id="cinemaTitle">01 — THE HUB</b>
+      </div>
+      <div class="cinema-tools">
+        <button class="cinema-sound" type="button" data-sound-toggle aria-pressed="false">
+          <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span data-sound-label>SOUND OFF</span>
+        </button>
+        <button class="cinema-close" id="cinemaClose" type="button" aria-label="Close the film">
+          <span>CLOSE</span><em>ESC</em>
+          <svg viewBox="0 0 18 18" aria-hidden="true"><path d="m4 4 10 10M14 4 4 14" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="cinema-main">
+      <div class="cinema-screen" id="cinemaScreen">
+        <video id="filmVideo" poster="./assets/film/poster.jpg" preload="metadata" muted playsinline aria-label="StockDesk product film">
+          <source src="./assets/demo-film.webm" type="video/webm">
+        </video>
+        <span class="cinema-vignette" aria-hidden="true"></span>
+        <button class="cinema-big-play" id="cinemaBigPlay" type="button" aria-label="Play film">
+          <span class="big-play-ring" aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.2 19 12 8 18.8z" fill="currentColor"/></svg>
+        </button>
+        <div class="cinema-loader" id="cinemaLoader" aria-hidden="true"><span></span><small>LOADING FILM</small></div>
+        <div class="cinema-end-card" id="cinemaEndCard" aria-hidden="true">
+          <span>THE END · STOCKDESK</span>
+          <button type="button" id="cinemaReplay">↺ &nbsp;REPLAY THE FILM</button>
+        </div>
+        <div class="cinema-error" id="cinemaError" hidden>
+          <span>FILM UNAVAILABLE</span>
+          <p>This browser could not play the WebM film. Try the latest Chrome, Edge or Safari, or watch it from the repository.</p>
+        </div>
+        <span class="corner corner-tl" aria-hidden="true"></span>
+        <span class="corner corner-br" aria-hidden="true"></span>
+      </div>
+
+      <div class="cinema-controls">
+        <div class="seek-wrap">
+          <div class="seek-ticks" aria-hidden="true">
+            <i style="left:16.36%"></i><i style="left:35.05%"></i><i style="left:47.90%"></i><i style="left:61.92%"></i><i style="left:75.93%"></i>
+          </div>
+          <input id="seek" type="range" min="0" max="42.8" step="0.01" value="0" aria-label="Film progress" style="--seek:0%">
+        </div>
+        <div class="cinema-control-row">
+          <button class="ctl-play" id="cinemaPlay" type="button" aria-label="Play film">
+            <svg class="icon-play" viewBox="0 0 20 20" aria-hidden="true"><path d="M6.5 4 16 10l-9.5 6z" fill="currentColor"/></svg>
+            <svg class="icon-pause" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4h2.6v12H6zM11.4 4H14v12h-2.6z" fill="currentColor"/></svg>
+          </button>
+          <span class="timecode"><b id="filmTime">00:00</b> / <span id="filmDuration">00:43</span></span>
+          <span class="now-chapter"><i aria-hidden="true"></i><b id="filmChapterLabel">PROLOGUE</b></span>
+          <span class="cinema-spacer"></span>
+          <span class="cinema-hint">SPACE PLAY/PAUSE · ← → SEEK · ESC CLOSE</span>
+          <button class="ctl-icon" id="cinemaFullscreen" type="button" aria-label="Fullscreen">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3H3v4M13 3h4v4M17 13v4h-4M7 17H3v-4" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="cinema-chapters" id="cinemaChapters" role="group" aria-label="Film chapters">
+        <button type="button" data-time="7" class="is-active"><span>01</span><b data-i18n="chHub">The HUB</b><small>00:07</small></button>
+        <button type="button" data-time="15"><span>02</span><b data-i18n="chDaily">每日策略</b><small>00:15</small></button>
+        <button type="button" data-time="20.5"><span>03</span><b data-i18n="chPortfolio">持仓</b><small>00:20</small></button>
+        <button type="button" data-time="26.5"><span>04</span><b data-i18n="chModels">模型</b><small>00:26</small></button>
+        <button type="button" data-time="32.5"><span>05</span><b data-i18n="chUS">美股版</b><small>00:32</small></button>
+      </div>
+
+      <div class="cinema-foot">
+        <span>A STOCKDESK PRODUCT FILM · 2026</span>
+        <span>MUSIC — VIACHESLAV STAROSTIN</span>
+        <span>00:43 · 25 FPS · 1440 × 810</span>
+      </div>
+    </div>
+  </div>
 </div>
-<div class="guide-panel" id="guidePanel" hidden>
-  <div class="guide-head"><b data-i18n="guideTitle">怎么逛这个页面</b><button id="guideClose" aria-label="Close">×</button></div>
-  <ol>
-    <li data-i18n="guide1">向下滚动，影片会自动播放；也可以点中间的播放键。</li>
-    <li data-i18n="guide2">点影片下面的 01–05 章节，会跳到对应功能。</li>
-    <li data-i18n="guide3">在「三个问题」里切换标签，看同一张桌子的不同视角。</li>
-    <li data-i18n="guide4">右上角 EN / 中 随时切换语言。</li>
-  </ol>
-</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<footer>
-  <span>StockDesk · local-first equity desk</span>
-  <span id="localStats">LOCAL SESSION · --</span>
-  <span>Music: ViacheslavStarostin · MIT · not investment advice</span>
-</footer>
+<audio id="soundtrack" src="./assets/film-music.mp3" loop preload="metadata"></audio>
 <script src="./site.js"></script>
 </body>
 </html>
