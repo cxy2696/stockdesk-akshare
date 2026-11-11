@@ -34,7 +34,7 @@
 
 ### KDJ 极值预警
 
-任意页面右侧有一个固定的白色 **KDJ 预警** 按键；点击后从右侧打开独立面板，不占用量化模型页面。
+HUB 右侧「行业要闻」下方有一个白色 **KDJ预警** 按键，和其他右侧入口一致；点击进入独立页面，不再占用量化模型。
 
 - 先选半导体、通信设备或指数；共 2 个行业 + 6 个指数（含中证1000）
 - 两张图分别是 5 分钟与 30 分钟
@@ -172,7 +172,7 @@ For the first run, just do three things: set your initial assets, record one rea
 
 ### KDJ alerts
 
-Use the fixed white **KDJ** button on the right side of any page. It opens a dedicated drawer and does not occupy the Quant Models page.
+Use the white **KDJ** button under Industry News in the HUB right column. It opens a dedicated page and no longer occupies Quant Models.
 
 - Pick semiconductors, communications equipment or an index; two sectors + six indices, including CSI 1000
 - Two charts: 5-minute and 30-minute
