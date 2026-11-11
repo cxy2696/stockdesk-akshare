@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import advice, backtest, clock, daily, db, market, patterns as pattern_lib, portfolio, repo, screener, state, technical
+from . import advice, backtest, clock, daily, db, kdj, market, patterns as pattern_lib, portfolio, repo, screener, state, technical
 from .config import APP_VERSION, INDEXES
 
 router = APIRouter()
@@ -361,6 +361,11 @@ class AccountIn(BaseModel):
 @router.put("/api/portfolio/account")
 def put_account(body: AccountIn):
     return ok(repo.set_account(body.assets))
+
+
+@router.get("/api/market/kdj-alerts")
+def kdj_alerts():
+    return ok(kdj.snapshot())
 
 
 # ================================================================ screener
