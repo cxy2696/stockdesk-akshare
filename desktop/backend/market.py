@@ -117,7 +117,7 @@ def _money_cn(v) -> float | None:
 
 
 def _fund_flow() -> dict[str, dict]:
-    cached = db.cache_get("fund:individual", 180)
+    cached = db.cache_get("fund:individual", 60)
     if cached is not None:
         return cached
     out: dict[str, dict] = {}
