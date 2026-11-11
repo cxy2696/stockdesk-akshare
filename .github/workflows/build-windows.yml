@@ -34,6 +34,7 @@ jobs:
           cd desktop
           pyinstaller --noconfirm --clean --onefile --noconsole --name StockDesk `
             --add-data "frontend/dist;frontend_dist" `
+            --add-data "backend/data/all_symbols.json;backend/data" `
             --collect-submodules backend `
             --collect-submodules akshare `
             --collect-data akshare `

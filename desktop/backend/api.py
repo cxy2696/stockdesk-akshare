@@ -95,7 +95,8 @@ def spot(sort: str = "pct", limit: int = 30, page: int = 1):
     key = {"pct": "pct", "turnover": "turnover", "amount": "amount", "inflow": "main_inflow"}.get(sort, "pct")
     rows = [r for r in rows if r.get(key) is not None]
     rows.sort(key=lambda r: r.get(key) or 0, reverse=True)
-    total = len(rows)
+    # Count all listed companies, not only the rows with a live quote.
+    total = int(s.get("total") or len(rows))
     start = max(0, (page - 1) * limit)
     return ok({"rows": rows[start:start + limit], "total": total, "ts": s.get("ts"), "date": s.get("date")})
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import re
 import time
+from pathlib import Path
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -99,16 +100,78 @@ def _row_from_spot(f: dict) -> dict:
     }
 
 
-def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
-    """Full A-share snapshot. Returns {"ts","date","total","rows"}."""
-    cached = db.cache_get("spot:v3", ttl)
+def _akshare_spot() -> dict:
+    """Full A-share universe fallback: 5,000+ listed symbols plus Sina quotes."""
+    cached = db.cache_get("spot:ak", 600)
     if cached:
         return cached
+    try:
+        import akshare as ak
+        universe = []
+        try:
+            import json as _json
+            symbol_file = Path(__file__).resolve().parent / "data" / "all_symbols.json"
+            universe = [(str(x["code"]).zfill(6), str(x["name"])) for x in _json.loads(symbol_file.read_text("utf-8"))]
+        except Exception:
+            try:
+                names = ak.stock_info_a_code_name()
+                universe = [(str(r["code"]).zfill(6), str(r["name"])) for _, r in names.iterrows()]
+            except Exception:
+                universe = []
+        quotes = {}
+        try:
+            spot = ak.stock_zh_a_spot()
+            for _, r in spot.iterrows():
+                raw = str(r.get("代码") or "")
+                code = raw[-6:]
+                if not code.isdigit():
+                    continue
+                quotes[code] = {
+                    "price": _num(r.get("最新价")), "pct": _num(r.get("涨跌幅")),
+                    "chg": _num(r.get("涨跌额")), "open": _num(r.get("今开")),
+                    "high": _num(r.get("最高")), "low": _num(r.get("最低")),
+                    "prev_close": _num(r.get("昨收")), "volume": _num(r.get("成交量")),
+                    "amount": _num(r.get("成交额")), "turnover": None,
+                }
+        except Exception:
+            quotes = {}
+        rows = []
+        for code, name in universe:
+            q = quotes.get(code, {})
+            rows.append({"code": code, "name": name, **q, "pe": None, "pb": None,
+                         "mcap": None, "fcap": None, "main_inflow": None,
+                         "volume_ratio": None, "market": market_of(code)})
+        if not rows:
+            for code, q in quotes.items():
+                if q.get("price"):
+                    rows.append({"code": code, "name": "", **q, "pe": None, "pb": None,
+                                 "mcap": None, "fcap": None, "main_inflow": None,
+                                 "volume_ratio": None, "market": market_of(code)})
+        out = {"ts": time.time(), "date": time.strftime("%Y-%m-%d"), "total": len(rows), "rows": rows, "source": "akshare-sina"}
+        if rows:
+            db.cache_set("spot:ak", out)
+            db.cache_set("spot:v3", out)
+        return out
+    except Exception:
+        return {"ts": time.time(), "date": time.strftime("%Y-%m-%d"), "total": 0, "rows": []}
+
+
+def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
+    """Full A-share snapshot, including all ~5,580 listed names."""
+    cached = db.cache_get("spot:v3", ttl)
+    if cached and cached.get("total", 0) >= 5500:
+        return cached
+    # The Eastmoney clist endpoint omits some Beijing listings and is often
+    # rate-limited; use the complete akshare/Sina universe as the primary list.
+    return _akshare_spot()
     base = (
         f"{EM_LIST}?po=1&np=1&fltt=2&invt=2&fid=f3&fs={urllib.parse.quote(FS_A)}"
         f"&fields={SPOT_FIELDS}"
     )
-    first = _http_json(f"{base}&pn=1&pz=100")
+    try:
+        first = _http_json(f"{base}&pn=1&pz=100")
+    except Exception:
+        return _akshare_spot()
     data = (first or {}).get("data") or {}
     total = int(data.get("total") or 0)
     rows = [_row_from_spot(f) for f in (data.get("diff") or [])]
@@ -133,7 +196,13 @@ def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
     }
     if out["rows"]:
         db.cache_set("spot:v3", out)
-    return out
+    # Eastmoney's list omits some Beijing listings; the akshare/Sina universe
+    # includes all ~5,580 A-share names. Prefer the complete universe.
+    if len(out["rows"]) < 5500:
+        ak_rows = _akshare_spot()
+        if ak_rows.get("total", 0) > len(out["rows"]):
+            return ak_rows
+    return out if out["rows"] else _akshare_spot()
 
 
 def _sina_quote(code: str, prefix: str | None = None) -> dict | None:

@@ -21,3 +21,6 @@ desktop/frontend/dist/
 ios/build/
 ios/build-device/
 ios/StockDesk.xcodeproj/
+
+!desktop/backend/data/
+!desktop/backend/data/all_symbols.json

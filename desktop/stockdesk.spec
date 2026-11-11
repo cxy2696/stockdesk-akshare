@@ -9,6 +9,7 @@ ROOT = os.path.abspath(os.getcwd())
 
 datas = [
     (os.path.join(ROOT, "frontend", "dist"), "frontend_dist"),
+    (os.path.join(ROOT, "backend", "data"), "backend/data"),
 ] + collect_data_files("akshare")
 hiddenimports = collect_submodules("uvicorn") + collect_submodules("akshare") + ["webview", "webview.platforms.cocoa"]
 
