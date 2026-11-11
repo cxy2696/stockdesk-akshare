@@ -130,6 +130,12 @@ export default function KdjPanel() {
             <ChartCard title="5 分钟" period="5" target={target} />
             <ChartCard title="30 分钟" period="30" target={target} />
           </div>
+          <div className="kdj-advice">
+            <b>参考操作建议 <em>非交易指令</em></b>
+            <div><span>J ≥ 118</span> 超买区：不追高，已有仓位看放量滞涨；等 J 回落或价格跌破短均线再判断。</div>
+            <div><span>J ≤ -14</span> 超卖区：不恐慌抄底，等 J 拐头、价格止跌或出现放量承接。</div>
+            <div><span>5m + 30m</span> 同向先后触发：参考权重更高；单周期触发只作为盘中提示。</div>
+          </div>
           <div className="muted small kdj-note">
             中枢为最近摆动高低点重叠区的近似值，用于看价格重心，不是严格缠论中枢。5 分钟偏即时，30 分钟偏质量；同向先后触发时参考权重更高。阈值按常规方向：上轨超买、下轨超卖。
           </div>
@@ -153,6 +159,10 @@ export default function KdjPanel() {
         .kdj-chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:10px;margin-bottom:2px}
         .kdj-chart-head .muted{font-size:9px}
         .kdj-empty{padding:30px;text-align:center;color:var(--text-sub);font-size:11px}
+        .kdj-advice{margin-top:12px;border:1px solid var(--border-soft);padding:9px 11px;background:rgba(255,255,255,.018);font-size:10.5px;line-height:1.8;color:var(--text-sub)}
+        .kdj-advice>b{display:block;color:var(--text);font-size:11px;margin-bottom:4px}
+        .kdj-advice>b em{font-style:normal;color:var(--text-sub);font-size:8px;margin-left:6px;font-weight:400}
+        .kdj-advice span{font-family:'SF Mono',monospace;font-size:9px;color:var(--accent)}
         .kdj-note{margin-top:8px;line-height:1.7}
         @media(max-width:760px){.kdj-charts{grid-template-columns:1fr}}
       `}</style>
