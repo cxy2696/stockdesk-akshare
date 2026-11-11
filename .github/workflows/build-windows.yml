@@ -40,7 +40,7 @@ jobs:
         shell: pwsh
         run: |
           $env:STOCKDESK_DATA = "$pwd\testdata"
-          $p = Start-Process -FilePath ".\dist\StockDesk.exe" -ArgumentList "--headless","--port","8899" -PassThru
+          $p = Start-Process -FilePath ".\desktop\dist\StockDesk.exe" -ArgumentList "--headless","--port","8899" -PassThru
           $ok = $false
           for ($i=0; $i -lt 30; $i++) {
             Start-Sleep -Seconds 2
