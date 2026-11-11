@@ -17,7 +17,7 @@ import {
   ArrowLeftOutlined,
   ShareAltOutlined,
 } from '@ant-design/icons'
-import { Tooltip } from 'antd'
+import { Drawer, Tooltip } from 'antd'
 import StockSearch from './components/StockSearch'
 import { api } from './api'
 import { fmt, trendClass } from './utils'
@@ -42,6 +42,7 @@ import HubMap from './pages/HubMap'
 import Regions from './pages/Regions'
 import IndustryNews from './pages/IndustryNews'
 import Models from './pages/Models'
+import KdjPanel from './components/KdjPanel'
 
 const EN_NAV: Record<string, { label: string; title: string; sub: string }> = {
   '/': { label: 'Overview', title: 'Investment Overview', sub: 'Assets, holdings and today\'s market' },
@@ -70,6 +71,7 @@ export default function App() {
   const [overview, setOverview] = useState<any>(null)
   const [updated, setUpdated] = useState('')
   const [spin, setSpin] = useState(false)
+  const [kdjOpen, setKdjOpen] = useState(false)
 
   const load = async () => {
     try {
@@ -223,6 +225,22 @@ export default function App() {
           </div>
         </main>
       </div>
+      <button className="kdj-launcher" type="button" onClick={() => setKdjOpen(true)} aria-label="打开 KDJ 极值预警">
+        <span className="kdj-launcher-dot" aria-hidden="true" />
+        <b>KDJ</b>
+        <em>预警</em>
+      </button>
+      <Drawer
+        title={<span className="kdj-drawer-title">KDJ 极值预警 <small>5M / 30M · 半导体 · 通信设备 · 指数</small></span>}
+        placement="right"
+        width={Math.min(1020, typeof window !== 'undefined' ? window.innerWidth - 24 : 1020)}
+        open={kdjOpen}
+        onClose={() => setKdjOpen(false)}
+        className="kdj-drawer"
+        destroyOnClose
+      >
+        <KdjPanel />
+      </Drawer>
     </div>
   )
 }
