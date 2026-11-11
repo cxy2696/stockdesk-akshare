@@ -100,6 +100,50 @@ def _row_from_spot(f: dict) -> dict:
     }
 
 
+def _money_cn(v) -> float | None:
+    if v is None:
+        return None
+    text = str(v).strip().replace(",", "")
+    try:
+        if text.endswith("亿"):
+            return float(text[:-1]) * 1e8
+        if text.endswith("万"):
+            return float(text[:-1]) * 1e4
+        if text.endswith("元"):
+            return float(text[:-1])
+        return float(text)
+    except Exception:
+        return None
+
+
+def _fund_flow() -> dict[str, dict]:
+    cached = db.cache_get("fund:individual", 180)
+    if cached is not None:
+        return cached
+    out: dict[str, dict] = {}
+    try:
+        import akshare as ak
+        df = ak.stock_fund_flow_individual(symbol="即时")
+        for _, r in df.iterrows():
+            code = str(r.get("股票代码") or "").zfill(6)
+            if not code.isdigit():
+                continue
+            out[code] = {
+                "main_inflow": _money_cn(r.get("净额")),
+                "inflow": _money_cn(r.get("流入资金")),
+                "outflow": _money_cn(r.get("流出资金")),
+            }
+    except Exception as e:
+        try:
+            db.cache_set("fund:error", {"error": repr(e)[:900], "ts": time.time()})
+            print("fund-flow fallback failed:", repr(e), flush=True)
+        except Exception:
+            pass
+    if out:
+        db.cache_set("fund:individual", out)
+    return out
+
+
 def _akshare_spot() -> dict:
     """Full A-share universe fallback: 5,000+ listed symbols plus Sina quotes."""
     cached = db.cache_get("spot:ak", 600)
@@ -118,6 +162,7 @@ def _akshare_spot() -> dict:
                 universe = [(str(r["code"]).zfill(6), str(r["name"])) for _, r in names.iterrows()]
             except Exception:
                 universe = []
+        flow = _fund_flow()
         quotes = {}
         try:
             spot = ak.stock_zh_a_spot()
@@ -138,8 +183,10 @@ def _akshare_spot() -> dict:
         rows = []
         for code, name in universe:
             q = quotes.get(code, {})
+            f = flow.get(code, {})
             rows.append({"code": code, "name": name, **q, "pe": None, "pb": None,
-                         "mcap": None, "fcap": None, "main_inflow": None,
+                         "mcap": None, "fcap": None, "main_inflow": f.get("main_inflow"),
+                         "inflow": f.get("inflow"), "outflow": f.get("outflow"),
                          "volume_ratio": None, "market": market_of(code)})
         if not rows:
             for code, q in quotes.items():

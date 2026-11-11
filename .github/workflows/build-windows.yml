@@ -38,6 +38,9 @@ jobs:
             --collect-submodules backend `
             --collect-submodules akshare `
             --collect-data akshare `
+            --collect-all py_mini_racer `
+            --collect-all lxml `
+            --collect-all html5lib `
             --collect-all webview `
             --collect-all pythonnet `
             --collect-all clr_loader `

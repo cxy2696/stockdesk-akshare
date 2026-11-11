@@ -10,8 +10,8 @@ ROOT = os.path.abspath(os.getcwd())
 datas = [
     (os.path.join(ROOT, "frontend", "dist"), "frontend_dist"),
     (os.path.join(ROOT, "backend", "data"), "backend/data"),
-] + collect_data_files("akshare")
-hiddenimports = collect_submodules("uvicorn") + collect_submodules("akshare") + ["webview", "webview.platforms.cocoa"]
+] + collect_data_files("akshare") + collect_data_files("py_mini_racer") + collect_data_files("lxml") + collect_data_files("html5lib")
+hiddenimports = collect_submodules("uvicorn") + collect_submodules("akshare") + collect_submodules("py_mini_racer") + collect_submodules("lxml") + collect_submodules("bs4") + collect_submodules("html5lib") + ["webview", "webview.platforms.cocoa"]
 
 a = Analysis(
     ["main.py"],
