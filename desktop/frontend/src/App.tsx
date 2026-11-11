@@ -17,7 +17,7 @@ import {
   ArrowLeftOutlined,
   ShareAltOutlined,
 } from '@ant-design/icons'
-import { Drawer, Tooltip } from 'antd'
+import { Tooltip } from 'antd'
 import StockSearch from './components/StockSearch'
 import { api } from './api'
 import { fmt, trendClass } from './utils'
@@ -42,7 +42,7 @@ import HubMap from './pages/HubMap'
 import Regions from './pages/Regions'
 import IndustryNews from './pages/IndustryNews'
 import Models from './pages/Models'
-import KdjPanel from './components/KdjPanel'
+import Kdj from './pages/Kdj'
 
 const EN_NAV: Record<string, { label: string; title: string; sub: string }> = {
   '/': { label: 'Overview', title: 'Investment Overview', sub: 'Assets, holdings and today\'s market' },
@@ -71,7 +71,6 @@ export default function App() {
   const [overview, setOverview] = useState<any>(null)
   const [updated, setUpdated] = useState('')
   const [spin, setSpin] = useState(false)
-  const [kdjOpen, setKdjOpen] = useState(false)
 
   const load = async () => {
     try {
@@ -99,6 +98,7 @@ export default function App() {
       if (loc.pathname === '/regions' || loc.pathname === '/hub-map') return { title: 'Regions', sub: 'China listed-company map · analysis' }
       if (loc.pathname === '/index-analysis') return { title: 'Index Analysis', sub: 'A-share and global indices' }
       if (loc.pathname === '/models') return { title: 'Quant Models', sub: 'HMM · percolation · position plans' }
+      if (loc.pathname === '/kdj') return { title: 'KDJ Alerts', sub: '5m / 30m · J extremes · central zone' }
       if (loc.pathname === '/industry-news') return { title: 'Industry News', sub: 'Sector headlines and key names' }
       return EN_NAV[loc.pathname] ?? { title: 'StockDesk', sub: '' }
     }
@@ -106,6 +106,7 @@ export default function App() {
     if (loc.pathname === '/settings') return { title: '设置', sub: '账户资产 · 数据与缓存' }
     if (loc.pathname === '/regions' || loc.pathname === '/hub-map') return { title: '地域', sub: '中国上市公司分布 · 资产分析 · 投资建议 · 指数分析' }
     if (loc.pathname === '/index-analysis') return { title: '指数分析', sub: 'A股主要宽基 · 海外指数 · 建议结论' }
+    if (loc.pathname === '/kdj') return { title: 'KDJ 预警', sub: '5m / 30m · 极值区 · 近似中枢' }
     return NAV.find((n) => n.key === loc.pathname) ?? { title: 'StockDesk', sub: '' }
   }, [loc.pathname, lang])
 
@@ -220,27 +221,12 @@ export default function App() {
               <Route path="/regions" element={<HubMap />} />
               <Route path="/industry-news" element={<IndustryNews />} />
               <Route path="/models" element={<Models />} />
+              <Route path="/kdj" element={<Kdj />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
         </main>
       </div>
-      <button className="kdj-launcher" type="button" onClick={() => setKdjOpen(true)} aria-label="打开 KDJ 极值预警">
-        <span className="kdj-launcher-dot" aria-hidden="true" />
-        <b>KDJ</b>
-        <em>预警</em>
-      </button>
-      <Drawer
-        title={<span className="kdj-drawer-title">KDJ 极值预警 <small>5M / 30M · 半导体 · 通信设备 · 指数</small></span>}
-        placement="right"
-        width={Math.min(1020, typeof window !== 'undefined' ? window.innerWidth - 24 : 1020)}
-        open={kdjOpen}
-        onClose={() => setKdjOpen(false)}
-        className="kdj-drawer"
-        destroyOnClose
-      >
-        <KdjPanel />
-      </Drawer>
     </div>
   )
 }
