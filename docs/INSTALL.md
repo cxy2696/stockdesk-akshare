@@ -12,7 +12,7 @@
 
 | 平台 | 文件 |
 | --- | --- |
-| macOS | `StockDesk-macOS-1.10.1.zip` |
+| macOS | `StockDesk-macOS-1.10.2.zip` |
 | Windows | `StockDesk.exe` |
 | iOS | `StockDesk-iOS-3.6-unsigned.ipa` |
 
@@ -120,7 +120,7 @@ The [site download section](https://cxy2696.github.io/stockdesk-akshare/#downloa
 
 | Platform | File |
 | --- | --- |
-| macOS | `StockDesk-macOS-1.10.1.zip` |
+| macOS | `StockDesk-macOS-1.10.2.zip` |
 | Windows | `StockDesk.exe` |
 | iOS | `StockDesk-iOS-3.6-unsigned.ipa` |
 
