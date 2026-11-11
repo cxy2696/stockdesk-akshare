@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, Kpi, StatLine } from '../components/ui'
 import { api } from '../api'
-import KdjPanel from '../components/KdjPanel'
 import { fmt, trendClass } from '../utils'
 
 const STATE_COLORS = ['#35D0A5', '#F2C94C', '#FF6B6B']
@@ -47,7 +46,6 @@ export default function Models() {
 
   return (
     <div>
-      <KdjPanel />
       <div className="muted small" style={{ marginBottom: 12 }}>
         隐马尔可夫模型识别市场状态；渗流模型衡量上涨广度是否形成连通扩散。模型只描述当前结构，不预测点位。
       </div>
