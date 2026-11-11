@@ -95,7 +95,7 @@
       modelTitle: "模型描述现在，<br>不预测明天。",
       modelText: "五个 A 股指数的三状态 HMM 给出总仓位；渗流寻找最大 4 邻接连通簇，区分“普涨扩散”和“少数股票在动”；个股建议跟随你的真实持仓。",
       editionsTitle: "选一个入口。",
-      editionsText: "macOS、Windows、iOS、美股版与容器，共用一套数据习惯。",
+      editionsText: "macOS、Windows、iOS、美股版与容器，<br>共用一套数据习惯。",
       edMac: "原生窗口，双击即用。",
       edWin: "单文件 exe，WebView2。",
       edIOS: "装在口袋里的 HUB。",
@@ -197,7 +197,7 @@
       modelTitle: "Models describe.<br>They do not predict.",
       modelText: "A 3-state HMM on five A-share indices suggests total exposure. Percolation finds the largest four-neighbour cluster, separating broad diffusion from a few moving names. Per-stock guidance follows your actual holdings.",
       editionsTitle: "Pick an edition.",
-      editionsText: "macOS, Windows, iOS, the US edition and containers, with the same data habits.",
+      editionsText: "macOS, Windows, iOS, the US edition and containers,<br>with the same data habits.",
       edMac: "Native window. Double-click.",
       edWin: "One-file exe, WebView2.",
       edIOS: "The HUB in your pocket.",
@@ -1008,6 +1008,7 @@
      ============================================================ */
 
   const themeSections = $$("main > section[data-theme]");
+  const navLinks = $$(".primary-nav a[href^='#']");
 
   function revealPassedContent() {
     const trigger = window.innerHeight - 24;
@@ -1031,6 +1032,20 @@
       });
       header.dataset.theme = current;
     }
+
+    let activeLink = null;
+    navLinks.forEach((link) => {
+      const target = document.querySelector(link.getAttribute("href"));
+      if (!target) return;
+      if (target.getBoundingClientRect().top <= window.innerHeight * 0.36) activeLink = link;
+    });
+    navLinks.forEach((link) => {
+      const active = link === activeLink;
+      link.classList.toggle("is-active", active);
+      if (active) link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
+    });
+
     revealPassedContent();
   }
 
