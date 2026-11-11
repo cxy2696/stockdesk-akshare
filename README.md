@@ -31,6 +31,8 @@ An independent project site with a 43-second product film, five screening chapte
 
 StockDesk 是一个本地优先、单用户的股票投资工作台。它把持仓、行情、复盘、策略、HMM/渗流模型和地域/行业数据放在一个 HUD 风格的界面里，账户与行情缓存只保存在本机。
 
+最新版本 **1.10.0** 新增 KDJ 极值预警：半导体、通信设备与五个 A 股指数，5 分钟 / 30 分钟双周期，绘制近似中枢。
+
 本仓库是 **stockdesk-akshare** 项目文档与源码整理版，包含：
 
 - **macOS 原生 App**：pywebview + WebKit 独立窗口
@@ -54,6 +56,7 @@ StockDesk 是一个本地优先、单用户的股票投资工作台。它把持�
 | 行业要闻 | 行业新闻与关键标的 |
 | 图片分享 | 进入子页面后分享当前页面长图 |
 | 缩放 | 100% / 120% / 150%，文字自动换行、增行 |
+| KDJ 预警 | 半导体 / 通信设备 / 指数，5m + 30m 中枢与 J 极值 |
 
 ### 快速开始
 
@@ -283,7 +286,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 
 ### Versions
 
-- macOS: 1.9.0
+- macOS: 1.10.0
 - iOS: 3.6 (27)
 - US: 1.0.0
 
