@@ -32,6 +32,10 @@ python run.py
 
 行情来自东方财富公开接口，只用于研究，不构成投资建议。
 
+### 版本
+
+美股版 **1.0.0**。桌面端下载：[项目展示页](https://cxy2696.github.io/stockdesk-akshare/#download)。
+
 ## English
 
 This is a small US equity dashboard you can run on your own machine. It does not need the Mac backend and does not touch the A-share app's data — it is simply a local web app.
@@ -59,3 +63,7 @@ python run.py
 Open <http://127.0.0.1:8770>.
 
 Quotes come from Eastmoney's public endpoints. They are for research only, not investment advice.
+
+### Version
+
+US edition **1.0.0**. Desktop downloads: [project site](https://cxy2696.github.io/stockdesk-akshare/#download).
