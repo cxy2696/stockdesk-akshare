@@ -1,13 +1,25 @@
-__pycache__/
-*.pyc
-.venv/
-node_modules/
-frontend/dist/
-build/
-dist/
-*.app/
-*.exe
-*.ipa
+# local data and caches
 data/
 *.db
+*.db-journal
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+# build output
+dist/
+build/
+*.spec
+!desktop/stockdesk.spec
+desktop/frontend/dist/
+release-assets*/
+
+# OS / editor
 .DS_Store
+.idea/
+.vscode/
+
+# secrets
+*.pem
+*.p12
+*.mobileprovision
