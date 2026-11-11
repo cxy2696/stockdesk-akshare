@@ -19,7 +19,7 @@
       navStart: "开始",
       heroTitle: "一张安静的<br>桌子，<br>看完整市场。",
       heroAlt: "One quiet desk for the whole market.",
-      heroText: "StockDesk 把市场、持仓和模型放在一张安静的屏幕上。它跑在你自己的电脑里，账户数据留在本地，帮你在交易前回答三个问题。",
+      heroText: "StockDesk 把市场、持仓和模型放在一张安静的屏幕上。它跑在你自己的电脑里，账户数据只留在本机——没有账号，也没有云端同步。",
       download: "下载",
       source: "查看源码",
       guide: "阅读教程 →",
@@ -31,7 +31,7 @@
       withSound: "建议开启声音",
       fiveChapters: "五幕 · 一张桌子",
       floatA: "本地优先",
-      floatB: "账户数据不上传",
+      floatB: "无账号 · 无云端同步",
       scrollHint: "向下滚动，先看影片",
       musicLabel: "背景音乐",
       nowPlaying: "正在播放",
@@ -53,7 +53,7 @@
       tabModels: "模型怎么说？",
       factHub: "HUB 入口",
       factIndices: "A 股核心指数",
-      factCloud: "云端账户",
+      factLocal: "本地运行",
       filmTitle: "看这张桌子<br class=\"mobile-break\">怎么动。",
       filmText: "一段没有摆拍的短演示：HUB、每日策略、持仓和模型。",
       chHub: "HUB",
@@ -111,7 +111,7 @@
       closeTitle: "工具应该让你<br class=\"mobile-break\">更平静，<br>而不是更忙。",
       closeText: "行情只用于研究。<br>HMM 与渗流是纪律和风险背景，不是明天的答案。",
       legal: "MIT · 行情仅供研究，不构成投资建议。",
-      mobileFoot: "本地优先 · 账户数据留在本机<br>由 StockDesk 与一次安静的坚持构成。"
+      mobileFoot: "本地优先 · 无账号 · 无云端同步<br>由 StockDesk 与一次安静的坚持构成。"
     },
     en: {
       navTag: "personal equity desk",
@@ -121,7 +121,7 @@
       navStart: "Start",
       heroTitle: "One quiet desk<br>for the whole market.",
       heroAlt: "一张安静的桌子，看完整市场。",
-      heroText: "StockDesk puts the market, your positions and the models on one calm screen. It runs on your machine, keeps your account local, and helps you answer three questions before you trade.",
+      heroText: "StockDesk puts the market, your positions and the models on one calm screen. It runs on your machine — no account, no cloud sync — and keeps your data local.",
       download: "Download",
       source: "View source",
       guide: "Read the guide →",
@@ -133,7 +133,7 @@
       withSound: "with sound",
       fiveChapters: "FIVE CHAPTERS · ONE DESK",
       floatA: "LOCAL-FIRST",
-      floatB: "account data stays here",
+      floatB: "no account · no cloud sync",
       scrollHint: "Scroll to start with the film",
       musicLabel: "Background music",
       nowPlaying: "NOW PLAYING",
@@ -155,7 +155,7 @@
       tabModels: "What do the models say?",
       factHub: "HUB entries",
       factIndices: "A-share indices",
-      factCloud: "cloud account",
+      factLocal: "local by design",
       filmTitle: "Watch the desk<br class=\"mobile-break\"> move.",
       filmText: "A short, unedited walk through the HUB, the daily plan, the portfolio and the models.",
       chHub: "The HUB",
@@ -213,7 +213,7 @@
       closeTitle: "A tool should make you<br>calmer, not busier.",
       closeText: "Quotes are for research.<br>HMM and percolation are discipline and risk context, not tomorrow’s answer.",
       legal: "MIT · market data for research only, not investment advice.",
-      mobileFoot: "LOCAL-FIRST · account data stays on your machine<br>Built by StockDesk, with a little quiet stubbornness."
+      mobileFoot: "LOCAL-FIRST · no account · no cloud sync<br>Built by StockDesk, with a little quiet stubbornness."
     }
   };
 
