@@ -154,6 +154,7 @@ enum PatternEngine {
         var buy = [Int](repeating: 0, count: closes.count)
         var sell = [Int](repeating: 0, count: closes.count)
         var bc = 0, sc = 0
+        guard closes.count >= 5 else { return (buy, sell) }
         for i in 4..<closes.count {
             if closes[i] < closes[i - 4] { bc += 1; sc = 0 }
             else if closes[i] > closes[i - 4] { sc += 1; bc = 0 }
