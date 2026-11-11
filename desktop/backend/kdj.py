@@ -86,14 +86,14 @@ def _one(t: dict) -> dict:
     if m5:
         k5 = _kdj(m5)
         result.update(j5=k5["j"], series5=k5["series"], zone5=_zone(m5),
-                      alert5=("超买" if k5["j"] is not None and k5["j"] > UPPER else
-                              "超卖" if k5["j"] is not None and k5["j"] < LOWER else "正常"),
+                      alert5=("超买" if k5["j"] is not None and k5["j"] >= UPPER else
+                              "超卖" if k5["j"] is not None and k5["j"] <= LOWER else "正常"),
                       price=m5[-1].get("close"), pct=m5[-1].get("pct"))
     if m30:
         k30 = _kdj(m30)
         result.update(j30=k30["j"], series30=k30["series"], zone30=_zone(m30),
-                      alert30=("超买" if k30["j"] is not None and k30["j"] > UPPER else
-                               "超卖" if k30["j"] is not None and k30["j"] < LOWER else "正常"),
+                      alert30=("超买" if k30["j"] is not None and k30["j"] >= UPPER else
+                               "超卖" if k30["j"] is not None and k30["j"] <= LOWER else "正常"),
                       price=result["price"] or m30[-1].get("close"), pct=result["pct"] if result["pct"] is not None else m30[-1].get("pct"))
     result["alert"] = any(x in ("超买", "超卖") for x in (result["alert5"], result["alert30"]))
     result["direction"] = "超买" if "超买" in (result["alert5"], result["alert30"]) else "超卖" if "超卖" in (result["alert5"], result["alert30"]) else "正常"
