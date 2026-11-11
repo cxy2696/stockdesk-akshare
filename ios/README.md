@@ -32,7 +32,7 @@ SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切
 ## 版本
 
 - iOS：3.6 (27)
-- 下载：[StockDesk-iOS-3.6-unsigned.ipa](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.1/StockDesk-iOS-3.6-unsigned.ipa)
+- 下载：[StockDesk-iOS-3.6-unsigned.ipa](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk-iOS-3.6-unsigned.ipa)
 - 桌面端下载：[项目展示页](https://cxy2696.github.io/stockdesk-akshare/#download)
 
 ## 交付物
@@ -178,5 +178,5 @@ The unsigned IPA can be re-signed with Sideloadly, AltStore or Xcode. A free App
 
 ### Version
 
-iOS **3.6 (27)** · [Download the unsigned IPA](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.1/StockDesk-iOS-3.6-unsigned.ipa) · [All downloads](https://cxy2696.github.io/stockdesk-akshare/#download)
+iOS **3.6 (27)** · [Download the unsigned IPA](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk-iOS-3.6-unsigned.ipa) · [All downloads](https://cxy2696.github.io/stockdesk-akshare/#download)
 
