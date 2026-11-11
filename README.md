@@ -141,7 +141,7 @@ stockdesk-akshare/
 ### 版本
 
 - macOS：1.10.0
-- iOS：3.6 (27)
+- iOS：3.7 (28)
 - US：1.0.0
 
 ### 免责声明
@@ -273,7 +273,7 @@ See [desktop/README.md](desktop/README.md) for the full HUB guide, screenshots, 
 - **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.0
 - **macOS**: `StockDesk-macOS-1.10.0.zip`
 - **Windows**: `StockDesk.exe`
-- **iOS**: `StockDesk-iOS-3.6-unsigned.ipa`
+- **iOS**: `StockDesk-iOS-3.7-unsigned.ipa`
 - **A-share container**: `ghcr.io/cxy2696/stockdesk-akshare-a-share:latest`
 - **US container**: `ghcr.io/cxy2696/stockdesk-akshare-us:latest`
 
@@ -288,7 +288,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 ### Versions
 
 - macOS: 1.10.0
-- iOS: 3.6 (27)
+- iOS: 3.7 (28)
 - US: 1.0.0
 
 ### Disclaimer

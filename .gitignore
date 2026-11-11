@@ -16,3 +16,8 @@ data/
 node_modules/
 *.tsbuildinfo
 desktop/frontend/dist/
+
+# iOS generated build artifacts
+ios/build/
+ios/build-device/
+ios/StockDesk.xcodeproj/

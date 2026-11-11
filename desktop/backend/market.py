@@ -136,6 +136,61 @@ def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
     return out
 
 
+def _sina_quote(code: str, prefix: str | None = None) -> dict | None:
+    """Fallback quote when the Eastmoney push2 endpoint is rate-limited."""
+    sec = secid(code)
+    prefix = prefix or ("sh" if sec.startswith("1.") else "sz")
+    if prefix == "auto" and code.startswith(("4", "8", "92")):
+        prefix = "bj"
+    symbol = f"{prefix}{code}"
+    try:
+        req = urllib.request.Request(
+            f"https://hq.sinajs.cn/list={symbol}",
+            headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"},
+        )
+        text = urllib.request.urlopen(req, timeout=8).read().decode("gbk", "ignore")
+        payload = text.split('="', 1)[1].split('";', 1)[0] if '="' in text else ""
+        p = payload.split(",")
+        if len(p) < 10 or not p[0]:
+            return None
+        price = _num(p[3])
+        prev = _num(p[2])
+        if not price or not prev:
+            return None
+        return {
+            "code": code, "name": p[0], "price": price, "high": _num(p[4]), "low": _num(p[5]),
+            "open": _num(p[1]), "volume": _num(p[8]), "amount": _num(p[9]),
+            "prev_close": prev, "pct": round((price / prev - 1) * 100, 2),
+            "chg": round(price - prev, 3), "turnover": None, "pe": None, "pb": None,
+            "mcap": None, "fcap": None, "volume_ratio": None, "market": market_of(code),
+            "ts": time.time(), "source": "sina",
+        }
+    except Exception:
+        return _sina_quote(code)
+
+
+def _suggest(keyword: str, limit: int) -> list[dict]:
+    """Direct Eastmoney suggest API, used when the full spot list is unavailable."""
+    try:
+        q = urllib.parse.quote(keyword)
+        url = ("https://searchapi.eastmoney.com/api/suggest/get?"
+               f"input={q}&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count={max(5, limit)}")
+        d = _http_json(url, timeout=6)
+        rows = (((d or {}).get("QuotationCodeTable") or {}).get("Data") or [])
+        out = []
+        for r in rows:
+            code = str(r.get("Code") or "")
+            name = r.get("Name") or ""
+            if not code or not name:
+                continue
+            out.append({"code": code, "name": name, "price": None, "pct": None,
+                        "market": r.get("SecurityTypeName") or market_of(code),
+                        "pe": None, "pb": None, "mcap": None, "quote_id": r.get("QuoteID")})
+        return out[:limit]
+    except Exception:
+        return []
+
+
 def quote(code: str) -> dict | None:
     key = f"quote:{code}"
     cached = db.cache_get(key, QUOTE_TTL)
@@ -147,7 +202,7 @@ def quote(code: str) -> dict | None:
         )
         x = (d or {}).get("data")
         if not x:
-            return None
+            return _sina_quote(code)
         out = {
             "code": str(x.get("f57") or code),
             "name": x.get("f58") or "",
@@ -172,7 +227,7 @@ def quote(code: str) -> dict | None:
         db.cache_set(key, out)
         return out
     except Exception:
-        return None
+        return _sina_quote(code)
 
 
 def quotes(codes: list[str]) -> dict[str, dict]:
@@ -196,6 +251,43 @@ def quotes(codes: list[str]) -> dict[str, dict]:
 
 # ---------------------------------------------------------------- klines
 _PERIOD = {"daily": 101, "weekly": 102, "monthly": 103, "60m": 60, "30m": 30, "15m": 15, "5m": 5}
+
+
+def _akshare_klines(code: str, period: str, limit: int, adjust: str, secid_override: str | None = None) -> list[dict]:
+    """Sina fallback via akshare when the Eastmoney kline endpoint is limited."""
+    try:
+        import akshare as ak
+        sec = secid_override or secid(code)
+        prefix = "sh" if sec.startswith("1.") else "sz"
+        if code.startswith(("4", "8", "92")):
+            prefix = "bj"
+        symbol = f"{prefix}{code}"
+        if period in ("5m", "30m", "15m", "60m"):
+            df = ak.stock_zh_a_minute(symbol=symbol, period={"5m": "5", "15m": "15", "30m": "30", "60m": "60"}[period], adjust="")
+            date_col = "day"
+        else:
+            # Sina minute endpoint with scale=240 gives one daily bar per day;
+            # it works when both Eastmoney and the Sina daily token endpoint fail.
+            df = ak.stock_zh_a_minute(symbol=symbol, period="240", adjust="")
+            date_col = "day"
+        rows = []
+        prev = None
+        for _, r in df.tail(max(10, limit)).iterrows():
+            close = _num(r.get("close"))
+            if close is None:
+                continue
+            pct = ((close / prev - 1) * 100) if prev else 0.0
+            rows.append({
+                "date": str(r.get(date_col)), "open": _num(r.get("open")), "close": close,
+                "high": _num(r.get("high")), "low": _num(r.get("low")),
+                "volume": _num(r.get("volume"), 0), "amount": _num(r.get("amount"), 0),
+                "amplitude": None, "pct": round(pct, 2), "chg": round(close - prev, 3) if prev else 0,
+                "turnover": (_num(r.get("turnover"), 0) or 0) * (100 if period == "daily" else 1),
+            })
+            prev = close
+        return rows
+    except Exception:
+        return []
 
 
 def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qfq", secid_override: str | None = None) -> list[dict]:
@@ -240,6 +332,8 @@ def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qf
             }
         )
     rows = rows[-max(10, int(limit)):]
+    if not rows:
+        return _akshare_klines(code, period, limit, adjust, secid_override)
     if rows and any((r["close"] or 0) < 0 for r in rows):
         # forward-adjusted history can go negative on heavily-dividend stocks;
         # fall back to unadjusted prices for display
@@ -300,6 +394,9 @@ def index_quote(secid_: str, code: str, name: str, short: str) -> dict:
         db.cache_set(key, out)
         return out
     except Exception:
+        q = _sina_quote(code, "sh" if secid_.startswith("1.") else "sz")
+        if q:
+            return {**q, "short": short, "name": name, "code": code}
         return {"code": code, "name": name, "short": short, "price": None, "pct": None, "ts": time.time()}
 
 
@@ -350,8 +447,11 @@ def search(keyword: str, limit: int = 20) -> list[dict]:
     spot = db.cache_get("spot:v3", 86400)
     rows = spot.get("rows", []) if spot else []
     if not rows:
-        # slow path: one page of quotes only
-        rows = fetch_spot(ttl=0).get("rows", [])
+        # slow path: one page of quotes only; the spot list may be rate-limited
+        try:
+            rows = fetch_spot(ttl=0).get("rows", [])
+        except Exception:
+            rows = []
     starts, contains = [], []
     for r in rows:
         code = r["code"]
@@ -361,6 +461,8 @@ def search(keyword: str, limit: int = 20) -> list[dict]:
         elif kw in code or kw in name:
             contains.append(r)
     out = (starts + contains)[:limit]
+    if not out:
+        return _suggest(keyword, limit)
     return [
         {
             "code": r["code"],

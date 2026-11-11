@@ -26,6 +26,7 @@ struct InvestHudHeader: View {
         ("地域", "mappin.and.ellipse", "regions"),
         ("行业要闻", "newspaper.fill", "industry-news"),
         ("量化模型", "brain.head.profile", "models"),
+        ("KDJ预警", "waveform.path.ecg", "kdj"),
     ]
 
     var body: some View {
@@ -121,7 +122,7 @@ struct InvestHudHeader: View {
     private func itemLabel(_ data: (String, String, String)) -> some View {
         let en = ["每日策略": "Daily Plan", "板块跟踪": "Sectors", "收益复盘": "Review",
                   "策略回测": "Backtest", "地域": "Regions", "行业要闻": "Industry News",
-                  "量化模型": "Quant Models"][data.0] ?? data.0
+                  "量化模型": "Quant Models", "KDJ预警": "KDJ Alerts"][data.0] ?? data.0
         return HStack(spacing: 7) {
             Image(systemName: data.1).font(.system(size: 12)).foregroundStyle(.black).frame(width: 16)
             Text(lang == "en" ? en : data.0).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(.black).lineLimit(1)
@@ -282,7 +283,7 @@ struct MoreView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("StockDesk").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
-                                Text("v3.6 · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
+                                Text("v3.7 · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
                                 Text("当前 \(ctx.date.formatted(.dateTime.hour().minute().second())) · 数据更新 \(store.lastRefresh.isEmpty ? "--:--:--" : store.lastRefresh)")
                                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.textDim)
                             }
@@ -343,6 +344,7 @@ struct MoreView: View {
                 case "regions": HubMapView()
                 case "industry-news": IndustryNewsView()
                 case "models": ModelsView()
+                case "kdj": KDJView()
                 default:
                     if route.hasPrefix("stock:") { StockDetailView(code: String(route.dropFirst(6)), name: "") }
                     else { EmptyView() }
@@ -350,7 +352,7 @@ struct MoreView: View {
                 }
             }
         .onAppear {
-            if let s = store.debugScreen(), ["backtest", "dashboard", "watchlist", "portfolio", "analytics", "settings", "daily", "market", "asset-analysis", "advice-center", "index-analysis", "hub-map", "regions", "industry-news", "models"].contains(s) {
+            if let s = store.debugScreen(), ["backtest", "dashboard", "watchlist", "portfolio", "analytics", "settings", "daily", "market", "asset-analysis", "advice-center", "index-analysis", "hub-map", "regions", "industry-news", "models", "kdj"].contains(s) {
                 path = [s]
             }
         }

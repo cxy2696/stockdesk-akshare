@@ -179,10 +179,10 @@ actor MarketService {
     // MARK: - klines
 
     func klines(_ code: String, period: String = "daily", limit: Int = 320, adjust: String = "qfq", secidOverride: String? = nil) async throws -> [KLine] {
-        let klt = ["daily": 101, "weekly": 102, "monthly": 103][period] ?? 101
+        let klt = ["daily": 101, "weekly": 102, "monthly": 103, "5m": 5, "30m": 30][period] ?? 101
         let fqt = ["": 0, "qfq": 1, "hfq": 2][adjust] ?? 1
         let url = "\(hisURL)?secid=\(secidOverride ?? Self.secid(code))&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=\(klt)&fqt=\(fqt)&beg=19900101&end=20500101&lmt=\(max(10, limit))"
-        let obj = try await net.getJSON(JObj.self, url: url, ttl: period == "daily" ? 600 : 120, key: "k-\(secidOverride ?? code)-\(period)-\(adjust)-\(limit)")
+        let obj = try await net.getJSON(JObj.self, url: url, ttl: period == "daily" ? 600 : 60, key: "k-\(secidOverride ?? code)-\(period)-\(adjust)-\(limit)")
         guard let data = obj["data"]?.dict, let lines = data["klines"]?.array else { return [] }
         var rows: [KLine] = []
         for it in lines {
@@ -205,8 +205,8 @@ actor MarketService {
 
     /// Index klines need an explicit secid because 000001 is also 平安银行.
     func indexKlines(_ code: String, period: String = "daily", limit: Int = 2000) async throws -> [KLine] {
-        let klt = ["daily": 101, "weekly": 102, "monthly": 103][period] ?? 101
-        let sec = Self.indexDefs.first { $0.code == code }?.secid ?? "1.\(code)"
+        let klt = ["daily": 101, "weekly": 102, "monthly": 103, "5m": 5, "30m": 30][period] ?? 101
+        let sec = Self.indexDefs.first { $0.code == code }?.secid ?? (code.hasPrefix("399") || code.hasPrefix("899") ? "0.\(code)" : "1.\(code)")
         let url = "\(hisURL)?secid=\(sec)&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=\(klt)&fqt=0&beg=19900101&end=20500101&lmt=\(max(10, limit))"
         let obj = try await net.getJSON(JObj.self, url: url, ttl: 600, key: "ki-\(code)-\(period)")
         guard let data = obj["data"]?.dict, let lines = data["klines"]?.array else { return [] }
@@ -223,9 +223,10 @@ actor MarketService {
         return Array(rows.suffix(max(10, limit)))
     }
 
-    func boardKlines(_ code: String, limit: Int = 160) async throws -> [KLine] {
-        let url = "\(hisURL)?secid=90.\(code)&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=0&beg=19900101&end=20500101&lmt=\(limit)"
-        let obj = try await net.getJSON(JObj.self, url: url, ttl: 300, key: "bk-\(code)")
+    func boardKlines(_ code: String, period: String = "daily", limit: Int = 160) async throws -> [KLine] {
+        let klt = ["daily": 101, "weekly": 102, "monthly": 103, "5m": 5, "30m": 30][period] ?? 101
+        let url = "\(hisURL)?secid=90.\(code)&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=\(klt)&fqt=0&beg=19900101&end=20500101&lmt=\(limit)"
+        let obj = try await net.getJSON(JObj.self, url: url, ttl: period == "daily" ? 300 : 60, key: "bk-\(code)-\(period)")
         guard let data = obj["data"]?.dict, let lines = data["klines"]?.array else { return [] }
         var rows: [KLine] = []
         for it in lines {
