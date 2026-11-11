@@ -34,11 +34,13 @@
 
 ### KDJ 极值预警
 
-打开「量化模型」，最上方是独立的 KDJ 极值预警板块。先选半导体、通信设备或指数（含中证1000）；两张图分别是 5 分钟与 30 分钟。
+任意页面右侧有一个固定的白色 **KDJ 预警** 按键；点击后从右侧打开独立面板，不占用量化模型页面。
 
-- J > 120 超买，J < -16 超卖
+- 先选半导体、通信设备或指数；共 2 个行业 + 6 个指数（含中证1000）
+- 两张图分别是 5 分钟与 30 分钟
+- 上轨 `J ≥ 118` 超买，下轨 `J ≤ -14` 超卖
 - 图中黄色框是近似中枢，来自最近摆动高低点的重叠区
-- 预警只负责提示，不是买卖指令；强趋势里 J 可能长期停留在极值区
+- 面板里的操作建议只作参考，不是买卖指令；强趋势里 J 可能长期停留在极值区
 
 ### 每天的使用顺序
 
@@ -49,6 +51,7 @@
   → 持仓：有没有需要止损/减仓的标的
   → 板块/情绪/热图：市场扩散还是只剩少数板块
   → 量化模型：HMM 仓位 + 渗流行业 + 个股建议
+  → 右侧 KDJ：5m / 30m 是否进入极值区
   → 复盘：记录今天的判断，必要时分享
 ```
 
@@ -166,6 +169,16 @@ For the first run, just do three things: set your initial assets, record one rea
 | Want to modify code | Source | Clone the repo and follow the steps below |
 
 > If Gatekeeper blocks the macOS app, right-click → Open. The iOS IPA is unsigned and must be re-signed with your own Apple ID.
+
+### KDJ alerts
+
+Use the fixed white **KDJ** button on the right side of any page. It opens a dedicated drawer and does not occupy the Quant Models page.
+
+- Pick semiconductors, communications equipment or an index; two sectors + six indices, including CSI 1000
+- Two charts: 5-minute and 30-minute
+- Upper band `J >= 118` overbought; lower band `J <= -14` oversold
+- The yellow box is an approximate central zone built from recent swing highs/lows
+- Guidance is reference only, not a trade instruction; extremes can persist in strong trends
 
 ### First five minutes
 
