@@ -17,7 +17,7 @@ docker run --rm -p 8765:8765 \
 打开 <http://127.0.0.1:8765>。
 
 - 镜像：`ghcr.io/cxy2696/stockdesk-akshare-a-share`
-- 标签：`1.9.0`、`latest`
+- 标签：`1.9.0`、`latest`（容器镜像最近一次发布为 1.9.0；桌面 1.10.1 请从 Releases 下载）
 - 数据：`/data` 卷，建议长期保留
 - 页面：FastAPI + React HUD
 
@@ -55,7 +55,7 @@ docker run --rm -p 8765:8765 \
 Open <http://127.0.0.1:8765>.
 
 - Image: `ghcr.io/cxy2696/stockdesk-akshare-a-share`
-- Tags: `1.9.0`, `latest`
+- Tags: `1.9.0`, `latest` (the container image was last published at 1.9.0; desktop 1.10.1 is in Releases)
 - Data: the `/data` volume; keep it between runs
 - UI: FastAPI + React HUD
 
