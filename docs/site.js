@@ -251,6 +251,7 @@ apply();
 
 /* ---- Bilibili-like player controls ---- */
 const music = document.getElementById('filmMusic');
+if (music) music.volume = 0.55;
 const miniPlay = document.getElementById('miniPlay');
 const soundBtn = document.getElementById('soundBtn');
 const fullBtn = document.getElementById('fullBtn');
@@ -277,7 +278,7 @@ function syncMini() {
   syncSound();
 }
 v?.addEventListener('play', syncMini); v?.addEventListener('pause', syncMini);
-v?.addEventListener('timeupdate', () => { if (soundOn && music && Math.abs(music.currentTime - v.currentTime) > .5) music.currentTime = v.currentTime; });
+v?.addEventListener('timeupdate', () => { if (soundOn && music && Math.abs(music.currentTime - v.currentTime) > .25) music.currentTime = v.currentTime; });
 v?.addEventListener('seeked', () => { if (soundOn && music && v) music.currentTime = v.currentTime; });
 miniPlay?.addEventListener('click', () => { hideCoach(); if (v.paused) v.play().catch(()=>{}); else v.pause(); });
 soundBtn?.addEventListener('click', () => {
