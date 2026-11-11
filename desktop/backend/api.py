@@ -92,6 +92,11 @@ def spot(sort: str = "pct", limit: int = 30, page: int = 1):
     except Exception as e:
         raise HTTPException(502, f"行情获取失败: {e}")
     rows = s.get("rows", [])
+    flow = market._fund_flow()
+    for r in rows:
+        f = flow.get(r.get("code"))
+        if f:
+            r.update(f)
     key = {"pct": "pct", "turnover": "turnover", "amount": "amount", "inflow": "main_inflow"}.get(sort, "pct")
     rows = [r for r in rows if r.get(key) is not None]
     rows.sort(key=lambda r: r.get(key) or 0, reverse=True)
