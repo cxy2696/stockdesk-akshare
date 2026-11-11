@@ -22,7 +22,7 @@ Windows 10/11 上使用 pywebview + Edge WebView2，打开的是独立原生窗�
 
 ### KDJ 预警为什么移到了右侧？
 
-它是独立预警层，不属于量化模型页面。任意页面右侧的白色 **KDJ** 按键会打开抽屉；阈值是 `J ≥ 118` 超买、`J ≤ -14` 超卖。
+它是独立预警层，不属于量化模型页面。HUB 右侧「行业要闻」下方的白色 **KDJ预警** 按键会进入独立页面；阈值是 `J ≥ 118` 超买、`J ≤ -14` 超卖。
 
 ### 字体缩放会拉伸地图或图表吗？
 
@@ -56,7 +56,7 @@ Yes. In Chrome/Edge, the site download cards open the browser's save-location pi
 
 ### Why is KDJ on the right side?
 
-It is an independent warning layer, not part of Quant Models. The fixed white **KDJ** button on any page opens a drawer; thresholds are `J >= 118` overbought and `J <= -14` oversold.
+It is an independent warning layer, not part of Quant Models. The white **KDJ** button under Industry News opens a dedicated page; thresholds are `J >= 118` overbought and `J <= -14` oversold.
 
 ### Does font scaling stretch maps or charts?
 
