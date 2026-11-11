@@ -12,7 +12,7 @@ type Target = {
   series5: any[]; series30: any[]; zone5: any; zone30: any; error?: string
 }
 
-const UPPER = 120, LOWER = -16
+const UPPER = 118, LOWER = -14
 
 function chartOption(t: Target, period: '5' | '30') {
   const series = (period === '5' ? t.series5 : t.series30) || []
@@ -93,13 +93,13 @@ export default function KdjPanel() {
         <div>
           <div className="eyebrow">KDJ · 5M / 30M</div>
           <h3>极值预警</h3>
-          <p className="muted small">J &gt; 120 超买，J &lt; -16 超卖；任一周期触发即提示。只预警，不是买卖指令。</p>
+          <p className="muted small">J &gt; 118 超买，J &lt; -14 超卖；任一周期触发即提示。只预警，不是买卖指令。</p>
         </div>
         <Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button>
       </div>
       <div className="kdj-thresholds">
-        <span>上轨 <b>J &gt; 120</b></span>
-        <span>下轨 <b>J &lt; -16</b></span>
+        <span>上轨 <b>J &gt; 118</b></span>
+        <span>下轨 <b>J &lt; -14</b></span>
         <span>覆盖率 {targets.filter(t => t.alert).length}/{targets.length}</span>
       </div>
       {alerts.length > 0 && (
@@ -131,7 +131,7 @@ export default function KdjPanel() {
             <ChartCard title="30 分钟" period="30" target={target} />
           </div>
           <div className="muted small kdj-note">
-            中枢为最近摆动高低点重叠区的近似值，用于看价格重心，不是严格缠论中枢。5 分钟偏即时，30 分钟偏质量；同向先后触发时参考权重更高。
+            中枢为最近摆动高低点重叠区的近似值，用于看价格重心，不是严格缠论中枢。5 分钟偏即时，30 分钟偏质量；同向先后触发时参考权重更高。阈值按常规方向：上轨超买、下轨超卖。
           </div>
         </>
       ) : <div className="kdj-empty">暂无标的</div>}
