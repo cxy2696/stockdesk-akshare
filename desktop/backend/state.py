@@ -428,6 +428,11 @@ def hot_board(limit: int = 10) -> dict:
         if r.get("price") and (r.get("amount") or 0) > 0
         and "退" not in (r.get("name") or "") and "ST" not in (r.get("name") or "").upper()
     ]
+    flow = market._fund_flow()
+    for r in rows:
+        f = flow.get(r.get("code"))
+        if f:
+            r.update(f)
 
     def slim(r):
         return {
