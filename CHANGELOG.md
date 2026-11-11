@@ -18,6 +18,14 @@
 
 ## English
 
+### 1.10.0
+
+- 新增 KDJ 极值预警板块：半导体、通信设备与五个 A 股指数。
+- 5 分钟 / 30 分钟双周期，J > 120 超买、J < -16 超卖。
+- 每个周期绘制近似中枢区间，支持标的切换和预警提示。
+- 展示页字体/图片放大；新增下载包选择与保存位置选择器。
+- 影片重制，加入浅色动态开场、章节、声音和全屏。
+
 ### 1.9.0 / iOS 3.6 / US 1.0.0
 
 - The HUB is now seven entries: three on the left and four on the right, with larger silver buttons and the admin plate tucked under the left column.
