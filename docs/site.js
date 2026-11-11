@@ -286,7 +286,13 @@ soundBtn?.addEventListener('click', () => {
   soundBtn.textContent = soundOn ? '♪' : '♪';
   soundBtn.classList.toggle('on', soundOn);
   soundBtn.setAttribute('aria-pressed', String(soundOn));
-  syncSound();
+  if (soundOn && music && v) {
+    // Start inside the click gesture so browsers allow audible playback.
+    music.currentTime = v.currentTime || 0;
+    music.play().catch(()=>{});
+    if (v.paused) v.play().catch(()=>{});
+  } else if (music) music.pause();
+  setTimeout(() => { if (v && !v.paused) syncSound(); }, 80);
   toast(soundOn ? (lang === 'zh' ? '声音已开启' : 'Sound on') : (lang === 'zh' ? '声音已关闭' : 'Sound off'));
 });
 fullBtn?.addEventListener('click', () => {
