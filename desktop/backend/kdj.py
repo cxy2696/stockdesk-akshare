@@ -20,10 +20,11 @@ TARGETS = [
     {"key": "chinext", "name": "创业板指", "kind": "指数", "secid": "0.399006"},
     {"key": "szse", "name": "深证成指", "kind": "指数", "secid": "0.399001"},
     {"key": "star50", "name": "科创50", "kind": "指数", "secid": "1.000688"},
+    {"key": "csi1000", "name": "中证1000", "kind": "指数", "secid": "1.000852"},
 ]
 
-UPPER = 120.0
-LOWER = -16.0
+UPPER = 118.0
+LOWER = -14.0
 
 
 def _kdj(rows: list[dict], n: int = 9) -> dict[str, Any]:
