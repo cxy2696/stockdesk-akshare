@@ -98,8 +98,8 @@ export default function KdjPanel() {
         <Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button>
       </div>
       <div className="kdj-thresholds">
-        <span>上轨 <b>J &gt; 118</b></span>
-        <span>下轨 <b>J &lt; -14</b></span>
+        <span>上轨 · 超买区 <b>J ≥ 118</b></span>
+        <span>下轨 · 超卖区 <b>J ≤ -14</b></span>
         <span>覆盖率 {targets.filter(t => t.alert).length}/{targets.length}</span>
       </div>
       {alerts.length > 0 && (
@@ -132,8 +132,8 @@ export default function KdjPanel() {
           </div>
           <div className="kdj-advice">
             <b>参考操作建议 <em>非交易指令</em></b>
-            <div><span>J ≥ 118</span> 超买区：不追高，已有仓位看放量滞涨；等 J 回落或价格跌破短均线再判断。</div>
-            <div><span>J ≤ -14</span> 超卖区：不恐慌抄底，等 J 拐头、价格止跌或出现放量承接。</div>
+            <div><span>J ≥ 118</span> 超买区 → 参考动作：<strong>减仓 / 卖出</strong>，不追高；等 J 回落或价格跌破短均线确认。</div>
+            <div><span>J ≤ -14</span> 超卖区 → 参考动作：<strong>买入 / 低吸</strong>，不恐慌；等 J 拐头、价格止跌或放量承接。</div>
             <div><span>5m + 30m</span> 同向先后触发：参考权重更高；单周期触发只作为盘中提示。</div>
           </div>
           <div className="muted small kdj-note">
@@ -163,6 +163,7 @@ export default function KdjPanel() {
         .kdj-advice>b{display:block;color:var(--text);font-size:11px;margin-bottom:4px}
         .kdj-advice>b em{font-style:normal;color:var(--text-sub);font-size:8px;margin-left:6px;font-weight:400}
         .kdj-advice span{font-family:'SF Mono',monospace;font-size:9px;color:var(--accent)}
+        .kdj-advice strong{color:var(--text);font-weight:600}
         .kdj-note{margin-top:8px;line-height:1.7}
         @media(max-width:760px){.kdj-charts{grid-template-columns:1fr}}
       `}</style>
