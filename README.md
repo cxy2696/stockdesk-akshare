@@ -9,7 +9,7 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
+[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
 
 ## 项目展示页 / Project site
 
@@ -30,6 +30,8 @@ An independent project site with a 43-second product film, five screening chapte
 ### 项目简介
 
 StockDesk 是一个本地优先、单用户的股票投资工作台。它把持仓、行情、复盘、策略、HMM/渗流模型和地域/行业数据放在一个 HUD 风格的界面里，账户与行情缓存只保存在本机。
+
+最新版本 **1.10.0** 新增 KDJ 极值预警：2 个行业 + 9 个指数，5m / 30m 双周期，HUB 右侧「行业要闻」下方独立入口。
 
 本仓库是 **stockdesk-akshare** 项目文档与源码整理版，包含：
 
@@ -52,6 +54,7 @@ StockDesk 是一个本地优先、单用户的股票投资工作台。它把持�
 | 量化模型 | 5 个 A 股指数 3 状态 HMM、渗流最大连通簇、行业临界、个股仓位建议 |
 | 地域 | 中国上市公司地图、省份分布、省份龙头 |
 | 行业要闻 | 行业新闻与关键标的 |
+| KDJ 预警 | 半导体 / 通信设备 + 9 个 A 股指数；5m / 30m J 值与近似中枢；HUB 右侧独立入口 |
 | 图片分享 | 进入子页面后分享当前页面长图 |
 | 缩放 | 100% / 120% / 150%，文字自动换行、增行 |
 
@@ -137,7 +140,7 @@ stockdesk-akshare/
 
 ### 版本
 
-- macOS：1.9.0
+- macOS：1.10.0
 - iOS：3.6 (27)
 - US：1.0.0
 
@@ -175,6 +178,7 @@ This repository, **stockdesk-akshare**, is the documented source snapshot for:
 | Quant models | 3-state HMM on five A-share indices, percolation giant component, industry criticality, per-stock position advice |
 | Regions | China listed-company map, province distribution and leaders |
 | Industry news | Sector news and key names |
+| KDJ alerts | Two sectors + nine A-share indices; 5m / 30m J and approximate zones |
 | Image sharing | Full-page share image after entering a detail page |
 | Scaling | 100% / 120% / 150%, text reflows and rows grow automatically |
 
@@ -266,9 +270,9 @@ See [desktop/README.md](desktop/README.md) for the full HUB guide, screenshots, 
 
 ### Releases & Packages
 
-- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0
-- **macOS**: `StockDesk-macOS-1.9.0.zip`
-- **Windows**: `StockDesk-Windows-1.9.0.exe`
+- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.0
+- **macOS**: `StockDesk-macOS-1.10.0.zip`
+- **Windows**: `StockDesk.exe`
 - **iOS**: `StockDesk-iOS-3.6-unsigned.ipa`
 - **A-share container**: `ghcr.io/cxy2696/stockdesk-akshare-a-share:latest`
 - **US container**: `ghcr.io/cxy2696/stockdesk-akshare-us:latest`
@@ -283,7 +287,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 
 ### Versions
 
-- macOS: 1.9.0
+- macOS: 1.10.0
 - iOS: 3.6 (27)
 - US: 1.0.0
 

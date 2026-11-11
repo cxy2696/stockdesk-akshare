@@ -32,6 +32,17 @@
 6. **看量化模型**：点右侧“量化模型”，HMM 决定总仓位，渗流决定行业和标的。
 7. **分享**：进入任意子页面，点右下角分享，生成完整长图，可发到微信或 Notes。
 
+### KDJ 极值预警
+
+HUB 右侧「行业要闻」下方是独立的 **KDJ预警** 入口，和其他白色按键一致。面板用 akshare 拉取 5 分钟 / 30 分钟行情：
+
+- 上轨 `J ≥ 118` 超买区
+- 下轨 `J ≤ -14` 超卖区
+- 11 个标的：半导体、通信设备 + 9 个 A 股指数
+- 黄色框是最近摆动高低点的近似中枢
+- 每 60 秒自动刷新；行业板块被限流时会用 ETF 代理并标注
+- 只做提示，不是交易指令
+
 ### 每天的使用顺序
 
 ```
@@ -41,6 +52,7 @@
   → 持仓：有没有需要止损/减仓的标的
   → 板块/情绪/热图：市场扩散还是只剩少数板块
   → 量化模型：HMM 仓位 + 渗流行业 + 个股建议
+  → KDJ 预警：5m / 30m 是否进入极值区
   → 复盘：记录今天的判断，必要时分享
 ```
 
@@ -158,6 +170,17 @@ For the first run, just do three things: set your initial assets, record one rea
 | Want to modify code | Source | Clone the repo and follow the steps below |
 
 > If Gatekeeper blocks the macOS app, right-click → Open. The iOS IPA is unsigned and must be re-signed with your own Apple ID.
+
+### KDJ alerts
+
+Open **KDJ预警** under Industry News in the HUB right column. It uses akshare 5-minute / 30-minute bars:
+
+- `J >= 118` overbought
+- `J <= -14` oversold
+- 11 targets: two sectors plus nine A-share indices
+- The yellow band is an approximate central zone
+- Refreshes every 60 seconds; sectors fall back to an ETF proxy when the board endpoint is rate-limited
+- A warning layer, not a trade instruction
 
 ### First five minutes
 

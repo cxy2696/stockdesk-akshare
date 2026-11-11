@@ -4,6 +4,14 @@
 
 ## 中文
 
+### 1.10.0
+
+- 新增 KDJ 极值预警，使用 akshare 获取 5m / 30m 行情。
+- 入口在 HUB 右侧「行业要闻」下方，独立页面。
+- 上轨 `J ≥ 118` 超买，下轨 `J ≤ -14` 超卖；新增中证500、上证50、北证50。
+- 行业板块限流时用 ETF 代理并标注；每 60 秒刷新。
+- macOS / Windows 更新到 1.10.0。
+
 ### 1.9.0 / iOS 3.6 / 美股 1.0.0
 
 - HUB 收敛到 7 个入口：左侧 3 个、右侧 4 个，白色按键更大，管理员名片并入左列。
@@ -17,6 +25,14 @@
 - 提供 A 股和美股两个 GHCR 容器。
 
 ## English
+
+### 1.10.0
+
+- Added KDJ extreme-zone alerts using akshare 5m / 30m bars.
+- Entry sits under Industry News in the HUB right column, on a dedicated page.
+- `J >= 118` overbought, `J <= -14` oversold; added CSI 500, SSE 50 and BSE 50.
+- Sectors fall back to an ETF proxy when rate-limited and are marked as such; 60-second refresh.
+- macOS / Windows updated to 1.10.0.
 
 ### 1.9.0 / iOS 3.6 / US 1.0.0
 

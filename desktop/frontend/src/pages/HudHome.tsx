@@ -4,7 +4,7 @@ import { useTheme } from '../ThemeContext'
 import {
   AppstoreOutlined, BellOutlined, CalendarOutlined, ExperimentOutlined, FundOutlined,
   MailOutlined, PieChartOutlined, ProfileOutlined, SearchOutlined, SettingOutlined,
-  StarOutlined, ThunderboltOutlined, FireOutlined, AimOutlined, EnvironmentOutlined, ReadOutlined, NodeIndexOutlined,
+  StarOutlined, ThunderboltOutlined, FireOutlined, AimOutlined, EnvironmentOutlined, ReadOutlined, NodeIndexOutlined, LineChartOutlined,
 } from '@ant-design/icons'
 import { api } from '../api'
 import { useAdmin } from '../admin'
@@ -21,6 +21,7 @@ const RIGHT = [
   { key: '/regions', label: '地域', en: 'Regions', icon: <EnvironmentOutlined /> },
   { key: '/industry-news', label: '行业要闻', en: 'Industry News', icon: <ReadOutlined /> },
   { key: '/models', label: '量化模型', en: 'Quant Models', icon: <NodeIndexOutlined /> },
+  { key: '/kdj', label: 'KDJ预警', en: 'KDJ Alerts', icon: <LineChartOutlined /> },
 ]
 
 const SEG_COLORS = ['#F2C94C', '#55D6C2', '#B08CFF', '#FF8A5C', '#6EA8FF', '#7D8B86']
@@ -248,7 +249,7 @@ export default function HudHome({ overview }: { overview: any }) {
         <span>{lang === 'en' ? 'Net inflow' : '主力净流入'} {hot?.inflow?.[0]?.name ?? '--'} {fmt.big(hot?.inflow?.[0]?.inflow)}</span>
         <span>{lang === 'en' ? 'Now' : '当前'} {now.toLocaleTimeString('zh-CN', { hour12: false })}</span>
         <span>{lang === 'en' ? 'Data' : '数据'} {hot?.updated ? new Date(hot.updated * 1000).toLocaleTimeString('zh-CN', { hour12: false }) : '--:--:--'}</span>
-        <span className="hud-version">COMMAND DECK · v1.9</span>
+        <span className="hud-version">COMMAND DECK · v1.10</span>
       </div>
     </div>
   )

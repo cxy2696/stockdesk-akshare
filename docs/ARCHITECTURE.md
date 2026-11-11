@@ -41,6 +41,20 @@ HMM 的输入是五个 A 股指数的日对数收益，输出强势 / 震荡 / �
 
 渗流模型把上涨股票放进二维格点，寻找最大的 4 邻接连通簇。上涨家数只说明“有多少”，最大簇说明“有没有连成一片”。阈值 0.592746 来自二维方格点渗流模型，样本较小时只做相对参考。
 
+### KDJ 预警
+
+- `backend/kdj.py` 使用 akshare：指数走新浪分钟线，行业板块走东方财富。
+- 5m / 30m 各取 180 根；KDJ(9,3,3)，上轨 118、下轨 -14。
+- 行业接口限流时回退到跟踪 ETF，并在响应里标记 `proxy`。
+- 前端每 60 秒刷新；中枢为摆动高低点重叠区的近似。
+
+### KDJ alerts
+
+- `backend/kdj.py` uses akshare: Sina for index minute bars, Eastmoney for industry boards.
+- 180 bars per 5m / 30m frame; KDJ(9,3,3), bands 118 / -14.
+- A tracking ETF is used when the board endpoint is rate-limited and marked as a proxy.
+- The UI refreshes every 60 seconds; the central zone is approximate.
+
 ### iOS
 
 - `ios/StockDesk/Views` 放 SwiftUI 页面、HUD 和中国地图。
