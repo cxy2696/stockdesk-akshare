@@ -93,7 +93,7 @@
       bookS2: "净值 + 回撤",
       bookS2n: "风险真正长什么样",
       modelTitle: "模型描述现在，<br>不预测明天。",
-      modelText: "五个 A 股指数的三状态 HMM 给出总仓位；渗流寻找最大 4 邻接连通簇；HUB 右侧新增 KDJ 入口，查看半导体、通信设备与 9 个指数的 5m / 30m J 值。",
+      modelText: "五个 A 股指数的三状态 HMM 给出总仓位；渗流寻找最大 4 邻接连通簇；HUB 右侧新增 KDJ 入口，查看半导体、通信设备与 9 个指数的 5m / 30m J 值；全量 5,580 只 A 股与实时资金流已接入。",
       editionsTitle: "选一个入口。",
       editionsText: "macOS、Windows、iOS、美股版与容器，<br>共用一套数据习惯。",
       edMac: "原生窗口，双击即用。",
