@@ -9,7 +9,7 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
+[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.0) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
 
 ## 项目展示页 / Project site
 
@@ -269,7 +269,7 @@ See [desktop/README.md](desktop/README.md) for the full HUB guide, screenshots, 
 
 ### Releases & Packages
 
-- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.9.0
+- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.0
 - **macOS**: `StockDesk-macOS-1.9.0.zip`
 - **Windows**: `StockDesk-Windows-1.9.0.exe`
 - **iOS**: `StockDesk-iOS-3.6-unsigned.ipa`
