@@ -4459,3 +4459,21 @@ body.sound-on .now-eq i:nth-child(4) { animation-delay: -0.1s; }
     display: none;
   }
 }
+.download-section{padding:clamp(80px,9vw,150px) 0 clamp(70px,8vw,120px);background:var(--cream);color:var(--ink);position:relative;overflow:hidden}
+.download-section::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(17,18,14,.035) 1px,transparent 1px);background-size:100% 64px;pointer-events:none}
+.download-section .section-wrap{position:relative;z-index:1}
+.download-head{max-width:760px;margin-bottom:clamp(30px,4vw,52px)}
+.download-head .display{margin:18px 0 16px}
+.download-head>p:last-child{max-width:560px;color:rgba(17,18,14,.62);font-size:14px;line-height:1.85}
+.download-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line-light);border-left:1px solid var(--line-light)}
+.download-card{display:flex;flex-direction:column;min-height:300px;padding:26px 24px 22px;border-right:1px solid var(--line-light);border-bottom:1px solid var(--line-light);color:var(--ink);text-decoration:none;transition:background .35s var(--ease),transform .35s var(--ease)}
+.download-card:hover{background:rgba(201,173,114,.10)}
+.download-no{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--gold-dark);margin-bottom:28px}
+.download-card h3{font-family:var(--serif);font-size:clamp(30px,3vw,42px);font-weight:400;letter-spacing:-.02em;line-height:1;margin:0 0 16px}
+.download-card p{color:rgba(17,18,14,.62);font-size:12.5px;line-height:1.8;max-width:290px;margin:0 0 20px}
+.download-version{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:rgba(17,18,14,.42);margin-top:auto}
+.download-go{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:18px;padding:13px 15px;border:1px solid rgba(17,18,14,.28);font-size:12px;transition:background .25s var(--ease),color .25s var(--ease),border-color .25s var(--ease)}
+.download-go i{font-style:normal;font-size:16px}
+.download-card:hover .download-go{background:var(--ink);border-color:var(--ink);color:var(--cream)}
+.download-foot{margin-top:18px;font-family:var(--mono);font-size:8.5px;color:rgba(17,18,14,.42);letter-spacing:.03em}
+@media(max-width:900px){.download-grid{grid-template-columns:1fr}.download-card{min-height:0}}
