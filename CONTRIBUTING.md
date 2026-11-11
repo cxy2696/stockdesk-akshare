@@ -13,6 +13,7 @@
 3. 提交前运行：
    ```bash
    python -m compileall desktop/backend us
+   python -c "from backend import kdj; print(kdj.snapshot()['thresholds'])"
    cd desktop/frontend && npm run build
    ```
 4. UI 改动请附上一张截图，说明改了什么、在哪个主题/缩放下看过。
@@ -43,6 +44,7 @@ Thanks for helping improve StockDesk. This project values software you can keep 
 3. Before committing, run:
    ```bash
    python -m compileall desktop/backend us
+   python -c "from backend import kdj; print(kdj.snapshot()['thresholds'])"
    cd desktop/frontend && npm run build
    ```
 4. For UI changes, include a screenshot and mention the theme/scale you checked.
