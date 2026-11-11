@@ -79,22 +79,32 @@ function ChartCard({ title, period, target }: { title: string; period: '5' | '30
 export default function KdjPanel() {
   const [data, setData] = useState<any>(null)
   const [sel, setSel] = useState('semi')
+  const [industry, setIndustry] = useState('半导体')
+  const [industries, setIndustries] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [last, setLast] = useState('')
   const load = async (force = false) => {
     setLoading(true)
     try {
-      const next = await api.get<any>(`/api/market/kdj-alerts${force ? '?force=1' : ''}`)
+      const q = new URLSearchParams()
+      if (industry) q.set('industry', industry)
+      if (force) q.set('force', '1')
+      const next = await api.get<any>(`/api/market/kdj-alerts?${q.toString()}`)
       setData(next)
+      const picked = next.targets?.find((t: Target) => t.name === industry)
+      if (picked) setSel(picked.key)
       setLast(new Date().toLocaleTimeString('zh-CN', { hour12: false }))
     } catch (e: any) { message.error(e.message) }
     finally { setLoading(false) }
   }
   useEffect(() => {
+    api.get<string[]>('/api/market/kdj-industries').then(setIndustries).catch(() => {})
+  }, [])
+  useEffect(() => {
     load()
     const timer = setInterval(() => load(), 60_000)
     return () => clearInterval(timer)
-  }, [])
+  }, [industry])
   const targets: Target[] = data?.targets ?? []
   const target = targets.find((t) => t.key === sel) ?? targets[0]
   const alerts = targets.filter((t) => t.alert)
@@ -123,6 +133,14 @@ export default function KdjPanel() {
           description="极值可能持续，建议先确认周期、方向、持续时间和价格位置，再决定是否操作。"
         />
       )}
+      <div className="kdj-industry-row">
+        <label htmlFor="kdjIndustry">行业</label>
+        <select id="kdjIndustry" value={industry} onChange={(e) => { setIndustry(e.target.value); setSel(''); }}>
+          {industries.length === 0 && <option value="半导体">半导体</option>}
+          {industries.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+        <span>可切换全部行业板块</span>
+      </div>
       <div className="kdj-targets">
         {targets.map((t) => (
           <button key={t.key} className={t.key === sel ? 'active' : ''} onClick={() => setSel(t.key)}>
@@ -159,6 +177,9 @@ export default function KdjPanel() {
         .kdj-top h3{font-size:18px;margin:2px 0 3px}
         .kdj-thresholds{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0 10px;font-size:10px;color:var(--text-sub);font-family:'SF Mono',monospace}
         .kdj-thresholds b{color:var(--accent)}
+        .kdj-industry-row{display:flex;align-items:center;gap:8px;margin:4px 0 8px;font-size:10px;color:var(--text-sub)}
+        .kdj-industry-row select{background:var(--card);color:var(--text);border:1px solid var(--border);padding:3px 6px;font-size:10px;max-width:240px}
+        .kdj-industry-row span{font-size:8px;opacity:.6}
         .kdj-targets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
         .kdj-targets button{display:flex;align-items:center;gap:5px;border:1px solid var(--border);background:transparent;color:var(--text-sub);padding:4px 8px;cursor:pointer;font-size:10px}
         .kdj-targets button.active{color:#171a19;background:var(--accent);border-color:var(--accent)}

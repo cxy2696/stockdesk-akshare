@@ -269,25 +269,17 @@ def _board_rows(kind: str = "industry") -> list[dict]:
             "kind": kind,
         })
     if not out and kind == "industry":
-        try:
-            import akshare as ak
-            df = ak.stock_fund_flow_industry(symbol="即时")
-            for i, r in df.iterrows():
-                name = str(r.get("行业") or "")
-                if not name:
-                    continue
-                out.append({
-                    "code": f"AK{i}", "name": name,
-                    "pct": market._num(r.get("行业-涨跌幅")),
-                    "inflow": (market._num(r.get("净额")) or 0) * 1e8,
-                    "up": None, "down": None,
-                    "leader": r.get("领涨股"), "leader_code": None,
-                    "leader_pct": market._num(r.get("领涨股-涨跌幅")),
-                    "companies": market._num(r.get("公司家数")),
-                    "kind": kind,
-                })
-        except Exception:
-            pass
+        for i, r in enumerate(market._sina_industry_flow()):
+            name = r.get("name") or ""
+            if not name:
+                continue
+            out.append({
+                "code": f"SINA{i}", "name": name,
+                "pct": r.get("pct"), "inflow": r.get("inflow"),
+                "up": None, "down": None,
+                "leader": r.get("leader"), "leader_code": None,
+                "leader_pct": r.get("leader_pct"), "kind": kind,
+            })
     return out
 
 

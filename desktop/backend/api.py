@@ -370,8 +370,13 @@ def put_account(body: AccountIn):
 
 
 @router.get("/api/market/kdj-alerts")
-def kdj_alerts(force: bool = False):
-    return ok(kdj.snapshot(force=force))
+def kdj_alerts(force: bool = False, industry: str | None = None):
+    return ok(kdj.snapshot(force=force, industry=industry))
+
+
+@router.get("/api/market/kdj-industries")
+def kdj_industries():
+    return ok(kdj.industries())
 
 
 # ================================================================ screener

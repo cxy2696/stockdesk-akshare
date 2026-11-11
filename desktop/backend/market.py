@@ -122,25 +122,90 @@ def _fund_flow() -> dict[str, dict]:
         return cached
     out: dict[str, dict] = {}
     try:
-        import akshare as ak
-        df = ak.stock_fund_flow_individual(symbol="即时")
-        for _, r in df.iterrows():
-            code = str(r.get("股票代码") or "").zfill(6)
+        url = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+               "MoneyFlow.ssl_bkzj_ssggzj?page=1&num=6000&sort=netamount&asc=0")
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
+        rows = json.loads(urllib.request.urlopen(req, timeout=15).read().decode("utf-8", "ignore"))
+        for r in rows:
+            code = str(r.get("symbol") or "")[-6:]
             if not code.isdigit():
                 continue
             out[code] = {
-                "main_inflow": _money_cn(r.get("净额")),
-                "inflow": _money_cn(r.get("流入资金")),
-                "outflow": _money_cn(r.get("流出资金")),
+                "main_inflow": _num(r.get("netamount")),
+                "inflow": _num(r.get("inamount")),
+                "outflow": _num(r.get("outamount")),
             }
     except Exception as e:
         try:
             db.cache_set("fund:error", {"error": repr(e)[:900], "ts": time.time()})
-            print("fund-flow fallback failed:", repr(e), flush=True)
         except Exception:
             pass
     if out:
         db.cache_set("fund:individual", out)
+    return out
+
+
+def _sina_industry_flow() -> list[dict]:
+    try:
+        url = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+               "MoneyFlow.ssl_bkzj_bk?page=1&num=100&sort=netamount&asc=0&fenlei=0")
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
+        rows = json.loads(urllib.request.urlopen(req, timeout=15).read().decode("utf-8", "ignore"))
+        out = []
+        for r in rows:
+            out.append({
+                "name": r.get("name") or "",
+                "pct": round((_num(r.get("avg_changeratio")) or 0) * 100, 2),
+                "inflow": _num(r.get("netamount")),
+                "inflow_raw": _num(r.get("inamount")),
+                "outflow": _num(r.get("outamount")),
+                "leader": r.get("ts_name"),
+                "leader_pct": round((_num(r.get("ts_changeratio")) or 0) * 100, 2),
+            })
+        return out
+    except Exception:
+        return []
+
+
+def _prefix_for(code: str) -> str:
+    if code.startswith(("6", "5", "9")):
+        return "sh"
+    if code.startswith(("4", "8", "92")):
+        return "bj"
+    return "sz"
+
+
+def _sina_batch(codes: list[str]) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    for start in range(0, len(codes), 80):
+        chunk = codes[start:start + 80]
+        symbols = ",".join(f"{_prefix_for(c)}{c}" for c in chunk)
+        try:
+            req = urllib.request.Request(
+                f"https://hq.sinajs.cn/list={symbols}",
+                headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"},
+            )
+            text = urllib.request.urlopen(req, timeout=10).read().decode("gbk", "ignore")
+        except Exception:
+            continue
+        for line in text.splitlines():
+            if '="' not in line:
+                continue
+            try:
+                head, payload = line.split('="', 1)
+                code = head.rsplit("_", 1)[-1][2:]
+                p = payload.split('";', 1)[0].split(",")
+                price, prev = _num(p[3]), _num(p[2])
+                if not price or not prev:
+                    continue
+                out[code] = {
+                    "price": price, "high": _num(p[4]), "low": _num(p[5]),
+                    "open": _num(p[1]), "volume": _num(p[8]), "amount": _num(p[9]),
+                    "prev_close": prev, "pct": round((price / prev - 1) * 100, 2),
+                    "chg": round(price - prev, 3),
+                }
+            except Exception:
+                continue
     return out
 
 
@@ -180,6 +245,9 @@ def _akshare_spot() -> dict:
                 }
         except Exception:
             quotes = {}
+        missing = [code for code, _ in universe if not (quotes.get(code) or {}).get("price")]
+        if missing:
+            quotes.update(_sina_batch(missing))
         rows = []
         for code, name in universe:
             q = quotes.get(code, {})
@@ -533,6 +601,7 @@ def market_breadth() -> dict:
     for r in spot["rows"]:
         p = r.get("pct")
         if p is None:
+            flat += 1
             continue
         if p > 0.01:
             up += 1

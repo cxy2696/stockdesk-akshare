@@ -33,9 +33,44 @@ TARGETS = [
     {"key": "bse50", "name": "北证50", "kind": "指数", "sina": "bj899050", "secid": "0.899050"},
 ]
 
+INDUSTRY_PROXY = {
+    "半导体": "sh512480", "通信设备": "sh515880", "元件": "sh515260",
+    "消费电子": "sz159732", "光学光电子": "sh515260", "软件开发": "sh515230",
+    "计算机设备": "sh512720", "电池": "sz159755", "光伏设备": "sh515790",
+    "证券": "sh512880", "银行": "sh512800", "保险": "sh512070",
+    "白酒": "sh512690", "医疗器械": "sh512170", "化学制药": "sh512010",
+    "电力": "sz159611", "煤炭": "sh515220", "有色金属": "sh512400",
+    "房地产": "sh512200", "航天装备": "sh512660", "汽车零部件": "sh516110",
+    "游戏": "sh516010", "传媒": "sh512980", "钢铁": "sh515210",
+    "基础建设": "sh516950", "农业": "sz159825", "食品饮料": "sh515170",
+}
+INDUSTRIES_FALLBACK = ["半导体", "通信设备", "元件", "光学光电子", "消费电子", "软件开发", "计算机设备", "电池", "光伏设备", "汽车零部件", "证券", "银行", "保险", "白酒", "医疗器械", "化学制药", "电力", "煤炭", "有色金属", "房地产"]
+_INDUSTRY_CACHE: tuple[float, list[str]] = (0.0, [])
+
+
+def industries() -> list[str]:
+    global _INDUSTRY_CACHE
+    now = time.time()
+    if _INDUSTRY_CACHE[1] and now - _INDUSTRY_CACHE[0] < 600:
+        return _INDUSTRY_CACHE[1]
+    try:
+        import akshare as ak
+        df = ak.stock_fund_flow_industry(symbol="即时")
+        names = [str(x) for x in df["行业"].tolist() if str(x).strip()]
+        if names:
+            # Only expose sectors with a minute-data proxy; avoid empty options.
+            supported = [n for n in names if n in INDUSTRY_PROXY]
+            supported += [n for n in INDUSTRY_PROXY if n not in supported]
+            _INDUSTRY_CACHE = (now, supported)
+            return supported
+    except Exception:
+        pass
+    return INDUSTRIES_FALLBACK
+
+
 _CACHE: dict[tuple[str, str], tuple[float, dict]] = {}
 _CACHE_LOCK = threading.Lock()
-_SNAPSHOT: dict = {"ts": 0.0, "data": None}
+_SNAPSHOT: dict[str, tuple[float, dict]] = {}
 _EASTMONEY_BLOCKED_UNTIL = 0.0
 
 
@@ -190,21 +225,28 @@ def _one(t: dict) -> dict:
     return base
 
 
-def snapshot(force: bool = False) -> dict:
+def snapshot(force: bool = False, industry: str | None = None) -> dict:
     now = time.time()
+    industry = (industry or "").strip()
+    cache_key = industry or "__default__"
     with _CACHE_LOCK:
-        if not force and _SNAPSHOT["data"] is not None and now - _SNAPSHOT["ts"] < SNAPSHOT_TTL:
-            return _SNAPSHOT["data"]
+        hit = _SNAPSHOT.get(cache_key)
+        if not force and hit and now - hit[0] < SNAPSHOT_TTL:
+            return hit[1]
+    defs = list(TARGETS)
+    if industry and not any(t.get("name") == industry for t in defs):
+        defs.append({"key": f"industry:{industry}", "name": industry, "kind": "行业", "board": industry, "proxy": INDUSTRY_PROXY.get(industry)})
     old = socket.getdefaulttimeout()
     socket.setdefaulttimeout(12)
     try:
         with ThreadPoolExecutor(max_workers=4) as ex:
-            targets = list(ex.map(_one, TARGETS))
+            targets = list(ex.map(_one, defs))
     finally:
         socket.setdefaulttimeout(old)
     data = {"thresholds": {"upper": UPPER, "lower": LOWER}, "targets": targets,
+            "industry": industry or "半导体",
             "zones_note": "中枢为最近摆动高低点重叠区的近似值，不是严格缠论中枢。",
             "updated": time.time()}
     with _CACHE_LOCK:
-        _SNAPSHOT.update(ts=time.time(), data=data)
+        _SNAPSHOT[cache_key] = (time.time(), data)
     return data
