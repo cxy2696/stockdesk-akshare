@@ -3,6 +3,9 @@ name: Build Windows
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-2022
@@ -57,3 +60,8 @@ jobs:
         with:
           name: StockDesk-Windows
           path: desktop/dist/StockDesk.exe
+      - name: Publish to release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload v1.10.0 desktop/dist/StockDesk.exe --clobber 
