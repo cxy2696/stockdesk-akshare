@@ -31,7 +31,6 @@ iOS
 - `backend/app.py` 提供 API 和前端静态文件。
 - `backend/market.py` 负责 A 股行情、指数、K 线、搜索和板块数据。
 - `backend/models.py` 实现三状态高斯 HMM 和渗流最大连通簇。
-- `backend/kdj.py` 计算 5m / 30m KDJ 与近似中枢，覆盖半导体、通信设备、6 个指数。
 - `backend/portfolio.py` 处理交易流水、成本、净值与回撤。
 - `backend/db.py` 用 SQLite 保存账户、交易、自选和缓存。
 - `frontend/src` 是 HUD、页面、主题和图表所在的位置。
@@ -41,20 +40,6 @@ iOS
 HMM 的输入是五个 A 股指数的日对数收益，输出强势 / 震荡 / 弱势三种状态、后验概率、转移矩阵和预计持续时间。它回答“现在该拿多少仓位”。
 
 渗流模型把上涨股票放进二维格点，寻找最大的 4 邻接连通簇。上涨家数只说明“有多少”，最大簇说明“有没有连成一片”。阈值 0.592746 来自二维方格点渗流模型，样本较小时只做相对参考。
-
-### KDJ 预警
-
-- `backend/kdj.py` 拉取 5m / 30m K 线，按 `RSV → K → D → J` 递推；上轨 118、下轨 -14。
-- 中枢用最近摆动高低点的重叠区近似，不是严格缠论。
-- `frontend/src/components/KdjPanel.tsx` 是独立面板；`HudHome.tsx` 把 KDJ 入口放在右侧「行业要闻」下方，`/kdj` 为独立页面。
-- 只做提示，不产生交易信号。
-
-### KDJ alerts
-
-- `backend/kdj.py` fetches 5m / 30m candles and recurses `RSV → K → D → J`; upper 118, lower -14.
-- The central zone is an approximation from recent swing-high/low overlap, not strict Chan theory.
-- `frontend/src/components/KdjPanel.tsx` is the panel; `HudHome.tsx` places the KDJ entry under Industry News; `/kdj` is a dedicated page.
-- Alerts only; no trade signal is generated.
 
 ### iOS
 
@@ -101,7 +86,6 @@ US edition
 - `backend/app.py` serves both the API and the built frontend.
 - `backend/market.py` handles A-share quotes, indices, candles, search and sectors.
 - `backend/models.py` contains the three-state Gaussian HMM and the percolation giant component.
-- `backend/kdj.py` computes 5m / 30m KDJ and an approximate central zone for two sectors and six indices.
 - `backend/portfolio.py` handles trades, cost basis, NAV and drawdown.
 - `backend/db.py` stores accounts, trades, watchlists and caches in SQLite.
 - `frontend/src` is where the HUD, pages, themes and charts live.

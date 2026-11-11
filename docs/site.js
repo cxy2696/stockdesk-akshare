@@ -21,19 +21,6 @@
       heroAlt: "One quiet desk for the whole market.",
       heroText: "StockDesk 把市场、持仓和模型放在一张安静的屏幕上。它跑在你自己的电脑里，账户数据只留在本机——没有账号，也没有云端同步。",
       download: "下载",
-      navDownload: "下载",
-      dlTitle: "选择你的版本。",
-      dlText: "先选平台，再点下载。浏览器支持时会打开保存位置选择器；不支持时保存到默认下载文件夹。",
-      dlMac: "原生窗口，解压后打开 StockDesk.app。适合日常使用。",
-      dlWin: "单文件 exe，Windows 10/11 原生 WebView2 窗口；Win7/8 回退浏览器。",
-      dlIOS: "未签名 IPA，需要用自己的 Apple ID 重签后安装。",
-      dlMacBtn: "下载 macOS 包",
-      dlWinBtn: "下载 Windows 包",
-      dlIOSBtn: "下载 iOS 包",
-      dlFoot: "下载后请核对版本；iOS 需要重签，Windows 7/8 使用浏览器回退。",
-      dlSaved: "已保存到你选择的位置",
-      dlStart: "开始下载…",
-      dlCancel: "已取消",
       source: "查看源码",
       guide: "阅读教程 →",
       guideShort: "教程 ↗",
@@ -106,7 +93,7 @@
       bookS2: "净值 + 回撤",
       bookS2n: "风险真正长什么样",
       modelTitle: "模型描述现在，<br>不预测明天。",
-      modelText: "五个 A 股指数的三状态 HMM 给出总仓位；渗流寻找最大 4 邻接连通簇，区分“普涨扩散”和“少数股票在动”；右侧 KDJ 按键独立查看半导体、通信设备和六个指数的 5m / 30m 极值。",
+      modelText: "五个 A 股指数的三状态 HMM 给出总仓位；渗流寻找最大 4 邻接连通簇，区分“普涨扩散”和“少数股票在动”；个股建议跟随你的真实持仓。",
       editionsTitle: "选一个入口。",
       editionsText: "macOS、Windows、iOS、美股版与容器，<br>共用一套数据习惯。",
       edMac: "原生窗口，双击即用。",
@@ -136,19 +123,6 @@
       heroAlt: "一张安静的桌子，看完整市场。",
       heroText: "StockDesk puts the market, your positions and the models on one calm screen. It runs on your machine — no account, no cloud sync — and keeps your data local.",
       download: "Download",
-      navDownload: "Download",
-      dlTitle: "Choose your edition.",
-      dlText: "Pick a platform, then download. If the browser supports it, you will choose where to save; otherwise it goes to Downloads.",
-      dlMac: "Native window. Unzip and open StockDesk.app.",
-      dlWin: "One-file exe with a native WebView2 window on Windows 10/11; Windows 7/8 falls back to the browser.",
-      dlIOS: "Unsigned IPA. Re-sign with your own Apple ID before installing.",
-      dlMacBtn: "Download macOS",
-      dlWinBtn: "Download Windows",
-      dlIOSBtn: "Download iOS",
-      dlFoot: "Check the version after downloading. iOS needs re-signing; Windows 7/8 uses the browser fallback.",
-      dlSaved: "Saved to your chosen location",
-      dlStart: "Downloading…",
-      dlCancel: "Cancelled",
       source: "View source",
       guide: "Read the guide →",
       guideShort: "Guide ↗",
@@ -221,7 +195,7 @@
       bookS2: "NAV + drawdown",
       bookS2n: "What the risk really looked like",
       modelTitle: "Models describe.<br>They do not predict.",
-      modelText: "A 3-state HMM on five A-share indices suggests total exposure. Percolation finds the largest four-neighbour cluster. A separate right-rail KDJ view covers semiconductors, communications equipment and six indices on 5m / 30m.",
+      modelText: "A 3-state HMM on five A-share indices suggests total exposure. Percolation finds the largest four-neighbour cluster, separating broad diffusion from a few moving names. Per-stock guidance follows your actual holdings.",
       editionsTitle: "Pick an edition.",
       editionsText: "macOS, Windows, iOS, the US edition and containers,<br>with the same data habits.",
       edMac: "Native window. Double-click.",
@@ -1245,53 +1219,6 @@
       filmFrame.style.transform = "perspective(1400px) rotateX(0deg) rotateY(0deg) rotate(0.65deg)";
     });
   }
-
-  /* ============================================================
-     Download packages (save-location picker when supported)
-     ============================================================ */
-  async function downloadPackage(button) {
-    const url = button.dataset.dlUrl;
-    const file = button.dataset.dlFile || "StockDesk";
-    if (!url) return;
-    const label = button.querySelector("span");
-    const original = label ? label.textContent : "";
-    if (button.classList.contains("is-busy")) return;
-    button.classList.add("is-busy");
-    if (label) label.textContent = T[lang].dlStart;
-
-    try {
-      if (window.showSaveFilePicker) {
-        try {
-          const handle = await window.showSaveFilePicker({ suggestedName: file });
-          showToast(T[lang].dlStart, 5000);
-          const response = await fetch(url, { redirect: "follow" });
-          if (!response.ok) throw new Error("download failed");
-          const blob = await response.blob();
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          showToast(T[lang].dlSaved, 3600);
-          return;
-        } catch (err) {
-          if (err && err.name === "AbortError") { showToast(T[lang].dlCancel); return; }
-          /* CORS or picker failure: fall back to a normal download. */
-        }
-      }
-      const a = document.createElement("a");
-      a.href = url; a.download = file; a.target = "_blank"; a.rel = "noopener";
-      document.body.appendChild(a); a.click(); a.remove();
-      showToast(T[lang].dlStart, 3600);
-    } catch (err) {
-      showToast(T[lang].dlStart, 3600);
-      window.open(url, "_blank", "noopener");
-    } finally {
-      button.classList.remove("is-busy");
-      if (label) label.textContent = original;
-    }
-  }
-  $$("[data-dl-url]").forEach((button) => {
-    button.addEventListener("click", () => downloadPackage(button));
-  });
 
   /* ============================================================
      Boot

@@ -6,16 +6,6 @@
 
 ## 中文
 
-### 直接下载
-
-[项目展示页下载区](https://cxy2696.github.io/stockdesk-akshare/#download) 提供 macOS / Windows / iOS 三个包；Chrome / Edge 可选择保存位置，Safari 和手机回退到默认下载目录。
-
-| 平台 | 文件 |
-| --- | --- |
-| macOS | `StockDesk-macOS-1.10.2.zip` |
-| Windows | `StockDesk.exe` |
-| iOS | `StockDesk-iOS-3.6-unsigned.ipa` |
-
 ### 你需要准备
 
 - Python 3.10 或更高版本（美股版 3.9+）
@@ -67,11 +57,8 @@ npm ci
 npm run build
 cd ..
 
-pyinstaller --noconfirm --clean --onefile --noconsole --name StockDesk `
-  --add-data "frontend/dist;frontend_dist" `
-  --collect-submodules backend --collect-all webview `
-  --collect-all pythonnet --collect-all clr_loader `
-  --hidden-import anyio._backends._asyncio main.py
+pyinstaller --noconfirm --onefile --noconsole --name StockDesk `
+  --add-data "frontend/dist;frontend_dist" main.py
 ```
 
 Windows 10/11 使用 Edge WebView2 原生窗口；Windows 7/8 没有 WebView2 时会退回浏览器。
@@ -113,16 +100,6 @@ python run.py --port 8770
 - **macOS 提示未签名**：右键 App → 打开。
 
 ## English
-
-### Download
-
-The [site download section](https://cxy2696.github.io/stockdesk-akshare/#download) has macOS, Windows and iOS packages. Chrome/Edge can choose a save location; Safari and mobile use the default Downloads folder.
-
-| Platform | File |
-| --- | --- |
-| macOS | `StockDesk-macOS-1.10.2.zip` |
-| Windows | `StockDesk.exe` |
-| iOS | `StockDesk-iOS-3.6-unsigned.ipa` |
 
 ### What you need
 
@@ -175,11 +152,8 @@ npm ci
 npm run build
 cd ..
 
-pyinstaller --noconfirm --clean --onefile --noconsole --name StockDesk `
-  --add-data "frontend/dist;frontend_dist" `
-  --collect-submodules backend --collect-all webview `
-  --collect-all pythonnet --collect-all clr_loader `
-  --hidden-import anyio._backends._asyncio main.py
+pyinstaller --noconfirm --onefile --noconsole --name StockDesk `
+  --add-data "frontend/dist;frontend_dist" main.py
 ```
 
 Windows 10/11 gets a native Edge WebView2 window. Windows 7/8 has no WebView2 and falls back to the browser.

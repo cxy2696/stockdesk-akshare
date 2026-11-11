@@ -198,7 +198,7 @@ def quotes(codes: list[str]) -> dict[str, dict]:
 _PERIOD = {"daily": 101, "weekly": 102, "monthly": 103, "60m": 60, "30m": 30, "15m": 15, "5m": 5}
 
 
-def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qfq", secid_override: str | None = None, timeout: float = 12.0) -> list[dict]:
+def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qfq", secid_override: str | None = None) -> list[dict]:
     adjust = adjust if adjust in ("", "qfq", "hfq") else "qfq"
     fqt = {"": 0, "qfq": 1, "hfq": 2}[adjust]
     key = f"kline:{secid_override or code}:{period}:{adjust}:{limit}"
@@ -215,7 +215,7 @@ def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qf
         f"&klt={klt}&fqt={fqt}&beg={start}&end={end}&lmt={max(10, int(limit))}"
     )
     try:
-        d = _http_json(url, timeout=timeout)
+        d = _http_json(url)
         kl = ((d or {}).get("data") or {}).get("klines") or []
     except Exception:
         kl = []
@@ -243,7 +243,7 @@ def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qf
     if rows and any((r["close"] or 0) < 0 for r in rows):
         # forward-adjusted history can go negative on heavily-dividend stocks;
         # fall back to unadjusted prices for display
-        return klines(code, period=period, limit=limit, adjust="", secid_override=secid_override, timeout=timeout)
+        return klines(code, period=period, limit=limit, adjust="", secid_override=secid_override)
     if rows:
         db.cache_set(key, rows)
     return rows
@@ -413,7 +413,7 @@ def financials(code: str, periods: int = 8) -> list[dict]:
     )
     rows: list[dict] = []
     try:
-        d = _http_json(url, timeout=timeout)
+        d = _http_json(url)
         res = (d or {}).get("result") or {}
         data = res.get("data") if isinstance(res, dict) else res
         for x in data or []:
@@ -452,7 +452,7 @@ def profile(code: str) -> dict:
     )
     out: dict = {}
     try:
-        d = _http_json(url, timeout=timeout)
+        d = _http_json(url)
         res = (d or {}).get("result") or {}
         data = res.get("data") if isinstance(res, dict) else res
         x = (data or [None])[0] if isinstance(data, list) else data
@@ -496,7 +496,7 @@ def concepts(code: str) -> list[str]:
     )
     names: list[str] = []
     try:
-        d = _http_json(url, timeout=timeout)
+        d = _http_json(url)
         res = (d or {}).get("result") or {}
         data = res.get("data") if isinstance(res, dict) else res
         for x in data or []:

@@ -16,14 +16,6 @@ Windows 10/11 上使用 pywebview + Edge WebView2，打开的是独立原生窗�
 
 先看看 macOS 顶部菜单栏是否已经切换到 StockDesk；窗口会固定从主屏左上角打开。如果仍然异常，查看 `~/Library/Application Support/StockDesk/stockdesk.log`。
 
-### 下载时可以选择保存位置吗？
-
-可以。项目页下载区在 Chrome / Edge 里会调用浏览器的保存位置选择器；Safari、Firefox 和手机浏览器不支持时，会直接保存到默认下载目录。iOS 的 IPA 未签名，需要用自己的 Apple ID 重签。
-
-### KDJ 预警为什么移到了右侧？
-
-它是独立预警层，不属于量化模型页面。HUB 右侧「行业要闻」下方的白色 **KDJ预警** 按键会进入独立页面；阈值是 `J ≥ 118` 超买、`J ≤ -14` 超卖。
-
 ### 字体缩放会拉伸地图或图表吗？
 
 不会。桌面端只调整文字字号，按钮和卡片会随文字自动增高，表格自动换行。地图、K 线和固定图形保持原来的几何比例。
@@ -49,14 +41,6 @@ On Windows 10/11 it uses pywebview with Edge WebView2, so you get a standalone n
 ### I opened the macOS app but cannot see a window.
 
 Check the macOS menu bar first — StockDesk may already be active. The window opens at the top-left of the primary display. If something still looks wrong, check `~/Library/Application Support/StockDesk/stockdesk.log`.
-
-### Can I choose where downloads are saved?
-
-Yes. In Chrome/Edge, the site download cards open the browser's save-location picker. Safari, Firefox and mobile browsers fall back to the default Downloads folder. The iOS IPA is unsigned and needs re-signing with your own Apple ID.
-
-### Why is KDJ on the right side?
-
-It is an independent warning layer, not part of Quant Models. The white **KDJ** button under Industry News opens a dedicated page; thresholds are `J >= 118` overbought and `J <= -14` oversold.
 
 ### Does font scaling stretch maps or charts?
 
