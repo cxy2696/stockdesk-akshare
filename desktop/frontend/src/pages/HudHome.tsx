@@ -248,7 +248,7 @@ export default function HudHome({ overview }: { overview: any }) {
         <span>{lang === 'en' ? 'Net inflow' : '主力净流入'} {hot?.inflow?.[0]?.name ?? '--'} {fmt.big(hot?.inflow?.[0]?.inflow)}</span>
         <span>{lang === 'en' ? 'Now' : '当前'} {now.toLocaleTimeString('zh-CN', { hour12: false })}</span>
         <span>{lang === 'en' ? 'Data' : '数据'} {hot?.updated ? new Date(hot.updated * 1000).toLocaleTimeString('zh-CN', { hour12: false }) : '--:--:--'}</span>
-        <span className="hud-version">COMMAND DECK · v1.9</span>
+        <span className="hud-version">COMMAND DECK · v1.10</span>
       </div>
     </div>
   )
