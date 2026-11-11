@@ -1,7 +1,7 @@
 # StockDesk · akshare
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-1.10.1-c9ad72)](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.1)
+[![Release](https://img.shields.io/badge/release-1.10.2-c9ad72)](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](desktop/backend)
 [![TypeScript](https://img.shields.io/badge/TypeScript-React-3178C6?logo=typescript&logoColor=white)](desktop/frontend)
 [![Swift](https://img.shields.io/badge/Swift-SwiftUI-F05138?logo=swift&logoColor=white)](ios)
@@ -10,7 +10,7 @@
 **个人股票投资台 / A local-first equity desk**  
 macOS · Windows · iOS · US Equities
 
-[中文](#中文) · [English](#english) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Download](https://cxy2696.github.io/stockdesk-akshare/#download) · [Guide](docs/GUIDE.md) · [Install](docs/INSTALL.md) · [Architecture](docs/ARCHITECTURE.md) · [Languages](LANGUAGES.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.1)
+[中文](#中文) · [English](#english) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Download](https://cxy2696.github.io/stockdesk-akshare/#download) · [Guide](docs/GUIDE.md) · [Install](docs/INSTALL.md) · [Architecture](docs/ARCHITECTURE.md) · [Languages](LANGUAGES.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2)
 
 ## 项目展示页 / Project site
 
@@ -34,9 +34,9 @@ A 43-second product film with five chapters and music, the HUB / models / US / i
 
 StockDesk 是一个本地优先、单用户的股票投资工作台。它把行情、持仓、复盘、回测、HMM/渗流模型、KDJ 预警和地域/行业视图放在一个安静的命令舱界面里；账户和缓存只保存在本机。
 
-最新版本 **1.10.1**：
+最新版本 **1.10.2**：
 
-- KDJ 极值预警从「量化模型」移出，改为右侧独立白色按键
+- KDJ 极值预警从「量化模型」移出，放在 HUB 右侧「行业要闻」下方，沿用同一套白色按键
 - 上轨 `J ≥ 118` 超买，下轨 `J ≤ -14` 超卖
 - 新增中证1000，共覆盖 2 个行业 + 6 个指数
 - 5 分钟 / 30 分钟双图，绘制近似中枢
@@ -72,8 +72,8 @@ StockDesk 是一个本地优先、单用户的股票投资工作台。它把行�
 
 | 平台 | 文件 | 版本 |
 | --- | --- | --- |
-| macOS | `StockDesk-macOS-1.10.1.zip` | 1.10.1 |
-| Windows | `StockDesk.exe` | 1.10.1 |
+| macOS | `StockDesk-macOS-1.10.2.zip` | 1.10.2 |
+| Windows | `StockDesk.exe` | 1.10.2 |
 | iOS | `StockDesk-iOS-3.6-unsigned.ipa` | 3.6 |
 
 iOS IPA 未签名，需要自己的 Apple ID 重签。
@@ -143,8 +143,8 @@ stockdesk-akshare/
 
 ### 版本
 
-- macOS：1.10.1
-- Windows：1.10.1
+- macOS：1.10.2
+- Windows：1.10.2
 - iOS：3.6 (27)
 - US：1.0.0
 
@@ -160,9 +160,9 @@ MIT License。见 [LICENSE](LICENSE)。
 
 StockDesk is a local-first, single-user equity desk. Market data, positions, review, backtests, HMM/percolation models, KDJ alerts and regional/industry views live in one quiet command-deck interface. Account data and caches stay on your machine.
 
-Latest **1.10.1**:
+Latest **1.10.2**:
 
-- KDJ alerts moved out of Quant Models into a fixed white button on the right rail
+- KDJ alerts moved out of Quant Models into the HUB right column, directly under Industry News, using the same white button
 - Upper band `J ≥ 118` overbought; lower band `J ≤ -14` oversold
 - CSI 1000 added: 2 sectors + 6 indices
 - 5m / 30m charts with an approximate central zone
@@ -198,8 +198,8 @@ Use the [download section](https://cxy2696.github.io/stockdesk-akshare/#download
 
 | Platform | File | Version |
 | --- | --- | --- |
-| macOS | `StockDesk-macOS-1.10.1.zip` | 1.10.1 |
-| Windows | `StockDesk.exe` | 1.10.1 |
+| macOS | `StockDesk-macOS-1.10.2.zip` | 1.10.2 |
+| Windows | `StockDesk.exe` | 1.10.2 |
 | iOS | `StockDesk-iOS-3.6-unsigned.ipa` | 3.6 |
 
 The iOS IPA is unsigned; re-sign with your own Apple ID.
@@ -255,8 +255,8 @@ stockdesk-akshare/
 
 ### Versions
 
-- macOS: 1.10.1
-- Windows: 1.10.1
+- macOS: 1.10.2
+- Windows: 1.10.2
 - iOS: 3.6 (27)
 - US: 1.0.0
 
