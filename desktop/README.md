@@ -35,7 +35,7 @@ macOS / Windows 桌面端：FastAPI + React + ECharts + pywebview。账户数据
 
 ### KDJ 极值预警
 
-入口：任意页面右侧固定白色 **KDJ 预警** 按键。
+入口：HUB 右侧「行业要闻」下方的白色 **KDJ预警** 按键，和其他右侧入口一致。
 
 - 上轨：`J ≥ 118` 超买
 - 下轨：`J ≤ -14` 超卖
@@ -113,7 +113,7 @@ desktop/
 
 ### 版本
 
-- macOS / Windows：1.10.1
+- macOS / Windows：1.10.2
 - 下载：<https://cxy2696.github.io/stockdesk-akshare/#download>
 
 ---
@@ -130,7 +130,7 @@ macOS / Windows desktop app: FastAPI + React + ECharts + pywebview. Account data
 - Watchlist, indices, sectors, stock detail, chips and money flow
 - Daily plan, portfolio ledger, review, 10 backtest rules
 - 3-state HMM on five A-share indices + percolation giant component
-- KDJ alerts from a fixed white right-rail button; 5m/30m J and approximate zones
+- KDJ alerts from a white HUB button under Industry News; 5m/30m J and approximate zones
 - Full-page image sharing; native macOS share sheet and Windows Explorer
 - 100% / 120% / 150% scaling; HUD / light / dark themes; Chinese / English
 
@@ -178,4 +178,4 @@ Local-only account data, no login and no cloud sync. Quotes may be delayed or in
 
 ### Version
 
-macOS / Windows: **1.10.1** · [Download](https://cxy2696.github.io/stockdesk-akshare/#download)
+macOS / Windows: **1.10.2** · [Download](https://cxy2696.github.io/stockdesk-akshare/#download)
