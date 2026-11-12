@@ -47,6 +47,14 @@ jobs:
           }
           $health = Invoke-RestMethod "http://127.0.0.1:8899/api/health" -TimeoutSec 10
           Write-Host "health:" $health.data.version
+          # The packaged UI must be present, not just the API.
+          $html = (Invoke-WebRequest "http://127.0.0.1:8899/" -UseBasicParsing -TimeoutSec 10).Content
+          if ($html -notmatch "StockDesk") { throw "frontend index missing" }
+          $asset = [regex]::Match($html, 'assets/index-[^"'']+').Value
+          if (-not $asset) { throw "frontend asset reference missing" }
+          $assetStatus = (Invoke-WebRequest "http://127.0.0.1:8899/$asset" -UseBasicParsing -TimeoutSec 30).StatusCode
+          if ($assetStatus -ne 200) { throw "frontend asset failed: $assetStatus" }
+          Write-Host "frontend asset:" $asset $assetStatus
           $kdj = Invoke-RestMethod "http://127.0.0.1:8899/api/market/kdj-alerts" -TimeoutSec 120
           $boards = Invoke-RestMethod "http://127.0.0.1:8899/api/market/boards" -TimeoutSec 60
           $models = Invoke-RestMethod "http://127.0.0.1:8899/api/market/models" -TimeoutSec 120

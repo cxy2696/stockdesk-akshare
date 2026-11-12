@@ -30,13 +30,22 @@
 #### 1.1 macOS：DMG（推荐）
 
 1. 下载 `StockDesk-macOS-1.10.2.dmg`。
-2. 双击打开，把 **StockDesk** 拖进 **Applications**。
-3. 第一次打开如果提示「无法验证开发者」：在 Finder 里右键 App → **打开**，或到「系统设置 → 隐私与安全性」点「仍要打开」。
+2. 双击打开，双击 **`Install-StockDesk.command`**。如果 macOS 提示无法打开，右键该脚本 → **打开**。
+3. 脚本会复制到 Applications、清除浏览器的下载隔离标记并启动 App。
 4. 看到 HUD 指挥舱即安装完成。账户数据保存在 `~/Library/Application Support/StockDesk`。
+
+也可以手动把 **StockDesk** 拖进 **Applications**，然后在终端执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/StockDesk.app
+open /Applications/StockDesk.app
+```
+
+> 为什么需要这一步：安装包使用本机 ad-hoc 签名，没有付费 Apple Developer ID / 公证。macOS 会给浏览器下载的文件加 `com.apple.quarantine`，Gatekeeper 因此拒绝启动；清除标记不会降低系统安全性，也不会修改 App 内容。
 
 #### 1.2 macOS：ZIP
 
-下载 ZIP → 双击解压 → 把 `StockDesk.app` 拖进 Applications。和 DMG 的内容完全一致，只是没有安装向导。
+下载 ZIP → 双击解压 → 双击 `Install-StockDesk.command`。脚本内容与 DMG 完全一致。
 
 #### 1.3 Windows：单文件 exe
 
@@ -330,8 +339,9 @@ powershell -ExecutionPolicy Bypass -File .\build_win.ps1
 ### 10. 常见问题
 
 - **下载很慢**：优先用 DMG（约 43 MB）或 ZIP（约 42 MB）；Windows exe 已精简到约 52 MB。GitHub Releases 支持断点续传，网络不稳时可以重试。
-- **macOS 提示未签名**：右键 App → 打开；或在「隐私与安全性」里允许。
-- **Windows 没有窗口**：确认 WebView2 Runtime 已安装；没有时会退回浏览器。
+- **macOS 提示未签名 / 已损坏 / 无法打开**：不要直接双击 App。先运行安装包里的 `Install-StockDesk.command`；或手动执行 `xattr -dr com.apple.quarantine /Applications/StockDesk.app`。如果仍被拦截，到「系统设置 → 隐私与安全性」点「仍要打开」。
+- **macOS 打开后空白 / 内容加载失败**：先确认 App 是从 Applications 启动，而不是 DMG 里的临时路径；再查看 `~/Library/Application Support/StockDesk/stockdesk.log`。1.10.2 在启动失败时会弹出原生错误提示，不再只显示空白窗口。
+- **Windows 没有窗口 / 请求失败**：确认 WebView2 Runtime 已安装；没有时会退回浏览器。SmartScreen 拦截时点「更多信息 → 仍要运行」；仍无窗口可运行 `StockDesk.exe --browser`，并查看 `%LOCALAPPDATA%\StockDesk\stockdesk.log`。
 - **iOS 安装失败**：IPA 未签名，必须用自己的 Apple ID 重签；免费签名 7 天有效。
 - **端口被占用**：启动器会自动往后找空闲端口，看终端或日志里的实际地址。
 - **数据看起来不对**：先刷新，再检查网络；行情来自公开接口，可能延迟。东方财富不可达时，板块/KDJ 会自动回退到新浪/ETF 代理，并在界面标注。
@@ -527,8 +537,9 @@ Do not trade every day. HMM and percolation describe the present; they are risk 
 ### 10. FAQ
 
 - **Slow download**: use the DMG (~43 MB) or ZIP (~42 MB); the Windows exe is about 52 MB. GitHub Releases supports resume, so retry on unstable networks.
-- **macOS says unsigned**: right-click → Open, or allow it in Privacy & Security.
-- **No window on Windows**: install WebView2 Runtime; otherwise the app opens in the browser.
+- **macOS says unsigned / damaged / cannot open**: do not double-click the app directly. Run `Install-StockDesk.command` from the download, or run `xattr -dr com.apple.quarantine /Applications/StockDesk.app`. If it is still blocked, click "Open Anyway" in System Settings → Privacy & Security.
+- **macOS opens but content is blank**: make sure you launched the copy in Applications, not the temporary DMG path, then check `~/Library/Application Support/StockDesk/stockdesk.log`. 1.10.2 now shows a native error dialog if startup fails instead of a silent blank window.
+- **No window / request failure on Windows**: install WebView2 Runtime; otherwise the app opens in the browser. If SmartScreen blocks it, choose More info → Run anyway. You can also run `StockDesk.exe --browser` and check `%LOCALAPPDATA%\StockDesk\stockdesk.log`.
 - **iOS install fails**: the IPA is unsigned; re-sign it with your Apple ID. Free signatures expire after 7 days.
 - **Port in use**: the launcher picks the next free port; check the log.
 - **Data looks wrong**: refresh and check the network. When Eastmoney is unreachable, sectors/KDJ fall back to Sina/ETF proxy and label it.

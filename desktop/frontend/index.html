@@ -22,7 +22,29 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#070a0c;color:#f4f6f5;font-family:-apple-system,'PingFang SC',sans-serif;text-align:center;padding:24px">
+        <div>
+          <div style="font-size:18px;font-weight:600;letter-spacing:.08em">StockDesk 正在加载…</div>
+          <div style="margin-top:10px;font-size:12px;color:#a5b0ad;line-height:1.8">
+            如果长时间空白，请查看日志：<br>
+            macOS：~/Library/Application Support/StockDesk/stockdesk.log<br>
+            Windows：%LOCALAPPDATA%\StockDesk\stockdesk.log
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      window.addEventListener('error', function (e) {
+        var root = document.getElementById('root');
+        if (!root || root.childElementCount > 1) return;
+        root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#070a0c;color:#ff8a8a;font-family:-apple-system,sans-serif;padding:24px;text-align:center">' +
+          '<div><div style="font-size:18px;font-weight:600">StockDesk 页面加载失败</div>' +
+          '<div style="margin-top:10px;font-size:12px;color:#a5b0ad;line-height:1.8">' +
+          String((e && e.message) || '未知错误').replace(/[<>&]/g, '') +
+          '<br>请退出后重新打开，或查看 stockdesk.log。</div></div></div>';
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

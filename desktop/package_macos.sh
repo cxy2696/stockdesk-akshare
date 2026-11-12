@@ -40,9 +40,21 @@ echo "==> 3/3 生成 DMG / ZIP / 校验和"
 APP="dist/StockDesk.app"
 rm -rf release
 mkdir -p release
-ditto -c -k --norsrc --keepParent "$APP" "release/StockDesk-macOS-$VERSION.zip"
-hdiutil create -volname "StockDesk $VERSION" -srcfolder "$APP" -ov -format UDBZ \
+STAGE="release/.stage"
+mkdir -p "$STAGE"
+ditto "$APP" "$STAGE/StockDesk.app"
+cp Install-StockDesk.command "$STAGE/Install-StockDesk.command"
+chmod +x "$STAGE/Install-StockDesk.command"
+cp MACOS-README.txt "$STAGE/安装说明.txt"
+
+# ZIP: installer + app + readme at the archive root.
+ditto -c -k --norsrc "$STAGE" "release/StockDesk-macOS-$VERSION.zip"
+
+# DMG: same contents, plus an Applications shortcut for users who prefer drag.
+ln -s /Applications "$STAGE/Applications"
+hdiutil create -volname "StockDesk $VERSION" -srcfolder "$STAGE" -ov -format UDBZ \
   "release/StockDesk-macOS-$VERSION.dmg" >/dev/null
+rm -rf "$STAGE"
 (cd release && shasum -a 256 "StockDesk-macOS-$VERSION.dmg" "StockDesk-macOS-$VERSION.zip" > SHA256SUMS-macOS.txt)
 
 ls -lh release

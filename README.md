@@ -37,13 +37,15 @@ StockDesk 是一个本地优先、单用户的股票投资工作台。它把持�
 
 | 平台 | 推荐文件 | 大小 | 安装方式 |
 | --- | --- | --- | --- |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | 约 43 MB | 打开 DMG，把 StockDesk 拖进 Applications |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | 约 42 MB | 解压后打开 `StockDesk.app` |
-| Windows 10/11 x64 | `StockDesk.exe` | 约 52 MB | 双击运行；需要 WebView2 Runtime |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | 约 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | 约 42 MB | 解压后双击 `Install-StockDesk.command` |
+| Windows 10/11 x64 | `StockDesk.exe` | 约 52 MB | 双击运行；WebView2 Runtime；SmartScreen 拦截时「更多信息 → 仍要运行」 |
 | iPhone (iOS 17+) | `StockDesk-iOS-3.7.2-unsigned.ipa` | 约 1.3 MB | 用 Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | — | `docker run`，见 `docs/PACKAGES.md` |
 
 所有安装包都在 [Releases v1.10.2](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2)，同目录的 `SHA256SUMS-macOS.txt` 可用于校验下载完整性。macOS 包只包含 Apple Silicon 版本；Intel Mac 请从源码运行或使用容器。
+
+> macOS 注意：App 使用本机 ad-hoc 签名，浏览器下载后会带 `com.apple.quarantine` 标记，Gatekeeper 可能提示「无法打开」。DMG / ZIP 内都附有 `Install-StockDesk.command`，双击它（若被拦截则右键 → 打开）会复制到 Applications、清除下载标记并启动。手动命令：`xattr -dr com.apple.quarantine /Applications/StockDesk.app`。
 
 本仓库 **stockdesk-akshare** 项目包含：
 
@@ -175,13 +177,15 @@ StockDesk is a local-first, single-user equity research desk. It combines portfo
 
 | Platform | Recommended file | Size | Install |
 | --- | --- | --- | --- |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | ~43 MB | Open the DMG and drag StockDesk to Applications |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | ~42 MB | Unzip and open `StockDesk.app` |
-| Windows 10/11 x64 | `StockDesk.exe` | ~52 MB | Double-click; WebView2 Runtime required |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | ~43 MB | Open the DMG and run `Install-StockDesk.command` |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | ~42 MB | Unzip and run `Install-StockDesk.command` |
+| Windows 10/11 x64 | `StockDesk.exe` | ~52 MB | Double-click; WebView2; if SmartScreen blocks, More info → Run anyway |
 | iPhone (iOS 17+) | `StockDesk-iOS-3.7.2-unsigned.ipa` | ~1.3 MB | Re-sign with Sideloadly / AltStore / Xcode |
 | Browser / NAS | GHCR containers | — | `docker run`, see `docs/PACKAGES.md` |
 
 All packages live in [Releases v1.10.2](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2); `SHA256SUMS-macOS.txt` verifies the macOS downloads. The macOS build is Apple Silicon only; Intel Macs should run from source or use a container.
+
+> macOS note: the app is ad-hoc signed, so a downloaded copy carries `com.apple.quarantine` and Gatekeeper may say it cannot be opened. Both DMG and ZIP include `Install-StockDesk.command`; double-click it (right-click → Open if macOS warns) and it copies the app to Applications, clears the quarantine flag, and launches it. Manual command: `xattr -dr com.apple.quarantine /Applications/StockDesk.app`.
 
 This repository, **stockdesk-akshare**, is the documented source snapshot for:
 

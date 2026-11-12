@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import json
 import os
 import socket
 import subprocess
@@ -102,17 +103,43 @@ class ShareApi:
         return {"ok": True, "path": path}
 
 
+def _log_dir() -> Path:
+    """Directory that matches the documented per-platform data folder."""
+    try:
+        from backend.config import data_dir
+        return data_dir()
+    except Exception:
+        base = os.environ.get("LOCALAPPDATA") or os.environ.get("TEMP") or str(Path.home())
+        return Path(base) / "StockDesk"
+
+
 def _setup_frozen_logging():
     """PyInstaller --noconsole has no stdout/stderr; keep a file log instead."""
     if not getattr(sys, "frozen", False):
         return
     try:
-        base = os.environ.get("LOCALAPPDATA") or os.environ.get("TEMP") or str(Path.home())
-        logdir = Path(base) / "StockDesk"
+        logdir = _log_dir()
         logdir.mkdir(parents=True, exist_ok=True)
         f = open(logdir / "stockdesk.log", "a", encoding="utf-8", buffering=1)
         sys.stdout = f
         sys.stderr = f
+    except Exception:
+        pass
+
+
+def _show_error(title: str, message: str) -> None:
+    """Show a native error dialog even in a --noconsole PyInstaller build."""
+    print(f"[stockdesk] {title}: {message}", file=sys.stderr)
+    try:
+        if sys.platform == "darwin":
+            script = (
+                f'display dialog {json.dumps(message)} with title {json.dumps(title)} '
+                'buttons {"好"} default button 1 with icon stop'
+            )
+            subprocess.run(["osascript", "-e", script], timeout=90, check=False)
+        elif sys.platform == "win32":
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, message, title, 0x10)
     except Exception:
         pass
 
@@ -137,6 +164,28 @@ def main():
             return 2
 
     headless = args.headless or os.environ.get("STOCKDESK_HEADLESS") == "1"
+
+    # A packaged app must always carry its frontend. Without this check a
+    # missing/partially-downloaded bundle showed an empty native window with no
+    # explanation, which looked like "the app opened but content failed".
+    if getattr(sys, "frozen", False):
+        try:
+            from backend.config import frontend_dist
+            front = frontend_dist()
+            if not (front / "index.html").exists():
+                message = (
+                    f"找不到前端资源：{front / 'index.html'}\n\n"
+                    "请重新下载完整安装包，或查看日志：\n" + str(_log_dir() / "stockdesk.log")
+                )
+                if headless:
+                    print("[stockdesk] " + message, file=sys.stderr)
+                else:
+                    _show_error("StockDesk 安装不完整", message)
+                return 1
+        except Exception as e:
+            _show_error("StockDesk 启动失败", f"读取前端资源失败：{e}")
+            return 1
+
     port = free_port(args.port)
     url = f"http://127.0.0.1:{port}"
 
@@ -150,7 +199,15 @@ def main():
     threading.Thread(target=warm_spot, name="warmup", daemon=True).start()
 
     if not wait_ready(url):
-        print("API server failed to start", file=sys.stderr)
+        message = (
+            f"本地服务未能在 {url} 启动。\n\n"
+            f"请查看日志：{_log_dir() / 'stockdesk.log'}\n"
+            "可以尝试退出后重新打开；如果端口被占用，程序会自动换端口。"
+        )
+        if headless:
+            print("[stockdesk] " + message, file=sys.stderr)
+        else:
+            _show_error("StockDesk 启动失败", message)
         return 1
     print(f"[stockdesk] ready at {url}")
 

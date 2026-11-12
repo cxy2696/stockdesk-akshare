@@ -8,12 +8,21 @@
 
 | 平台 | 推荐文件 | 安装 |
 | --- | --- | --- |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg`（约 43 MB） | 打开 DMG，拖进 Applications |
-| Windows 10/11 x64 | `StockDesk.exe`（精简单文件，约 52 MB） | 双击运行；装好 WebView2 Runtime |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg`（约 43 MB） | 打开 DMG，双击 `Install-StockDesk.command` |
+| Windows 10/11 x64 | `StockDesk.exe`（精简单文件，约 52 MB） | 双击运行；装好 WebView2 Runtime；SmartScreen 拦截时「更多信息 → 仍要运行」 |
 | iPhone iOS 17+ | `StockDesk-iOS-3.7.2-unsigned.ipa` | Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | 见 `PACKAGES.md` |
 
 下载页：<https://cxy2696.github.io/stockdesk-akshare/#download>
+macOS 首次打开：App 使用 ad-hoc 签名，浏览器下载后会带 `com.apple.quarantine` 标记，Gatekeeper 可能提示「无法打开」或「已损坏」。DMG / ZIP 内的 `Install-StockDesk.command` 会自动复制到 Applications 并清除该标记；也可以手动执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/StockDesk.app
+open /Applications/StockDesk.app
+```
+
+不要直接双击 DMG 里的 App 运行；先运行安装脚本或拖入 Applications 后再清除隔离标记。
+
 Release：<https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2>
 
 ## 中文
@@ -45,6 +54,13 @@ python main.py
 ```bash
 python main.py --browser
 ```
+
+### Windows 首次打开
+
+- 如果 Windows SmartScreen 提示「已保护你的电脑」：点「更多信息」→「仍要运行」。
+- 需要 WebView2 Runtime；没有时程序会退回默认浏览器。
+- 双击后没有窗口：查看 `%LOCALAPPDATA%\StockDesk\stockdesk.log`；也可以运行 `StockDesk.exe --browser`，用浏览器打开。
+- 1.10.2 在启动失败时会弹出错误提示，不再静默退出。
 
 ### 打包 macOS App
 
