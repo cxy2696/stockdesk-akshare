@@ -64,8 +64,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "StockDesk",
         "CFBundleDisplayName": "StockDesk",
-        "CFBundleShortVersionString": "1.9.0",
-        "CFBundleVersion": "1.9.0",
+        "CFBundleShortVersionString": "1.10.1",
+        "CFBundleVersion": "1.10.1",
         "NSHighResolutionCapable": True,
         "LSMinimumSystemVersion": "12.0",
         "LSApplicationCategoryType": "public.app-category.finance",
