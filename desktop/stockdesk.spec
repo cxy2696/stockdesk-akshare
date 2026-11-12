@@ -21,7 +21,24 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],
-    excludes=["tkinter"],
+    excludes=[
+        "tkinter",
+        # Optional heavy dependencies of pandas/akshare. The desktop backend
+        # only uses pandas/numpy/akshare HTTP helpers; none of these are
+        # imported by the live code paths (verified by the API smoke test).
+        "pyarrow",
+        "scipy",
+        "matplotlib",
+        "PIL",
+        "openpyxl",
+        "xlsxwriter",
+        "xlrd",
+        "pyxlsb",
+        "odf",
+        "calamine",
+        "IPython",
+        "pytest",
+    ],
     cipher=block_cipher,
     noarchive=False,
 )
@@ -64,8 +81,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "StockDesk",
         "CFBundleDisplayName": "StockDesk",
-        "CFBundleShortVersionString": "1.10.1",
-        "CFBundleVersion": "1.10.1",
+        "CFBundleShortVersionString": "1.10.2",
+        "CFBundleVersion": "1.10.2",
         "NSHighResolutionCapable": True,
         "LSMinimumSystemVersion": "12.0",
         "LSApplicationCategoryType": "public.app-category.finance",

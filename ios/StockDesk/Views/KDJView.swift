@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import Foundation
 
 private struct KTarget: Identifiable {
     let id: String
@@ -7,6 +8,9 @@ private struct KTarget: Identifiable {
     let kind: String
     let code: String
     let board: Bool
+    /// Tracking ETF used when the Eastmoney board-minute endpoint is
+    /// unreachable or rate-limited (the same proxy the desktop build uses).
+    var proxy: String? = nil
 }
 
 private struct KPoint: Identifiable {
@@ -33,7 +37,7 @@ private struct KPeriod {
     var points: [KPoint] = []
     var zone: ClosedRange<Double>? = nil
     var j: Double? = nil
-    var alert: String = "正常"
+    var alert: String = "暂无"
     var kValue: Double? = nil
     var dValue: Double? = nil
     var rsv: Double? = nil
@@ -44,12 +48,14 @@ private struct KPeriod {
     var cross: String = "--"
     var trend: String = "--"
     var metrics: KMetrics? = nil
+    var source: String = ""
+    var proxy: Bool = false
     var error: String = ""
 }
 
 private let targets: [KTarget] = [
-    .init(id: "semi", name: "半导体", kind: "行业", code: "BK1036", board: true),
-    .init(id: "comm", name: "通信设备", kind: "行业", code: "BK0448", board: true),
+    .init(id: "semi", name: "半导体", kind: "行业", code: "BK1036", board: true, proxy: "512480"),
+    .init(id: "comm", name: "通信设备", kind: "行业", code: "BK0448", board: true, proxy: "515880"),
     .init(id: "sse", name: "上证指数", kind: "指数", code: "000001", board: false),
     .init(id: "szse", name: "深证成指", kind: "指数", code: "399001", board: false),
     .init(id: "chinext", name: "创业板指", kind: "指数", code: "399006", board: false),
@@ -116,16 +122,46 @@ private final class KDJStore: ObservableObject {
     }
 
     private func fetch(_ t: KTarget, period: String) async -> KPeriod {
-        do {
-            let rows = t.board
-                ? try await MarketService.shared.boardKlines(t.code, period: period, limit: 180)
-                : try await MarketService.shared.indexKlines(t.code, period: period, limit: 180)
-            let (points, zone, j, metrics) = compute(rows)
-            let alert = j.map { $0 >= 118 ? "超买" : $0 <= -14 ? "超卖" : "正常" } ?? "正常"
-            return KPeriod(points: points, zone: zone, j: j, alert: alert, metrics: metrics, error: rows.isEmpty ? "暂无行情" : "")
-        } catch {
-            return KPeriod(error: error.localizedDescription)
+        if t.board {
+            // Eastmoney is the primary source, but on networks that resolve its
+            // IPv6 address without a working route the request is dropped after
+            // the TLS handshake. The desktop build already falls back to the
+            // tracking ETF; do the same here so the sector cards never stay on
+            // "暂无行情" when the index path is healthy.
+            if let rows = try? await MarketService.shared.boardKlines(t.code, period: period, limit: 180, timeout: 4),
+               rows.count >= 10 {
+                return makePeriod(rows, proxy: false, source: "东方财富 · 行业板块")
+            }
+            if let proxy = t.proxy,
+               let rows = try? await MarketService.shared.klines(proxy, period: period, limit: 180),
+               rows.count >= 10 {
+                return makePeriod(rows, proxy: true, source: "新浪 · 行业ETF代理")
+            }
+            return KPeriod(error: "板块分钟行情暂不可用，请稍后重试")
         }
+        do {
+            let rows = try await MarketService.shared.indexKlines(t.code, period: period, limit: 180)
+            guard rows.count >= 10 else { return KPeriod(error: "暂无行情") }
+            return makePeriod(rows, proxy: false, source: "新浪 · 指数分钟线")
+        } catch {
+            return KPeriod(error: Self.readable(error))
+        }
+    }
+
+    private func makePeriod(_ rows: [KLine], proxy: Bool, source: String) -> KPeriod {
+        let (points, zone, j, metrics) = compute(rows)
+        let alert = j.map { $0 >= 118 ? "超买" : $0 <= -14 ? "超卖" : "正常" } ?? "暂无"
+        return KPeriod(points: points, zone: zone, j: j, alert: alert,
+                       metrics: metrics, source: source, proxy: proxy,
+                       error: rows.isEmpty ? "暂无行情" : "")
+    }
+
+    private static func readable(_ error: Error) -> String {
+        if let urlError = error as? URLError,
+           [.networkConnectionLost, .timedOut, .notConnectedToInternet, .cannotConnectToHost].contains(urlError.code) {
+            return "行情连接中断，请稍后重试"
+        }
+        return error.localizedDescription
     }
 }
 
@@ -154,9 +190,16 @@ struct KDJView: View {
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(Theme.accent)
 
-                Text("LIVE · 每 60 秒自动刷新 \(store.updated.isEmpty ? "" : "· 更新 \(store.updated)")")
-                    .font(.system(size: 8, design: .monospaced))
-                    .foregroundStyle(Theme.textDim)
+                HStack(spacing: 5) {
+                    if store.loading {
+                        ProgressView().controlSize(.mini).tint(Theme.accent)
+                    }
+                    Text(store.loading
+                         ? "LIVE · 正在连接行情…"
+                         : "LIVE · 每 60 秒自动刷新 \(store.updated.isEmpty ? "" : "· 更新 \(store.updated)")")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundStyle(Theme.textDim)
+                }
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
@@ -214,6 +257,14 @@ struct KDJView: View {
                 Text(title).font(.system(size: 12, weight: .semibold))
                 Text("J \(p.j.map { String(format: "%.2f", $0) } ?? "--")")
                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.textSub)
+                if p.proxy {
+                    Text("ETF代理")
+                        .font(.system(size: 7, weight: .semibold))
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(Color.orange.opacity(0.16))
+                        .foregroundStyle(.orange)
+                        .clipShape(Capsule())
+                }
                 Spacer()
                 Text(p.alert)
                     .font(.system(size: 8, weight: .semibold))
@@ -271,7 +322,7 @@ struct KDJView: View {
                 .font(.system(size: 7.5, design: .monospaced))
                 .foregroundStyle(Theme.textDim)
             }
-            Text("东方财富分钟线 · \(p.points.count) 根")
+            Text("\(p.source.isEmpty ? "分钟线" : p.source) · \(p.points.count) 根")
                 .font(.system(size: 7, design: .monospaced)).foregroundStyle(Theme.textDim)
         }
         .padding(10)

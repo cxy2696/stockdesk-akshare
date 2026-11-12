@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "StockDesk"
-APP_VERSION = "1.10.1"
+APP_VERSION = "1.10.2"
 
 BASE_DIR = Path(__file__).resolve().parent
 

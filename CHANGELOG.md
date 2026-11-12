@@ -4,6 +4,19 @@
 
 ## 中文
 
+### 1.10.2
+
+- **下载体积**：macOS 安装包从 94.3 MB 降到约 43 MB（DMG）/ 42 MB（ZIP），Windows 单文件同步移除未使用的重型依赖，下载和首次解压时间显著缩短。
+- PyInstaller 现在排除 `pyarrow`、`scipy`、`matplotlib`、`PIL`、`openpyxl` 等未被桌面端实际调用的可选依赖；保留 pandas / numpy / akshare / lxml / curl_cffi 等运行必需项，并逐项做 API 冒烟测试。
+- 新增 `desktop/package_macos.sh` 与 `desktop/build_win.ps1`，统一生成 DMG、ZIP、Windows exe 和 macOS SHA256 校验和。
+- iOS KDJ 行业卡在东方财富板块分钟线不可达 / 限流时自动回退到标注的 ETF 代理（半导体 512480、通信设备 515880），5m / 30m 不再停在「暂无行情」。
+- iOS 板块跟踪在东方财富板块列表不可达时回退到新浪行业 / 概念资金流，行业与概念标签都能出数据；板块分钟请求增加超时，避免长时间空白。
+- iOS 修正北证 50 的新浪 `bj899050` 代码。
+- 重新构建桌面前端与 macOS 应用包，确保 HUD 深色主题的极值提醒横幅对比度修复真正随包发布；同时加宽提醒底色、边框、文字与图标，并修正 HUB 中央「资产中枢 / 运行中」文字重叠。
+- 新增带截图的详细功能与使用指南（`docs/GUIDE.md`），官网下载区统一到 1.10.2，并同步 README / INSTALL / PACKAGES 的版本与下载链接。
+- 版本：macOS / Windows **1.10.2**；iOS **3.7.2 (29)**；美股 **1.0.1**。
+
+
 ### 1.10.1
 
 - 修复东方财富在 IPv6 网络下 TLS 握手后断连的问题：仅对东方财富域名优先 IPv4，指数、行业、主力资金恢复。
@@ -37,6 +50,19 @@
 - 提供 A 股和美股两个 GHCR 容器。
 
 ## English
+
+### 1.10.2
+
+- **Download size**: the macOS package drops from 94.3 MB to about 43 MB (DMG) / 42 MB (ZIP), and the Windows one-file exe removes the same unused heavy dependencies, cutting download and first-unzip time.
+- PyInstaller now excludes `pyarrow`, `scipy`, `matplotlib`, `PIL`, `openpyxl` and other optional packages the desktop app never imports; pandas / numpy / akshare / lxml / curl_cffi stay, and every endpoint is smoke-tested.
+- Added `desktop/package_macos.sh` and `desktop/build_win.ps1` to produce DMG, ZIP, the Windows exe and macOS SHA256 checksums reproducibly.
+- iOS KDJ sector cards now fall back to the labelled ETF proxy (semiconductor 512480, communications equipment 515880) when Eastmoney board-minute data is unreachable or rate-limited, so 5m / 30m no longer sit on "no data".
+- iOS sector tracking falls back to the Sina industry / concept money-flow list when the Eastmoney board list is unreachable, and board-minute requests now time out quickly instead of leaving a blank panel.
+- Fixed the Sina symbol for the BSE 50 index (`bj899050`).
+- Rebuilt the desktop frontend and macOS app bundle so the HUD warning-banner contrast fix is actually shipped; widened the banner background, border, text and icon, and fixed the overlapping "asset hub / running" label.
+- Added a screenshot-guided feature and usage guide (`docs/GUIDE.md`), moved the site download section to 1.10.2, and synced versions / links across README / INSTALL / PACKAGES.
+- Versions: macOS / Windows **1.10.2**; iOS **3.7.2 (29)**; US **1.0.1**.
+
 
 ### 1.10.1
 

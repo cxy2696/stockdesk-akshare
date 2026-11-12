@@ -15,6 +15,9 @@ jobs:
         with:
           python-version: '3.11'
           architecture: 'x64'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: Install
         shell: pwsh
         run: |
@@ -22,43 +25,42 @@ jobs:
           pip install -r desktop/requirements.txt
           pip install "numpy==1.26.4" "pandas==2.2.3"
           pip install pyinstaller==6.10.0
-      - name: Build frontend
+      - name: Build exe (slim, excludes unused heavy packages)
         shell: pwsh
-        run: |
-          cd desktop/frontend
-          npm ci
-          npm run build
-      - name: Build exe
-        shell: pwsh
-        run: |
-          cd desktop
-          pyinstaller --noconfirm --clean --onefile --noconsole --name StockDesk `
-            --add-data "frontend/dist;frontend_dist" `
-            --add-data "backend/data/all_symbols.json;backend/data" `
-            --collect-submodules backend `
-            --collect-submodules akshare `
-            --collect-data akshare `
-            --collect-all webview `
-            --collect-all pythonnet `
-            --collect-all clr_loader `
-            --hidden-import anyio._backends._asyncio `
-            main.py
-      - name: Smoke
+        working-directory: desktop
+        run: powershell -ExecutionPolicy Bypass -File .\build_win.ps1
+      - name: Smoke test the packaged exe
         shell: pwsh
         run: |
           $env:STOCKDESK_DATA = "$pwd\testdata"
           $p = Start-Process -FilePath ".\desktop\dist\StockDesk.exe" -ArgumentList "--headless","--port","8899" -PassThru
           $ok = $false
-          for ($i=0; $i -lt 30; $i++) {
+          for ($i=0; $i -lt 40; $i++) {
             Start-Sleep -Seconds 2
             try { $r = Invoke-WebRequest "http://127.0.0.1:8899/api/health" -UseBasicParsing -TimeoutSec 3; if ($r.StatusCode -eq 200) { $ok=$true; break } } catch {}
           }
-          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
           if (-not $ok) {
             Write-Host "---- stockdesk log ----"
             Get-Content "$env:LOCALAPPDATA\StockDesk\stockdesk.log" -Tail 120 -ErrorAction SilentlyContinue
+            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
             throw "exe failed health check"
           }
+          $health = Invoke-RestMethod "http://127.0.0.1:8899/api/health" -TimeoutSec 10
+          Write-Host "health:" $health.data.version
+          $kdj = Invoke-RestMethod "http://127.0.0.1:8899/api/market/kdj-alerts" -TimeoutSec 120
+          $boards = Invoke-RestMethod "http://127.0.0.1:8899/api/market/boards" -TimeoutSec 60
+          $models = Invoke-RestMethod "http://127.0.0.1:8899/api/market/models" -TimeoutSec 120
+          if (-not $kdj.ok -or $kdj.data.targets.Count -lt 5) { throw "KDJ endpoint failed" }
+          if (-not $boards.ok -or $boards.data.Count -lt 5) { throw "boards endpoint failed" }
+          if (-not $models.ok) { throw "models endpoint failed" }
+          Write-Host "KDJ targets:" $kdj.data.targets.Count
+          Write-Host "boards:" $boards.data.Count
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+      - name: Report size
+        shell: pwsh
+        run: |
+          $f = Get-Item ".\desktop\dist\StockDesk.exe"
+          Write-Host ("StockDesk.exe: {0:N1} MB" -f ($f.Length / 1MB))
       - uses: actions/upload-artifact@v4
         with:
           name: StockDesk-Windows
@@ -67,4 +69,4 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload v1.10.1 desktop/dist/StockDesk.exe --clobber 
+        run: gh release upload v1.10.2 desktop/dist/StockDesk.exe --clobber

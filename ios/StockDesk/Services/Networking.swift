@@ -24,7 +24,7 @@ actor Networking {
     }
 
     /// GET a URL and decode JSON. Cached for `ttl` seconds when provided.
-    func get(_ urlString: String, ttl: TimeInterval? = nil, key: String? = nil) async throws -> Data {
+    func get(_ urlString: String, ttl: TimeInterval? = nil, key: String? = nil, timeout: TimeInterval? = nil) async throws -> Data {
         let cacheKey = key ?? Self.hash(urlString)
         let file = cacheDir.appendingPathComponent(cacheKey + ".json")
         if let ttl, let attrs = try? FileManager.default.attributesOfItem(atPath: file.path),
@@ -40,6 +40,7 @@ actor Networking {
         if isEastmoney, Date() < emBlockedUntil { throw APIError.http(-2) }
         var req = URLRequest(url: url)
         req.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let timeout { req.timeoutInterval = timeout }
         let data: Data
         let resp: URLResponse
         do {
@@ -63,8 +64,8 @@ actor Networking {
         return String(data: data, encoding: .utf8) ?? ""
     }
 
-    func getJSON<T: Decodable>(_ type: T.Type, url: String, ttl: TimeInterval? = nil, key: String? = nil) async throws -> T {
-        let data = try await get(url, ttl: ttl, key: key)
+    func getJSON<T: Decodable>(_ type: T.Type, url: String, ttl: TimeInterval? = nil, key: String? = nil, timeout: TimeInterval? = nil) async throws -> T {
+        let data = try await get(url, ttl: ttl, key: key, timeout: timeout)
         do {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {

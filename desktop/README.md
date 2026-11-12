@@ -107,7 +107,7 @@ cd frontend && npm install && npm run build && cd ..
 - **KDJ 极值预警**：HUB 右侧「行业要闻」下方独立入口；5m / 30m K 线与 J 值，上轨 `J ≥ 118`、下轨 `J ≤ -14`
 - 标的：半导体、通信设备、上证、深证、创业板、沪深300、中证500、中证1000、科创50、上证50、北证50
 - akshare 数据；行业限流时用 ETF 代理并标注；每 60 秒刷新
-- 版本号更新到 1.10.1
+- 1.10.2：安装包剔除 pyarrow / scipy / matplotlib 等未使用依赖，macOS 下载从 94.3 MB 降到约 43 MB；KDJ 行业 ETF 代理、HUD 提醒对比度与 iOS 板块回退同步更新
 
 ## v1.9 更新
 

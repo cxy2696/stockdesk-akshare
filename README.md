@@ -9,7 +9,7 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Models](docs/MODELS.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.1) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
+[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Models](docs/MODELS.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
 
 ## 项目展示页 / Project site
 
@@ -31,7 +31,19 @@ An independent project site with a 43-second product film, five screening chapte
 
 StockDesk 是一个本地优先、单用户的股票投资工作台。它把持仓、行情、复盘、策略、HMM/渗流模型和地域/行业数据放在一个 HUD 风格的界面里，账户与行情缓存只保存在本机。
 
-最新版本 **1.10.1** 修复东方财富在 IPv6 网络下不可达导致的指数/行业/主力资金空白，并恢复全量 5,580 只 A 股的估值与资金流字段；KDJ 行业在板块分钟数据缺失时使用 ETF 代理。
+最新版本 **1.10.2** 在 1.10.1 的基础上完成三件事：一是把 macOS 安装包从 94.3 MB 压到约 43 MB、Windows 单文件同步瘦身；二是修复 iOS 端 KDJ 行业数据链接、板块跟踪和北证 50 的行情回退；三是补齐带截图的详细使用指南，并把官网下载入口统一到 1.10.2。
+
+### 直接下载 / Direct download
+
+| 平台 | 推荐文件 | 大小 | 安装方式 |
+| --- | --- | --- | --- |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | 约 43 MB | 打开 DMG，把 StockDesk 拖进 Applications |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | 约 42 MB | 解压后打开 `StockDesk.app` |
+| Windows 10/11 x64 | `StockDesk.exe` | 约 30 MB（以 Release 为准） | 双击运行；需要 WebView2 Runtime |
+| iPhone (iOS 17+) | `StockDesk-iOS-3.7.2-unsigned.ipa` | 约 1.3 MB | 用 Sideloadly / AltStore / Xcode 重签 |
+| 浏览器 / NAS | GHCR 容器 | — | `docker run`，见 `docs/PACKAGES.md` |
+
+所有安装包都在 [Releases v1.10.2](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2)，同目录的 `SHA256SUMS-macOS.txt` 可用于校验下载完整性。macOS 包只包含 Apple Silicon 版本；Intel Mac 请从源码运行或使用容器。
 
 本仓库 **stockdesk-akshare** 项目包含：
 
@@ -142,8 +154,8 @@ stockdesk-akshare/
 
 ### 版本
 
-- macOS：1.10.1
-- iOS：3.7.1 (28)
+- macOS：1.10.2
+- iOS：3.7.2 (29)
 - US：1.0.1
 
 ### 免责声明
@@ -158,6 +170,18 @@ stockdesk-akshare/
 ### What is this?
 
 StockDesk is a local-first, single-user equity research desk. It combines portfolio tracking, market data, review analytics, strategy backtests, HMM/percolation models, and regional/industry views in a HUD-style interface. Account data and caches stay on your machine.
+
+### Direct download
+
+| Platform | Recommended file | Size | Install |
+| --- | --- | --- | --- |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | ~43 MB | Open the DMG and drag StockDesk to Applications |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | ~42 MB | Unzip and open `StockDesk.app` |
+| Windows 10/11 x64 | `StockDesk.exe` | ~30 MB (see Release) | Double-click; WebView2 Runtime required |
+| iPhone (iOS 17+) | `StockDesk-iOS-3.7.2-unsigned.ipa` | ~1.3 MB | Re-sign with Sideloadly / AltStore / Xcode |
+| Browser / NAS | GHCR containers | — | `docker run`, see `docs/PACKAGES.md` |
+
+All packages live in [Releases v1.10.2](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2); `SHA256SUMS-macOS.txt` verifies the macOS downloads. The macOS build is Apple Silicon only; Intel Macs should run from source or use a container.
 
 This repository, **stockdesk-akshare**, is the documented source snapshot for:
 
@@ -272,10 +296,10 @@ See [desktop/README.md](desktop/README.md) for the full HUB guide, screenshots, 
 
 ### Releases & Packages
 
-- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.1
-- **macOS**: `StockDesk-macOS-1.10.1.zip`
+- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2
+- **macOS**: `StockDesk-macOS-1.10.2.dmg` / `StockDesk-macOS-1.10.2.zip`
 - **Windows**: `StockDesk.exe`
-- **iOS**: `StockDesk-iOS-3.7.1-unsigned.ipa`
+- **iOS**: `StockDesk-iOS-3.7.2-unsigned.ipa`
 - **A-share container**: `ghcr.io/cxy2696/stockdesk-akshare-a-share:latest`
 - **US container**: `ghcr.io/cxy2696/stockdesk-akshare-us:latest`
 
@@ -289,8 +313,8 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 
 ### Versions
 
-- macOS: 1.10.1
-- iOS: 3.7.1 (28)
+- macOS: 1.10.2
+- iOS: 3.7.2 (29)
 - US: 1.0.1
 
 ### Disclaimer

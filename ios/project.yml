@@ -21,8 +21,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.stockdesk.app
         PRODUCT_NAME: StockDesk
-        MARKETING_VERSION: "3.7.1"
-        CURRENT_PROJECT_VERSION: "28"
+        MARKETING_VERSION: "3.7.2"
+        CURRENT_PROJECT_VERSION: "29"
         INFOPLIST_KEY_CFBundleDisplayName: StockDesk
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"

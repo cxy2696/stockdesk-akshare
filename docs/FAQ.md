@@ -4,6 +4,14 @@
 
 ## 中文
 
+### 1.10.2 安装包为什么变小了？
+
+1.10.2 的 PyInstaller 配置排除了 `pyarrow`、`scipy`、`matplotlib`、`PIL`、`openpyxl` 等桌面端未实际调用的可选依赖，保留 pandas / numpy / akshare / lxml / curl_cffi 等运行必需项。macOS 安装包从 94.3 MB 降到约 43 MB（DMG）/ 42 MB（ZIP），Windows 单文件同步精简；所有 API 冒烟测试和 iOS / 桌面端功能验证均已通过。
+
+### 下载很慢怎么办？
+
+优先使用 macOS 的 DMG（约 43 MB）或 ZIP（约 42 MB）；Windows exe 约 30 MB。GitHub Releases 支持断点续传，网络不稳时可以直接重试，不需要重新找链接。
+
 ### 这个仓库会影响我正在用的 StockDesk 吗？
 
 不会。`stockdesk-akshare` 是独立的源码和文档副本，不覆盖本地数据库、端口或正在运行的进程。美股版也使用单独端口 8770。
@@ -29,6 +37,14 @@ Windows 10/11 上使用 pywebview + Edge WebView2，打开的是独立原生窗�
 不提供。行情可能延迟、缺失或出错，任何交易决定和风险都由你自己承担。
 
 ## English
+
+### Why are the 1.10.2 packages smaller?
+
+The PyInstaller build now excludes optional packages the desktop app never imports (`pyarrow`, `scipy`, `matplotlib`, `PIL`, `openpyxl`, and others) while keeping pandas / numpy / akshare / lxml / curl_cffi. The macOS package dropped from 94.3 MB to about 43 MB (DMG) / 42 MB (ZIP), and the Windows one-file build is smaller too. Endpoint smoke tests and iOS/desktop checks still pass.
+
+### What if the download is slow?
+
+Use the macOS DMG (~43 MB) or ZIP (~42 MB); the Windows exe is about 30 MB. GitHub Releases supports resume, so retry the same link on unstable networks.
 
 ### Will this repository affect the StockDesk I am already using?
 

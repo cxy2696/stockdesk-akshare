@@ -24,3 +24,6 @@ ios/StockDesk.xcodeproj/
 
 !desktop/backend/data/
 !desktop/backend/data/all_symbols.json
+
+# release packages
+desktop/release/

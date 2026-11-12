@@ -4472,8 +4472,11 @@ body.sound-on .now-eq i:nth-child(4) { animation-delay: -0.1s; }
 .download-card h3{font-family:var(--serif);font-size:clamp(30px,3vw,42px);font-weight:400;letter-spacing:-.02em;line-height:1;margin:0 0 16px}
 .download-card p{color:rgba(17,18,14,.62);font-size:12.5px;line-height:1.8;max-width:290px;margin:0 0 20px}
 .download-version{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:rgba(17,18,14,.42);margin-top:auto}
-.download-go{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:18px;padding:13px 15px;border:1px solid rgba(17,18,14,.28);font-size:12px;transition:background .25s var(--ease),color .25s var(--ease),border-color .25s var(--ease)}
+.download-go{display:flex;color:var(--ink);text-decoration:none;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:18px;padding:13px 15px;border:1px solid rgba(17,18,14,.28);font-size:12px;transition:background .25s var(--ease),color .25s var(--ease),border-color .25s var(--ease)}
 .download-go i{font-style:normal;font-size:16px}
 .download-card:hover .download-go{background:var(--ink);border-color:var(--ink);color:var(--cream)}
+.download-alt{margin-top:10px;font-size:11px;color:rgba(17,18,14,.52);text-decoration:underline;text-underline-offset:3px}
+.download-alt:hover{color:var(--ink)}
+.download-foot a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .download-foot{margin-top:18px;font-family:var(--mono);font-size:8.5px;color:rgba(17,18,14,.42);letter-spacing:.03em}
 @media(max-width:900px){.download-grid{grid-template-columns:1fr}.download-card{min-height:0}}

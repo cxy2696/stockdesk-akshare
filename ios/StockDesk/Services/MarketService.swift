@@ -237,9 +237,13 @@ actor MarketService {
     // MARK: - Sina fallback (Eastmoney is frequently rate-limited)
 
     private func sinaSymbol(_ code: String, _ secid: String? = nil) -> String {
+        // Beijing listings use the bj prefix on Sina even though Eastmoney
+        // addresses them with a 0. market id. 899050 is the BSE 50 index.
+        if code.hasPrefix("899") || code.hasPrefix("8") || code.hasPrefix("4") || code.hasPrefix("92") {
+            return "bj" + code
+        }
         let sec = secid ?? Self.secid(code)
         if sec.hasPrefix("1.") { return "sh" + code }
-        if sec.hasPrefix("0.") { return (code.hasPrefix("399") || code.hasPrefix("899")) ? "sz" + code : "sz" + code }
         return "sz" + code
     }
 
@@ -340,10 +344,10 @@ actor MarketService {
         return Array(rows.suffix(max(10, limit)))
     }
 
-    func boardKlines(_ code: String, period: String = "daily", limit: Int = 160) async throws -> [KLine] {
+    func boardKlines(_ code: String, period: String = "daily", limit: Int = 160, timeout: TimeInterval? = nil) async throws -> [KLine] {
         let klt = ["daily": 101, "weekly": 102, "monthly": 103, "5m": 5, "30m": 30][period] ?? 101
         let url = "\(hisURL)?secid=90.\(code)&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=\(klt)&fqt=0&beg=19900101&end=20500101&lmt=\(limit)"
-        let obj = try await net.getJSON(JObj.self, url: url, ttl: period == "daily" ? 300 : 60, key: "bk-\(code)-\(period)")
+        let obj = try await net.getJSON(JObj.self, url: url, ttl: period == "daily" ? 300 : 60, key: "bk-\(code)-\(period)", timeout: timeout)
         guard let data = obj["data"]?.dict, let lines = data["klines"]?.array else { return [] }
         var rows: [KLine] = []
         for it in lines {
@@ -494,25 +498,62 @@ actor MarketService {
 
     // MARK: - boards / market state
 
-    func boards(kind: String = "industry") async throws -> [Board] {
-        let fs = kind == "industry" ? "m:90+t:2" : "m:90+t:3"
-        let fields = "f12,f14,f3,f62,f104,f105,f128,f140,f136"
-        let url = "\(listURL)?pn=1&pz=120&po=1&np=1&fltt=2&invt=2&fid=f3&fs=\(fs)&fields=\(fields)"
-        let obj = try await net.getJSON(JObj.self, url: url, ttl: 60, key: "boards-\(kind)")
-        let diff = obj["data"]?.dict?["diff"]?.array ?? []
-        return diff.compactMap { item in
-            guard let d = item.dict else { return nil }
+    /// Sina's industry money-flow ranking is the fallback when Eastmoney's
+    /// board list is unreachable (the desktop build uses the same endpoint).
+    private func sinaBoards(kind: String) async -> [Board] {
+        let fenlei: String
+        switch kind {
+        case "industry": fenlei = "0"
+        case "concept": fenlei = "1"
+        default: return []
+        }
+        let url = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk?page=1&num=100&sort=netamount&asc=0&fenlei=\(fenlei)"
+        guard let rows = try? await net.getJSON([JObj].self, url: url, ttl: 60, key: "sina-bkzj-\(fenlei)") else { return [] }
+        return rows.enumerated().compactMap { i, r -> Board? in
+            guard let name = r["name"]?.string, !name.isEmpty else { return nil }
             return Board(
-                code: d["f12"]?.string ?? "", name: d["f14"]?.string ?? "",
-                pct: d["f3"]?.double, inflow: d["f62"]?.double,
-                up: d["f104"]?.double.map { Int($0) }, down: d["f105"]?.double.map { Int($0) },
-                leader: d["f128"]?.string, leaderCode: d["f140"]?.string,
-                leaderPct: d["f136"]?.double, kind: kind
+                code: "SINA\(i)", name: name,
+                pct: (r["avg_changeratio"]?.double ?? 0) * 100,
+                inflow: r["netamount"]?.double,
+                up: nil, down: nil,
+                leader: r["ts_name"]?.string, leaderCode: nil,
+                leaderPct: (r["ts_changeratio"]?.double ?? 0) * 100,
+                kind: kind
             )
         }
     }
 
+    func boards(kind: String = "industry") async throws -> [Board] {
+        let fs = kind == "industry" ? "m:90+t:2" : "m:90+t:3"
+        let fields = "f12,f14,f3,f62,f104,f105,f128,f140,f136"
+        let url = "\(listURL)?pn=1&pz=120&po=1&np=1&fltt=2&invt=2&fid=f3&fs=\(fs)&fields=\(fields)"
+        do {
+            let obj = try await net.getJSON(JObj.self, url: url, ttl: 60, key: "boards-\(kind)")
+            let diff = obj["data"]?.dict?["diff"]?.array ?? []
+            let rows = diff.compactMap { item -> Board? in
+                guard let d = item.dict else { return nil }
+                return Board(
+                    code: d["f12"]?.string ?? "", name: d["f14"]?.string ?? "",
+                    pct: d["f3"]?.double, inflow: d["f62"]?.double,
+                    up: d["f104"]?.double.map { Int($0) }, down: d["f105"]?.double.map { Int($0) },
+                    leader: d["f128"]?.string, leaderCode: d["f140"]?.string,
+                    leaderPct: d["f136"]?.double, kind: kind
+                )
+            }
+            if !rows.isEmpty { return rows }
+        } catch {
+            // fall through to the Sina industry ranking
+        }
+        let fallback = await sinaBoards(kind: kind)
+        if !fallback.isEmpty { return fallback }
+        throw APIError.noData
+    }
+
     func boardStocks(_ code: String) async throws -> [Quote] {
+        // The Sina fallback rows use synthetic SINA* codes and have no
+        // constituent list; don't wait on an Eastmoney request that cannot
+        // succeed for them.
+        guard code.hasPrefix("BK") else { return [] }
         let fields = "f12,f14,f2,f3,f20,f100"
         let url = "\(listURL)?pn=1&pz=40&po=1&np=1&fltt=2&invt=2&fid=f3&fs=b:\(code)&fields=\(fields)"
         let obj = try await net.getJSON(JObj.self, url: url, ttl: 60, key: "board-\(code)")

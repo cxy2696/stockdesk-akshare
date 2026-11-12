@@ -9,7 +9,7 @@
 完全独立的原生 iOS 股票投资 App：**不依赖 Mac 后端**，行情、K 线、财务、持仓、复盘、回测、选股、提醒全部在 iPhone 本地完成。
 SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切换明亮/深色；设置内可切换中文 / English。
 
-**v3.7**：HUB 精简为 3+4；分享只在进入子页面后出现，滚动内容自动拼接为完整长图，可经系统分享到微信/Notes；HMM/渗流新增个股建议、行业临界和最大连通簇理由；资产快照缓存；资产分析含资金分配、交易偏好、趋势与交易习惯；投资建议含历史总结、未来趋势与标的推荐；指数分析覆盖 7 个指数；顶部放大镜/星号/信封/铃铛；底部显示当前时间与数据更新时间。，持仓、复盘、总览、自选、回测、设置全部收进「投资」；K 线可拖动查看每日数据；公司概况补全；九转/底部钝化、7/20/30/60 日分析、行业趋势、行情要闻与指标说明。
+**v3.7.2**：HUB 精简为 3+4；分享只在进入子页面后出现，滚动内容自动拼接为完整长图，可经系统分享到微信/Notes；HMM/渗流新增个股建议、行业临界和最大连通簇理由；资产快照缓存；资产分析含资金分配、交易偏好、趋势与交易习惯；投资建议含历史总结、未来趋势与标的推荐；指数分析覆盖 7 个指数；顶部放大镜/星号/信封/铃铛；底部显示当前时间与数据更新时间。，持仓、复盘、总览、自选、回测、设置全部收进「投资」；K 线可拖动查看每日数据；公司概况补全；九转/底部钝化、7/20/30/60 日分析、行业趋势、行情要闻与指标说明。
 
 | 每日策略（多周期/行业） | 板块跟踪 | 投资 HUD |
 | --- | --- | --- |
@@ -98,6 +98,7 @@ xcrun simctl launch booted com.stockdesk.app
 - **资产中枢**：中国上市公司分布地图（5,570 家 / 31 地区），双指缩放；地域概览下方可折叠查看全部省份领涨公司；下方直达资产分析、投资建议、指数分析
 - **新增 HUB 入口**：地域（全部省份/城市行业偏好）、行业要闻（行业情况分析与投资趋势）、量化模型
 - **量化模型**：5 个 A 股核心指数 HMM 切换；个股仓位/买卖建议；行业临界、关键标的、细分行业渗流、随机重排稳健性
+- **KDJ 预警**：半导体 / 通信设备 + 9 个 A 股指数，5m / 30m 的 K/D/J、RSV、MA5/20、量比与近似中枢；板块分钟数据不可达时自动使用并标注 ETF 代理，不再停在「暂无行情」
 - **稳定性**：资产快照本地缓存，启动先展示上次资产再刷新
 - **分享**：HUD 顶栏及详情页浮动按钮可分享当前界面截图
 - **界面缩放**：设置 → 界面缩放，支持 100% / 120% / 150%；120% 两列，150% 自动切单列 HUB，全部页面同步
@@ -164,6 +165,7 @@ StockDesk for iOS is a fully standalone SwiftUI app. It does **not** require the
 - Built-in Chinese / English switch in Settings
 - Full-page image sharing via the system share sheet (WeChat, Notes, Files)
 - HMM and percolation models with per-stock position guidance
+- KDJ extreme-zone panel for two sectors and nine A-share indices, with 5m / 30m K/D/J, RSV, MA5/20, volume ratio and an approximate central zone; a labelled ETF proxy keeps sector cards live when board-minute data is unavailable
 - Local-only storage; no login and no uploads
 
 ### Install

@@ -106,6 +106,7 @@ export default function App() {
     if (loc.pathname === '/settings') return { title: '设置', sub: '账户资产 · 数据与缓存' }
     if (loc.pathname === '/regions' || loc.pathname === '/hub-map') return { title: '地域', sub: '中国上市公司分布 · 资产分析 · 投资建议 · 指数分析' }
     if (loc.pathname === '/index-analysis') return { title: '指数分析', sub: 'A股主要宽基 · 海外指数 · 建议结论' }
+    if (loc.pathname === '/models') return { title: '量化模型', sub: 'HMM · 渗流 · 行业临界 · 仓位建议' }
     if (loc.pathname === '/kdj') return { title: 'KDJ 预警', sub: '5m / 30m · 极值区 · 近似中枢' }
     return NAV.find((n) => n.key === loc.pathname) ?? { title: 'StockDesk', sub: '' }
   }, [loc.pathname, lang])

@@ -4,6 +4,18 @@
 
 > 第一次使用建议先看 [使用教程与流程](GUIDE.md)。 / First time here? Start with the [Guide & Workflow](GUIDE.md).
 
+## 下载安装 / Download & install
+
+| 平台 | 推荐文件 | 安装 |
+| --- | --- | --- |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg`（约 43 MB） | 打开 DMG，拖进 Applications |
+| Windows 10/11 x64 | `StockDesk.exe`（精简单文件） | 双击运行；装好 WebView2 Runtime |
+| iPhone iOS 17+ | `StockDesk-iOS-3.7.2-unsigned.ipa` | Sideloadly / AltStore / Xcode 重签 |
+| 浏览器 / NAS | GHCR 容器 | 见 `PACKAGES.md` |
+
+下载页：<https://cxy2696.github.io/stockdesk-akshare/#download>
+Release：<https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2>
+
 ## 中文
 
 ### 你需要准备
@@ -38,11 +50,16 @@ python main.py --browser
 
 ```bash
 cd desktop
-./build_app.sh
-open StockDesk.app
+VERSION=1.10.2 ./package_macos.sh
 ```
 
-构建脚本会把前端产物一起放进 App。首次打开如果被 Gatekeeper 拦住，右键 → 打开即可。
+脚本会构建前端、用 PyInstaller 生成 `dist/StockDesk.app`，并输出：
+
+- `release/StockDesk-macOS-1.10.2.dmg` —— 打开后把 App 拖进 Applications
+- `release/StockDesk-macOS-1.10.2.zip` —— 解压后打开 `StockDesk.app`
+- `release/SHA256SUMS-macOS.txt` —— 下载校验和
+
+`stockdesk.spec` 已排除 `pyarrow`、`scipy`、`matplotlib`、`PIL`、`openpyxl` 等未使用的可选依赖，DMG 约 43 MB、ZIP 约 42 MB；首次打开如果被 Gatekeeper 拦住，右键 → 打开即可。
 
 ### 打包 Windows 单文件
 
@@ -51,17 +68,10 @@ cd desktop
 py -3.10 -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt pyinstaller
-
-cd frontend
-npm ci
-npm run build
-cd ..
-
-pyinstaller --noconfirm --onefile --noconsole --name StockDesk `
-  --add-data "frontend/dist;frontend_dist" main.py
+powershell -ExecutionPolicy Bypass -File .\build_win.ps1
 ```
 
-Windows 10/11 使用 Edge WebView2 原生窗口；Windows 7/8 没有 WebView2 时会退回浏览器。
+`build_win.ps1` 会构建前端并调用 PyInstaller，使用与 macOS 相同的排除列表，输出 `dist/StockDesk.exe`。Windows 10/11 使用 Edge WebView2 原生窗口；没有 WebView2 时会退回浏览器。CI 会在 Windows runner 上构建并跑健康检查、KDJ 与板块接口冒烟测试。
 
 ### iOS
 
@@ -133,11 +143,16 @@ python main.py --browser
 
 ```bash
 cd desktop
-./build_app.sh
-open StockDesk.app
+VERSION=1.10.2 ./package_macos.sh
 ```
 
-The build script copies the built frontend into the bundle. If Gatekeeper blocks the first launch, right-click → Open.
+The script builds the frontend, runs PyInstaller, and writes:
+
+- `release/StockDesk-macOS-1.10.2.dmg` — open and drag the app into Applications
+- `release/StockDesk-macOS-1.10.2.zip` — unzip and open `StockDesk.app`
+- `release/SHA256SUMS-macOS.txt` — download checksums
+
+`stockdesk.spec` excludes unused optional packages such as `pyarrow`, `scipy`, `matplotlib`, `PIL` and `openpyxl`; the DMG is about 43 MB and the ZIP about 42 MB. If Gatekeeper blocks the first launch, right-click → Open.
 
 ### Build the Windows one-file exe
 
@@ -146,17 +161,10 @@ cd desktop
 py -3.10 -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt pyinstaller
-
-cd frontend
-npm ci
-npm run build
-cd ..
-
-pyinstaller --noconfirm --onefile --noconsole --name StockDesk `
-  --add-data "frontend/dist;frontend_dist" main.py
+powershell -ExecutionPolicy Bypass -File .\build_win.ps1
 ```
 
-Windows 10/11 gets a native Edge WebView2 window. Windows 7/8 has no WebView2 and falls back to the browser.
+`build_win.ps1` builds the frontend and calls PyInstaller with the same exclusion list, producing `dist/StockDesk.exe`. Windows 10/11 gets a native Edge WebView2 window; without WebView2 it falls back to the browser. CI builds this exe on a Windows runner and smoke-tests health, KDJ and sector endpoints.
 
 ### iOS
 
