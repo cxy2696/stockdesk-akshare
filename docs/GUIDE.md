@@ -384,13 +384,22 @@ The 1.10.2 packages exclude unused heavy dependencies (`pyarrow`, `scipy`, `matp
 #### macOS (DMG)
 
 1. Download `StockDesk-macOS-1.10.2.dmg`.
-2. Open it and drag **StockDesk** into **Applications**.
-3. If Gatekeeper blocks the first launch, right-click the app → **Open**, or allow it in System Settings → Privacy & Security.
+2. Open it and double-click **`Install-StockDesk.command`**. If macOS warns, right-click the script → **Open**.
+3. The script copies the app to Applications, clears the browser quarantine flag, and launches it.
 4. Account data lives in `~/Library/Application Support/StockDesk`.
+
+You can also drag **StockDesk** into **Applications** manually and run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/StockDesk.app
+open /Applications/StockDesk.app
+```
+
+> Why: the app is ad-hoc signed (no paid Developer ID/notarization), so a downloaded copy carries `com.apple.quarantine` and Gatekeeper refuses to launch it. Clearing the flag does not modify the app and does not disable Gatekeeper.
 
 #### macOS (ZIP)
 
-Download, unzip, drag `StockDesk.app` into Applications. Same contents as the DMG.
+Download, unzip, and double-click `Install-StockDesk.command`. Same contents as the DMG.
 
 #### Windows
 
