@@ -9,94 +9,74 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-[中文](#中文) · [English](#english) · [US Edition](docs/US-MARKET.md) · [Website](https://cxy2696.github.io/stockdesk-akshare/) · [Guide](docs/GUIDE.md) · [Languages](LANGUAGES.md) · [Architecture](docs/ARCHITECTURE.md) · [Models](docs/MODELS.md) · [Install](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2) · [Container](https://github.com/cxy2696/stockdesk-akshare/pkgs/container/stockdesk-akshare-us)
-
-## 项目展示页 / Project site
-
-**https://cxy2696.github.io/stockdesk-akshare/**
-
-一个独立的项目主页：43 秒产品影片、五章放映、背景音乐、HUB / 量化模型 / 美股 / iOS 界面、版本入口和快速开始。页面支持中英切换。
-
-An independent project site with a 43-second product film, five screening chapters, background music, the HUB / models / US / iOS views, editions and a quick start. It has a Chinese / English switch.
+[项目主页](https://cxy2696.github.io/stockdesk-akshare/) · [使用指南](docs/GUIDE.md) · [安装构建](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2) · [容器](docs/PACKAGES.md) · [English](#english)
 
 ![Mac HUB](screenshots/mac-hub.png)
 
-![Mac HUB English](screenshots/mac-hub-en.png)
+## 下载 / Download
 
----
-
-## 中文
-
-### 项目简介
-
-StockDesk 是一个本地优先、单用户的股票投资工作台。它把持仓、行情、复盘、策略、HMM/渗流模型和地域/行业数据放在一个 HUD 风格的界面里，账户与行情缓存只保存在本机。
-
-最新版本 **1.10.2** 在 1.10.1 的基础上完成三件事：一是把 macOS 安装包从 94.3 MB 压到约 43 MB、Windows 单文件同步瘦身；二是修复 iOS 端 KDJ 行业数据链接、板块跟踪和北证 50 的行情回退；三是补齐带截图的详细使用指南，并把官网下载入口统一到 1.10.2。
-
-### 直接下载 / Direct download
-
-| 平台 | 推荐文件 | 大小 | 安装方式 |
+| 平台 Platform | 文件 File | 大小 Size | 安装 Install |
 | --- | --- | --- | --- |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | 约 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | 约 42 MB | 解压后双击 `Install-StockDesk.command` |
-| Windows 10/11 x64 | `StockDesk.exe` | 约 52 MB | 双击运行；WebView2 Runtime；SmartScreen 拦截时「更多信息 → 仍要运行」 |
-| iPhone (iOS 17+) | `StockDesk-iOS-3.7.2-unsigned.ipa` | 约 1.3 MB | 用 Sideloadly / AltStore / Xcode 重签 |
-| 浏览器 / NAS | GHCR 容器 | — | `docker run`，见 `docs/PACKAGES.md` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.2.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.2.zip` | 42 MB | 解压后双击 `Install-StockDesk.command` |
+| Windows 10/11 x64 | `StockDesk.exe` | 52 MB | 双击；需要 WebView2；SmartScreen 选「更多信息 → 仍要运行」 |
+| iPhone iOS 17+ | `StockDesk-iOS-3.7.2-unsigned.ipa` | 1.9 MB | 用 Sideloadly / AltStore / Xcode 重签 |
+| 浏览器 / NAS | GHCR 容器 | — | 见 [PACKAGES](docs/PACKAGES.md) |
 
-所有安装包都在 [Releases v1.10.2](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2)，同目录的 `SHA256SUMS-macOS.txt` 可用于校验下载完整性。macOS 包只包含 Apple Silicon 版本；Intel Mac 请从源码运行或使用容器。
+- 全部文件在 [Releases v1.10.2](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
+- macOS App 为 ad-hoc 签名，下载后需运行安装脚本清除 `com.apple.quarantine`。脚本被拦截时右键 → 打开；手动命令：
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/StockDesk.app
+  ```
+- macOS 仅 Apple Silicon；Intel Mac 请从源码运行或使用容器。iOS IPA 未签名，必须重签。
 
-> macOS 注意：App 使用本机 ad-hoc 签名，浏览器下载后会带 `com.apple.quarantine` 标记，Gatekeeper 可能提示「无法打开」。DMG / ZIP 内都附有 `Install-StockDesk.command`，双击它（若被拦截则右键 → 打开）会复制到 Applications、清除下载标记并启动。手动命令：`xattr -dr com.apple.quarantine /Applications/StockDesk.app`。
+## 这是什么 / What it is
 
-本仓库 **stockdesk-akshare** 项目包含：
+StockDesk 是一个本地优先、单用户的股票投资工作台：持仓、行情、复盘、策略回测、HMM/渗流模型、KDJ 极值和地域/行业数据，都在一个 HUD 风格界面里。账户和缓存只保存在本机。
 
-- **macOS 原生 App**：pywebview + WebKit 独立窗口
-- **Windows 单文件 exe**：pywebview + Edge WebView2 独立窗口
-- **iOS App**：SwiftUI + Swift Charts
-- **US 美股版**：独立 FastAPI + ECharts 仪表盘
+A local-first, single-user equity desk: portfolio, quotes, review, backtests, HMM/percolation models, KDJ alerts and regional/industry views in one HUD. Account data and caches stay on your machine.
 
-> 本仓库变更不影响当前本地正在使用的 StockDesk。
+> 本仓库是独立副本，不影响你当前本地正在使用的 StockDesk。<br>
+> This is an independent snapshot and does not affect your existing StockDesk install.
 
-### 功能
+## 1.10.2 更新 / What's new
+
+- macOS 安装包从 94.3 MB 降到 **43 MB DMG / 42 MB ZIP**；新增 `Install-StockDesk.command`，自动安装并清除下载隔离。
+- iOS KDJ 行业卡在东方财富不可达时回退到标注的 ETF 代理；板块跟踪回退到新浪行业/概念资金流；修正北证 50 代码。
+- App 启动失败、前端资源缺失或页面 JS 加载失败时，会弹出/显示错误提示并写日志，不再静默空白。
+- Windows 仍为约 52 MB 单文件；新增 SmartScreen、WebView2、`--browser` 和日志排查说明。
+- 新增带截图的[使用指南](docs/GUIDE.md)。
+
+## 功能 / Features
 
 | 模块 | 说明 |
 | --- | --- |
-| HUD 指挥舱 | 资产中枢、7 个核心入口、管理员名片、状态栏 |
-| 持仓与复盘 | 交易流水、成本、已实现/浮动盈亏、净值、回撤 |
-| 每日策略 | 市场状态、仓位建议、标的选择 |
-| 板块跟踪 | 行业/概念板块、上涨广度、个股热图 |
-| 策略回测 | 均线、动量、RSI 等规则回测 |
-| 量化模型 | 5 个 A 股指数 3 状态 HMM、渗流最大连通簇、行业临界、个股仓位建议 |
-| 地域 | 中国上市公司地图、省份分布、省份龙头 |
-| 行业要闻 | 行业新闻与关键标的 |
-| KDJ 预警 | 半导体 / 通信设备 + 9 个 A 股指数，可切换 20+ 行业；5m / 30m K/D/J、RSV、MA5/20、量比、中枢；HUB 右侧独立入口 |
-| 全量股票 | 全部约 5,580 只 A 股上市公司；搜索、数量统计和代码表不再只依赖行情快照 |
-| 全量行情 | 5,580 只 A 股；个股/行业资金流入流出；行情与资金流自动回退数据源 |
-| 图片分享 | 进入子页面后分享当前页面长图 |
-| 缩放 | 100% / 120% / 150%，文字自动换行、增行 |
+| HUD 指挥舱 | 资产中枢、7 个入口、管理员名片、LIVE 状态栏 |
+| 每日策略 | 市场状态、仓位建议、今日标的、行业趋势、要闻 |
+| 持仓与复盘 | 交易流水、移动成本、已实现/浮动盈亏、净值、回撤、夏普 |
+| 自选与个股 | 实时行情、日/周/月 K、MACD、九转、筹码、黄金分割、支撑压力 |
+| 板块跟踪 | 行业/概念、市场情绪、涨停池、个股热图、形态选股 |
+| 策略回测 | 10 套策略、手续费/印花税/滑点、资金曲线、交易明细 |
+| 量化模型 | 5 指数 3 状态 HMM、渗流最大连通簇、行业临界、个股仓位建议 |
+| KDJ 预警 | 半导体/通信设备 + 9 个 A 股指数，5m/30m K/D/J、RSV、MA5/20、量比、中枢 |
+| 地域与要闻 | 中国上市公司地图、省份龙头、行业新闻与关键标的 |
+| 分享与缩放 | 子页面长图分享；100% / 120% / 150% 文字缩放，自动换行 |
 
-### 快速开始
+English modules: HUD, Daily Plan, Portfolio & Review, Watchlist/Stock Detail, Sectors, Backtest, Quant Models, KDJ Alerts, Regions/Industry News, Sharing & Scaling.
 
-想先看完整使用流程？[使用教程与流程](docs/GUIDE.md) 把第一次打开、每天的使用顺序、数据备份和发布流程都写在一起。
-
-#### macOS
+## 快速开始 / Quick start
 
 ```bash
+# macOS / Linux
 cd desktop
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cd frontend && npm ci && npm run build && cd ..
-python main.py
+python main.py            # 原生窗口；--browser 用浏览器
 ```
 
-开发和调试也可以直接打开浏览器：
-
-```bash
-python main.py --browser
-```
-
-#### Windows
-
-```bash
+```powershell
+# Windows
 cd desktop
 py -3.10 -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
@@ -104,228 +84,50 @@ cd frontend && npm ci && npm run build && cd ..
 python main.py
 ```
 
-单文件构建见 [docs/INSTALL.md](docs/INSTALL.md)。
-
-#### iOS
-
 ```bash
-cd ios
-xcodegen generate
-open StockDesk.xcodeproj
+# iOS
+cd ios && xcodegen generate && open StockDesk.xcodeproj
+# US edition
+cd us && python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && python run.py
 ```
 
-选择自己的开发团队后运行。数据保存在 App 本地；不依赖 Mac 后端。
+完整步骤、打包与发版见 [安装构建](docs/INSTALL.md)；第一次使用见 [使用指南](docs/GUIDE.md)。
 
-#### 美股版
+## 数据与缩放 / Data & scaling
 
-```bash
-cd us
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python run.py
-```
+- A 股/指数：东方财富公开行情接口；美股：东方财富美股公开接口；HTTP 直连，`akshare` 用于部分分钟线/板块回退。
+- 缩放只改文字：按钮/卡片自动增高，表格自动换行；地图和图表不拉伸；120%/150% 隐藏 ticker；iOS 150% 单列 HUB。
+- 所有行情仅用于研究，不构成投资建议。
 
-打开 `http://127.0.0.1:8770`。详见 [docs/US-MARKET.md](docs/US-MARKET.md)。
-
-### 数据源
-
-- A 股/指数：东方财富公开行情接口
-- 美股：东方财富美股公开行情接口（列表、报价、日 K）
-- 本项目以 HTTP 直连为主；`akshare` 可作为后续可选适配层
-
-所有行情仅用于研究，不构成投资建议。
-
-### 缩放原则
-
-- 只放大文字字号，不拉伸地图/固定图形
-- 按键高度自动增加，卡片/表格自动换行、增行
-- 120% / 150% 下隐藏行情 ticker，标题与副标题完整显示
-- iOS 150% 自动切换单列 HUB
-
-### 仓库结构
+## 项目结构 / Layout
 
 ```
 stockdesk-akshare/
-├── desktop/        FastAPI + React 桌面端源码
-├── ios/            SwiftUI iOS 源码
+├── desktop/        FastAPI + React 桌面端
+├── ios/            SwiftUI iOS
 ├── us/             美股独立仪表盘
-├── docs/           架构、安装、美股版
+├── docs/           指南、安装、架构、模型、容器
 ├── screenshots/    Mac / iOS / US 截图
 └── .github/        CI
 ```
 
-### 版本
+## 版本 / Versions
 
-- macOS：1.10.2
-- iOS：3.7.2 (29)
-- US：1.0.1
-
-### 免责声明
-
-本项目不提供投资建议。行情可能延迟、缺失或错误；据此交易的风险由使用者自行承担。
-
----
-
+| 平台 | 版本 |
+| --- | --- |
+| macOS / Windows | **1.10.2** |
+| iOS | **3.7.2 (29)** |
+| US | **1.0.1** |
+| 容器 | `stockdesk-akshare-a-share:1.10.2` / `stockdesk-akshare-us:1.0.1` |
 
 ## English
 
-### What is this?
+StockDesk is a local-first, single-user equity research desk for macOS, Windows, iOS and the web. It combines portfolio tracking, quotes, review analytics, backtests, HMM/percolation models, KDJ alerts and regional/industry views in a HUD-style interface. Account data and market caches stay local.
 
-StockDesk is a local-first, single-user equity research desk. It combines portfolio tracking, market data, review analytics, strategy backtests, HMM/percolation models, and regional/industry views in a HUD-style interface. Account data and caches stay on your machine.
+**Download:** use the table above. macOS is Apple Silicon only; run `Install-StockDesk.command` after downloading to clear Gatekeeper quarantine. Windows needs WebView2; choose More info → Run anyway if SmartScreen blocks it. The iOS IPA is unsigned and must be re-signed.
 
-### Direct download
+**Features:** HUD, Daily Plan, Portfolio/Review, Watchlist/Stock Detail, Sectors, Backtest, Quant Models, KDJ Alerts, Regions/Industry News, sharing and 100%/120%/150% scaling. See the [Guide](docs/GUIDE.md) for screenshots and the daily workflow; see [Install](docs/INSTALL.md) for source builds and packaging.
 
-| Platform | Recommended file | Size | Install |
-| --- | --- | --- | --- |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | ~43 MB | Open the DMG and run `Install-StockDesk.command` |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | ~42 MB | Unzip and run `Install-StockDesk.command` |
-| Windows 10/11 x64 | `StockDesk.exe` | ~52 MB | Double-click; WebView2; if SmartScreen blocks, More info → Run anyway |
-| iPhone (iOS 17+) | `StockDesk-iOS-3.7.2-unsigned.ipa` | ~1.3 MB | Re-sign with Sideloadly / AltStore / Xcode |
-| Browser / NAS | GHCR containers | — | `docker run`, see `docs/PACKAGES.md` |
-
-All packages live in [Releases v1.10.2](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2); `SHA256SUMS-macOS.txt` verifies the macOS downloads. The macOS build is Apple Silicon only; Intel Macs should run from source or use a container.
-
-> macOS note: the app is ad-hoc signed, so a downloaded copy carries `com.apple.quarantine` and Gatekeeper may say it cannot be opened. Both DMG and ZIP include `Install-StockDesk.command`; double-click it (right-click → Open if macOS warns) and it copies the app to Applications, clears the quarantine flag, and launches it. Manual command: `xattr -dr com.apple.quarantine /Applications/StockDesk.app`.
-
-This repository, **stockdesk-akshare**, is the documented source snapshot for:
-
-- **macOS app** — pywebview + WebKit native window
-- **Windows single-file exe** — pywebview + Edge WebView2 native window
-- **iOS app** — SwiftUI + Swift Charts
-- **US edition** — standalone FastAPI + ECharts dashboard
-
-> It's changes does not modify, launch, or interfere with the StockDesk installation you are currently using.
-
-### Features
-
-| Module | Description |
-| --- | --- |
-| HUD | Asset hub, seven entries, admin plate, live status bar |
-| Portfolio | Trades, cost basis, realized/unrealized P&L, NAV, drawdown |
-| Daily plan | Market regime, position sizing, candidate selection |
-| Sectors | Industry/concept boards, breadth, stock heatmap |
-| Backtest | MA cross, momentum, RSI and other rule tests |
-| Quant models | 3-state HMM on five A-share indices, percolation giant component, industry criticality, per-stock position advice |
-| Regions | China listed-company map, province distribution and leaders |
-| Industry news | Sector news and key names |
-| KDJ alerts | Two sectors + nine A-share indices; 5m / 30m J and approximate zones |
-| Image sharing | Full-page share image after entering a detail page |
-| Scaling | 100% / 120% / 150%, text reflows and rows grow automatically |
-
-### Quick start
-
-Want the full walkthrough? [Guide & Workflow](docs/GUIDE.md) covers first launch, the daily routine, backups and the release flow.
-
-#### macOS
-
-```bash
-cd desktop
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cd frontend && npm ci && npm run build && cd ..
-python main.py
-```
-
-Browser-only development:
-
-```bash
-python main.py --browser
-```
-
-#### Windows
-
-```bash
-cd desktop
-py -3.10 -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-cd frontend && npm ci && npm run build && cd ..
-python main.py
-```
-
-See [docs/INSTALL.md](docs/INSTALL.md) for the one-file build.
-
-#### iOS
-
-```bash
-cd ios
-xcodegen generate
-open StockDesk.xcodeproj
-```
-
-Select your development team and run. Data is local to the app; no Mac backend is required.
-
-#### US edition
-
-```bash
-cd us
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python run.py
-```
-
-Open `http://127.0.0.1:8770`. See [docs/US-MARKET.md](docs/US-MARKET.md).
-
-### Data sources
-
-- A-shares and indices: Eastmoney public endpoints
-- US equities: Eastmoney US public endpoints (list, quote, daily candles)
-- Direct HTTP is used today; `akshare` can be added as an optional adapter
-
-Market data is for research only and is not investment advice.
-
-### Scaling principles
-
-- Font size changes only; maps and fixed graphics are not stretched
-- Buttons grow in height; cards and tables wrap/grow rows
-- Ticker hides at 120%/150% so titles and subtitles remain complete
-- iOS switches the HUB to a single column at 150%
-
-### Layout
-
-```
-stockdesk-akshare/
-├── desktop/        FastAPI + React desktop source
-├── ios/            SwiftUI iOS source
-├── us/             Standalone US dashboard
-├── docs/           Architecture, install, US edition
-├── screenshots/    Mac / iOS / US screenshots
-└── .github/        CI
-```
-
-### Desktop details / 桌面端详情
-
-See [desktop/README.md](desktop/README.md) for the full HUB guide, screenshots, build steps and module descriptions.
-
-桌面端完整说明、交互截图、构建步骤与模块介绍：[desktop/README.md](desktop/README.md)
-
-### Releases & Packages
-
-- **Releases**: https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2
-- **macOS**: `StockDesk-macOS-1.10.2.dmg` / `StockDesk-macOS-1.10.2.zip`
-- **Windows**: `StockDesk.exe`
-- **iOS**: `StockDesk-iOS-3.7.2-unsigned.ipa`
-- **A-share container**: `ghcr.io/cxy2696/stockdesk-akshare-a-share:latest`
-- **US container**: `ghcr.io/cxy2696/stockdesk-akshare-us:latest`
-
-```bash
-# A-share web app (port 8765)
-docker run --rm -p 8765:8765 -v stockdesk-data:/data ghcr.io/cxy2696/stockdesk-akshare-a-share:latest
-
-# US dashboard (port 8770)
-docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
-```
-
-### Versions
-
-- macOS: 1.10.2
-- iOS: 3.7.2 (29)
-- US: 1.0.1
-
-### Disclaimer
-
-Not investment advice. Quotes may be delayed, missing, or incorrect. Trading decisions and risk remain yours.
-
-### License
-
-MIT License. See [LICENSE](LICENSE).
-
+**Versions:** macOS/Windows 1.10.2 · iOS 3.7.2 (29) · US 1.0.1.<br>
+**License:** MIT. Market data is for research only, not investment advice.
