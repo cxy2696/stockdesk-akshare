@@ -316,10 +316,10 @@ struct ModelsView: View {
         .navigationTitle("量化模型")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            let defs: [(String, String)] = [("上证", "1.000001"), ("沪深300", "1.000300"), ("创业板", "0.399006"), ("深证", "0.399001"), ("科创50", "1.000688")]
+            let defs: [(String, String, String)] = [("上证", "000001", "1.000001"), ("沪深300", "000300", "1.000300"), ("创业板", "399006", "0.399006"), ("深证", "399001", "0.399001"), ("科创50", "000688", "1.000688")]
             var built: [IndexHMM] = []
-            for (name, sec) in defs {
-                let kl = (try? await MarketService.shared.klines(name, limit: 420, adjust: "", secidOverride: sec)) ?? []
+            for (name, code, sec) in defs {
+                let kl = (try? await MarketService.shared.klines(code, limit: 420, adjust: "", secidOverride: sec)) ?? []
                 let closes = kl.map(\.close)
                 guard closes.count > 61 else { continue }
                 let rets = (1..<closes.count).map { (log(closes[$0] / closes[$0 - 1])) * 100 }
