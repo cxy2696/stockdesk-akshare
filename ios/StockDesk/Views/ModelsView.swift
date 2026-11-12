@@ -242,6 +242,10 @@ struct ModelsView: View {
 
                 Card(title: "细分行业渗流", subtitle: "按行业分组 · 上涨占比与最大簇 · Top 20") {
                     if let p = perc {
+                        if p.industries.isEmpty {
+                            Text("当前行情源未返回行业分类；全市场渗流结果仍有效。")
+                                .font(.system(size: 9.5)).foregroundStyle(Theme.textDim)
+                        }
                         ForEach(p.industries) { x in
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack {
