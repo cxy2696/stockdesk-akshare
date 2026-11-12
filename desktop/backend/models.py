@@ -10,11 +10,12 @@ from statistics import mean, pstdev
 import numpy as np
 
 from . import db, market, state
+from . import model_registry
 
-PERC_THRESHOLD = 0.592746
+PERC_THRESHOLD = float(model_registry.MODELS["percolation"]["params"]["threshold"])
 
 
-def _hmm(x: np.ndarray, k: int = 3, iters: int = 60) -> dict:
+def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["states"]), iters: int = int(model_registry.MODELS["hmm"]["params"]["iterations"])) -> dict:
     n = len(x)
     if n < 60:
         return {}
@@ -247,7 +248,9 @@ def model_snapshot() -> dict:
     hmm = {}
     for code, name, sec in a_indices:
         try:
-            kl = market.klines(code, limit=420, adjust="", secid_override=sec)
+            kl = market._akshare_klines(code, "daily", 420, "", sec)
+            if not kl:
+                kl = market.klines(code, limit=420, adjust="", secid_override=sec)
             closes = [r["close"] for r in kl]
             rets = np.diff(np.log(np.array(closes, dtype=float))) * 100
             h = _hmm(rets)
@@ -269,6 +272,7 @@ def model_snapshot() -> dict:
         "text": f"5 个 A 股核心指数中 {counts.get('强势', 0)} 个强势、{counts.get('震荡', 0)} 个震荡、{counts.get('弱势', 0)} 个弱势；整体以{dominant}为主。",
     }
     perc = _percolation(rows)
-    out = {"ts": time.time(), "hmm": hmm, "hmm_indices": hmm_indices, "hmm_summary": hmm_summary, "percolation": perc}
+    out = {"ts": time.time(), "hmm": hmm, "hmm_indices": hmm_indices, "hmm_summary": hmm_summary,
+           "percolation": perc, "model_meta": model_registry.meta()}
     db.cache_set("market:models:v3", out)
     return out
