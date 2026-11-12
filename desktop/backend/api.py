@@ -48,6 +48,12 @@ def province_leaders():
     return ok(_pl())
 
 
+@router.get("/api/models/meta")
+def models_meta():
+    from . import model_registry
+    return ok(model_registry.meta())
+
+
 @router.get("/api/market/models")
 def market_models():
     from .models import model_snapshot
