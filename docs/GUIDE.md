@@ -29,7 +29,7 @@ xattr -dr com.apple.quarantine /Applications/StockDesk.app
 open /Applications/StockDesk.app
 ```
 
-DMG 里的 App 不要直接双击运行；先运行安装脚本或拖进 Applications。macOS 包仅 Apple Silicon，Intel Mac 请从源码运行或使用容器。
+DMG 里的 App **不要直接双击运行**；先运行安装脚本或拖进 Applications。macOS 包仅 Apple Silicon，Intel Mac 请从源码运行或使用容器。
 
 #### Windows 首次打开
 
