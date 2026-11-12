@@ -201,10 +201,8 @@ enum QuantModels {
         let giantOcc = Double(largest.count) / Double(max(up, 1))
         let status = giantOcc >= percThreshold ? "超临界 · 扩散" : (giantOcc >= percThreshold - 0.08 ? "临界附近" : "亚临界 · 分裂")
         let largeSet = Set(largest)
-        var cells = [Int](repeating: 0, count: 2500)
-        for i in 0..<min(2500, n) {
-            cells[i] = largeSet.contains(i) ? 2 : (grid[i] == 1 ? 1 : 0)
-        }
+        var cells = [Int](repeating: 0, count: grid.count)
+        for i in 0..<n { cells[i] = largeSet.contains(i) ? 2 : (grid[i] == 1 ? 1 : 0) }
         var robust: [Double] = []
         for offset in [7, 17, 29] {
             var g = [Int](repeating: 0, count: grid.count)
@@ -214,7 +212,7 @@ enum QuantModels {
         }
         let grouped = Dictionary(grouping: valid) { $0.industry?.isEmpty == false ? $0.industry! : "其他" }
         var industries: [IndustryPercolation] = []
-        for (name, group) in grouped where group.count >= 8 {
+        for (name, group) in grouped where group.count >= 8 && name != "其他" {
             let gc = Int(ceil(sqrt(Double(group.count))))
             var g = [Int](repeating: 0, count: gc * gc)
             var upCount = 0
@@ -226,7 +224,7 @@ enum QuantModels {
             industries.append(IndustryPercolation(name: name, count: group.count, ratio: Double(upCount) / Double(group.count), giant: giant, status: st, leader: leader?.name ?? "--", leaderPct: leader?.pct))
         }
         industries.sort { $0.count > $1.count }
-        return PercolationSnapshot(total: n, up: up, ratio: ratio, threshold: percThreshold, largest: largest.count, giantOccupied: giantOcc, clusters: clusters.count, status: status, cells: cells, cols: 50, robustnessMean: robust.reduce(0, +) / 3, robustnessMin: robust.min() ?? 0, robustnessMax: robust.max() ?? 0, industries: Array(industries.prefix(20)), note: "将股票按代码顺序映射为二维格点，上涨=占据；统计最大 4 邻接连通簇。仅衡量广度扩散，不代表真实空间关系。")
+        return PercolationSnapshot(total: n, up: up, ratio: ratio, threshold: percThreshold, largest: largest.count, giantOccupied: giantOcc, clusters: clusters.count, status: status, cells: cells, cols: cols, robustnessMean: robust.reduce(0, +) / 3, robustnessMin: robust.min() ?? 0, robustnessMax: robust.max() ?? 0, industries: Array(industries.prefix(20)), note: "将股票按代码顺序映射为二维格点，上涨=占据；统计最大 4 邻接连通簇。仅衡量广度扩散，不代表真实空间关系。")
     }
 
     private static func components(_ grid: [Int], cols: Int) -> [Int] {
