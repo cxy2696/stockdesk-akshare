@@ -28,6 +28,7 @@ struct ModelsView: View {
     @State private var sel = 1
     @State private var perc: PercolationSnapshot?
     @State private var loading = true
+    @State private var lastUpdated = ""
 
     private var hmm: HMMSnapshot? { hmms.indices.contains(sel) ? hmms[sel].snapshot : hmms.first?.snapshot }
 
@@ -96,7 +97,12 @@ struct ModelsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                Text("隐马尔可夫识别市场状态；渗流模型衡量上涨广度是否形成连通扩散。模型只描述结构，不预测点位。")
+                HStack {
+                    Text("隐马尔可夫识别市场状态；渗流模型衡量上涨广度是否形成连通扩散。模型只描述结构，不预测点位。")
+                    Spacer()
+                    Text("v2.0.0 \(lastUpdated.isEmpty ? "" : "· " + lastUpdated)")
+                        .font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
+                }
                     .font(.system(size: 9.5)).foregroundStyle(Theme.textDim).lineSpacing(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -320,6 +326,16 @@ struct ModelsView: View {
         .navigationTitle("量化模型")
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            await loadModels()
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 300_000_000_000)
+                await loadModels()
+            }
+        }
+    }
+
+    private func loadModels() async {
+        lastUpdated = Date().formatted(.dateTime.hour().minute().second())
             let defs: [(String, String, String)] = [("上证", "000001", "1.000001"), ("沪深300", "000300", "1.000300"), ("创业板", "399006", "0.399006"), ("深证", "399001", "0.399001"), ("科创50", "000688", "1.000688")]
             var built: [IndexHMM] = []
             for (name, code, sec) in defs {
@@ -335,7 +351,7 @@ struct ModelsView: View {
             else { rows = (try? await MarketService.shared.spot(ttl: 300).rows) ?? [] }
             perc = QuantModels.percolation(rows)
             loading = false
-        }
+    }
     }
 
     private func strategyKV(_ k: String, _ v: String) -> some View {
