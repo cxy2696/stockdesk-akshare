@@ -10,9 +10,17 @@ export default function Models() {
   const [data, setData] = useState<any>(null)
   const [summary, setSummary] = useState<any>(null)
   const [sel, setSel] = useState(1)
-  useEffect(() => {
-    api.get<any>('/api/market/models').then(setData).catch(() => {})
+  const [last, setLast] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const load = () => {
+    setRefreshing(true)
+    api.get<any>('/api/market/models').then((d) => { setData(d); setLast(new Date().toLocaleTimeString('zh-CN', { hour12: false })) }).catch(() => {}).finally(() => setRefreshing(false))
     api.get<any>('/api/portfolio/summary').then(setSummary).catch(() => {})
+  }
+  useEffect(() => {
+    load()
+    const timer = setInterval(load, 5 * 60_000)
+    return () => clearInterval(timer)
   }, [])
   const hmmList = data?.hmm_indices ?? []
   const hmm = hmmList[sel] ?? data?.hmm
@@ -46,8 +54,18 @@ export default function Models() {
 
   return (
     <div>
-      <div className="muted small" style={{ marginBottom: 12 }}>
-        隐马尔可夫模型识别市场状态；渗流模型衡量上涨广度是否形成连通扩散。模型只描述当前结构，不预测点位。
+      <div className="row-between" style={{ marginBottom: 10 }}>
+        <div className="muted small">
+          隐马尔可夫模型识别市场状态；渗流模型衡量上涨广度是否形成连通扩散。模型只描述当前结构，不预测点位。
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <span className="muted small" style={{ fontFamily: 'monospace', fontSize: 9 }}>
+            MODEL v{data?.model_meta?.registry_version ?? '2.0.0'} · {last ? `更新 ${last}` : '计算中'}
+          </span>
+          <button className="btn-ghost" style={{ fontSize: 10, padding: '5px 9px' }} onClick={load} disabled={refreshing}>
+            {refreshing ? '计算中…' : '刷新'}
+          </button>
+        </div>
       </div>
       <div className="model-index-grid">
         {hmmList.map((h: any, i: number) => (
