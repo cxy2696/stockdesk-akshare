@@ -14,6 +14,8 @@
 - iOS 修正北证 50 的新浪 `bj899050` 代码。
 - 重新构建桌面前端与 macOS 应用包，确保 HUD 深色主题的极值提醒横幅对比度修复真正随包发布；同时加宽提醒底色、边框、文字与图标，并修正 HUB 中央「资产中枢 / 运行中」文字重叠。
 - 新增带截图的详细功能与使用指南（`docs/GUIDE.md`），官网下载区统一到 1.10.2，并同步 README / INSTALL / PACKAGES 的版本与下载链接。
+- 修复下载后首次打开失败：macOS DMG / ZIP 内置 `Install-StockDesk.command`，自动安装到 Applications 并清除 `com.apple.quarantine`；App 启动时检查前端资源，缺失/后端未启动会弹原生错误提示并写日志，不再静默空白。
+- 前端增加启动占位与加载失败提示；Windows CI 增加首页和 JS/CSS 静态资源冒烟，避免只测 API 不测内容。
 - 版本：macOS / Windows **1.10.2**；iOS **3.7.2 (29)**；美股 **1.0.1**。
 
 
@@ -61,6 +63,8 @@
 - Fixed the Sina symbol for the BSE 50 index (`bj899050`).
 - Rebuilt the desktop frontend and macOS app bundle so the HUD warning-banner contrast fix is actually shipped; widened the banner background, border, text and icon, and fixed the overlapping "asset hub / running" label.
 - Added a screenshot-guided feature and usage guide (`docs/GUIDE.md`), moved the site download section to 1.10.2, and synced versions / links across README / INSTALL / PACKAGES.
+- Fixed first-launch failures after download: macOS DMG/ZIP now includes `Install-StockDesk.command`, which installs to Applications and clears `com.apple.quarantine`; the app checks bundled frontend assets and shows a native error dialog (plus log) when startup fails instead of a silent blank window.
+- Added a frontend boot placeholder/error message; Windows CI now also checks the index page and JS/CSS assets, not just APIs.
 - Versions: macOS / Windows **1.10.2**; iOS **3.7.2 (29)**; US **1.0.1**.
 
 
