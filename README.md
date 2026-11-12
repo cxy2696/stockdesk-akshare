@@ -149,7 +149,7 @@ stockdesk-akshare/
 ├── desktop/        FastAPI + React 桌面端源码
 ├── ios/            SwiftUI iOS 源码
 ├── us/             美股独立仪表盘
-├── docs/           架构、安装、美股版、FAQ
+├── docs/           架构、安装、美股版
 ├── screenshots/    Mac / iOS / US 截图
 └── .github/        CI
 ```
@@ -287,7 +287,7 @@ stockdesk-akshare/
 ├── desktop/        FastAPI + React desktop source
 ├── ios/            SwiftUI iOS source
 ├── us/             Standalone US dashboard
-├── docs/           Architecture, install, US edition, FAQ
+├── docs/           Architecture, install, US edition
 ├── screenshots/    Mac / iOS / US screenshots
 └── .github/        CI
 ```
