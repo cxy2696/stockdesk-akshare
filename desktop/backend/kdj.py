@@ -6,6 +6,8 @@ minute endpoint is rate-limited, so the warning layer still has a live proxy.
 """
 from __future__ import annotations
 
+from . import model_registry
+
 import socket
 import traceback
 import threading
@@ -13,8 +15,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-UPPER = 118.0
-LOWER = -14.0
+UPPER = float(model_registry.MODELS["kdj"]["params"]["upper"])
+LOWER = float(model_registry.MODELS["kdj"]["params"]["lower"])
 BAR_LIMIT = 180
 CACHE_TTL = 45
 SNAPSHOT_TTL = 30
@@ -275,6 +277,7 @@ def snapshot(force: bool = False, industry: str | None = None) -> dict:
     finally:
         socket.setdefaulttimeout(old)
     data = {"thresholds": {"upper": UPPER, "lower": LOWER}, "targets": targets,
+            "model_meta": model_registry.meta(),
             "industry": industry or "半导体",
             "zones_note": "中枢为最近摆动高低点重叠区的近似值，不是严格缠论中枢。",
             "updated": time.time()}
