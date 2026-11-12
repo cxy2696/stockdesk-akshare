@@ -33,14 +33,14 @@ StockDesk 是一个本地优先、单用户的股票投资工作台。它把持�
 
 最新版本 **1.10.1** 修复东方财富在 IPv6 网络下不可达导致的指数/行业/主力资金空白，并恢复全量 5,580 只 A 股的估值与资金流字段；KDJ 行业在板块分钟数据缺失时使用 ETF 代理。
 
-本仓库是 **stockdesk-akshare** 项目文档与源码整理版，包含：
+本仓库 **stockdesk-akshare** 项目包含：
 
 - **macOS 原生 App**：pywebview + WebKit 独立窗口
 - **Windows 单文件 exe**：pywebview + Edge WebView2 独立窗口
 - **iOS App**：SwiftUI + Swift Charts
 - **US 美股版**：独立 FastAPI + ECharts 仪表盘
 
-> 本仓库是独立副本，不修改、不启动、不影响当前本地正在使用的 StockDesk。
+> 本仓库变更不影响当前本地正在使用的 StockDesk。
 
 ### 功能
 
@@ -166,7 +166,7 @@ This repository, **stockdesk-akshare**, is the documented source snapshot for:
 - **iOS app** — SwiftUI + Swift Charts
 - **US edition** — standalone FastAPI + ECharts dashboard
 
-> This is an independent copy. It does not modify, launch, or interfere with the StockDesk installation you are currently using.
+> It's changes does not modify, launch, or interfere with the StockDesk installation you are currently using.
 
 ### Features
 
