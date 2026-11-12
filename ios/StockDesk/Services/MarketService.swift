@@ -100,7 +100,39 @@ actor MarketService {
 
     // MARK: - spot
 
+    private func sinaSpot(ttl: TimeInterval) async -> (rows: [Quote], date: String) {
+        var all: [Quote] = []
+        for start in stride(from: 1, through: 56, by: 8) {
+            await withTaskGroup(of: [Quote].self) { group in
+                for page in start...min(start + 7, 56) {
+                    group.addTask {
+                        let url = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeData?page=\(page)&num=100&sort=amount&asc=0&node=hs_a&symbol=&_s_r_a=page"
+                        guard let arr = try? await self.net.getJSON([JVal].self, url: url, ttl: ttl, key: "sina-spot-\(page)") else { return [] }
+                        var rows: [Quote] = []
+                        for item in arr {
+                            guard let d = item.dict, let code = d["code"]?.string, let name = d["name"]?.string else { continue }
+                            rows.append(Quote(code: code, name: name, price: d["trade"]?.double, pct: d["changepercent"]?.double,
+                                              chg: d["pricechange"]?.double, high: d["high"]?.double,
+                                              low: d["low"]?.double, open: d["open"]?.double,
+                                              prevClose: d["settlement"]?.double, volume: d["volume"]?.double,
+                                              amount: d["amount"]?.double, turnover: d["turnoverratio"]?.double,
+                                              pe: d["per"]?.double, pb: d["pb"]?.double,
+                                              mcap: d["mktcap"]?.double, fcap: d["nmc"]?.double,
+                                              market: Self.marketOf(code)))
+                        }
+                        return rows
+                    }
+                }
+                for await rows in group { all.append(contentsOf: rows) }
+            }
+        }
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        return (all.sorted { ($0.amount ?? 0) > ($1.amount ?? 0) }, df.string(from: Date()))
+    }
+
     func spot(ttl: TimeInterval = 180) async throws -> (rows: [Quote], date: String) {
+        let sina = await sinaSpot(ttl: ttl)
+        if sina.rows.count > 100 { return sina }
         var all: [[String: JVal]] = []
         var total = 0
         var page = 1
@@ -122,16 +154,40 @@ actor MarketService {
         }
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
+        if rows.count < 500 {
+            let fallback = await sinaSpot(ttl: ttl)
+            if fallback.rows.count > rows.count { return fallback }
+        }
+        if rows.isEmpty { return await sinaSpot(ttl: ttl) }
         return (rows, df.string(from: Date()))
     }
 
     // MARK: - quote
 
+    private func sinaStockQuote(_ code: String) async -> Quote? {
+        let symbol = sinaSymbol(code)
+        guard let data = try? await net.get("https://hq.sinajs.cn/list=\(symbol)", ttl: 8, key: "sina-q-\(symbol)"),
+              let text = String(data: data, encoding: .isoLatin1),
+              let payload = text.split(separator: "=\"").dropFirst().first?.split(separator: "\"").first else { return nil }
+        let p = payload.split(separator: ",").map(String.init)
+        guard p.count > 9, let price = Double(p[3]), let prev = Double(p[2]), prev > 0 else { return nil }
+        return Quote(code: code, name: "", price: price, pct: (price / prev - 1) * 100,
+                     chg: price - prev, high: Double(p[4]), low: Double(p[5]), open: Double(p[1]),
+                     prevClose: prev, volume: Double(p[8]), amount: Double(p[9]),
+                     market: Self.marketOf(code))
+    }
+
     func quote(_ code: String) async throws -> Quote {
         let fields = "f43,f44,f45,f46,f47,f48,f57,f58,f60,f116,f117,f162,f167,f168,f169,f170,f171,f50"
         let url = "\(quoteURL)?secid=\(Self.secid(code))&fltt=2&invt=2&fields=\(fields)"
-        let obj = try await net.getJSON(JObj.self, url: url, ttl: 20, key: "q-\(code)")
-        guard let d = obj["data"]?.dict else { throw APIError.noData }
+        guard let obj = try? await net.getJSON(JObj.self, url: url, ttl: 20, key: "q-\(code)") else {
+            if let q = await sinaStockQuote(code) { return q }
+            throw APIError.noData
+        }
+        guard let d = obj["data"]?.dict else {
+            if let q = await sinaStockQuote(code) { return q }
+            throw APIError.noData
+        }
         return Quote(
             code: d["f57"]?.string ?? code,
             name: d["f58"]?.string ?? "",
@@ -178,7 +234,68 @@ actor MarketService {
 
     // MARK: - klines
 
+    // MARK: - Sina fallback (Eastmoney is frequently rate-limited)
+
+    private func sinaSymbol(_ code: String, _ secid: String? = nil) -> String {
+        let sec = secid ?? Self.secid(code)
+        if sec.hasPrefix("1.") { return "sh" + code }
+        if sec.hasPrefix("0.") { return (code.hasPrefix("399") || code.hasPrefix("899")) ? "sz" + code : "sz" + code }
+        return "sz" + code
+    }
+
+    private struct SinaK: Decodable {
+        let day: String
+        let open: String
+        let high: String
+        let low: String
+        let close: String
+        let volume: String?
+        let amount: String?
+    }
+
+    private func sinaKlines(_ code: String, period: String, limit: Int, secid: String? = nil) async -> [KLine] {
+        let symbol = sinaSymbol(code, secid)
+        let scale = ["5m": "5", "30m": "30", "60m": "60"][period] ?? "240"
+        let url = "https://quotes.sina.cn/cn/api/jsonp_v2.php/=/CN_MarketDataService.getKLineData?symbol=\(symbol)&scale=\(scale)&ma=no&datalen=\(max(10, limit))"
+        guard let data = try? await net.get(url, ttl: 60, key: "sina-k-\(symbol)-\(scale)"),
+              var text = String(data: data, encoding: .utf8) else { return [] }
+        if let start = text.firstIndex(of: "["), let end = text.lastIndex(of: "]") {
+            text = String(text[start...end])
+        }
+        guard let d = text.data(using: .utf8),
+              let vals = try? JSONSerialization.jsonObject(with: d) as? [[String: Any]] else { return [] }
+        var rows: [KLine] = []
+        var prev: Double? = nil
+        for v in vals {
+            guard let close = Double(v["close"] as? String ?? ""),
+                  let open = Double(v["open"] as? String ?? ""),
+                  let high = Double(v["high"] as? String ?? ""),
+                  let low = Double(v["low"] as? String ?? "") else { continue }
+            let pct = prev.map { (close / $0 - 1) * 100 } ?? 0
+            rows.append(KLine(date: v["day"] as? String ?? "", open: open, close: close, high: high, low: low,
+                              volume: Double(v["volume"] as? String ?? "") ?? 0,
+                              amount: Double(v["amount"] as? String ?? "") ?? 0,
+                              pct: pct, turnover: 0))
+            prev = close
+        }
+        return Array(rows.suffix(max(10, limit)))
+    }
+
     func klines(_ code: String, period: String = "daily", limit: Int = 320, adjust: String = "qfq", secidOverride: String? = nil) async throws -> [KLine] {
+        // Sina first: Eastmoney often hangs or rate-limits on mobile networks.
+        let sina = await sinaKlines(code, period: period, limit: limit, secid: secidOverride)
+        if !sina.isEmpty { return sina }
+        return try await klinesEM(code, period: period, limit: limit, adjust: adjust, secidOverride: secidOverride)
+    }
+
+    func indexKlines(_ code: String, period: String = "daily", limit: Int = 2000) async throws -> [KLine] {
+        let sec = Self.indexDefs.first { $0.code == code }?.secid ?? "1.\(code)"
+        let sina = await sinaKlines(code, period: period, limit: limit, secid: sec)
+        if !sina.isEmpty { return sina }
+        return try await indexKlinesEM(code, period: period, limit: limit)
+    }
+
+    func klinesEM(_ code: String, period: String = "daily", limit: Int = 320, adjust: String = "qfq", secidOverride: String? = nil) async throws -> [KLine] {
         let klt = ["daily": 101, "weekly": 102, "monthly": 103, "5m": 5, "30m": 30][period] ?? 101
         let fqt = ["": 0, "qfq": 1, "hfq": 2][adjust] ?? 1
         let url = "\(hisURL)?secid=\(secidOverride ?? Self.secid(code))&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=\(klt)&fqt=\(fqt)&beg=19900101&end=20500101&lmt=\(max(10, limit))"
@@ -204,7 +321,7 @@ actor MarketService {
     }
 
     /// Index klines need an explicit secid because 000001 is also 平安银行.
-    func indexKlines(_ code: String, period: String = "daily", limit: Int = 2000) async throws -> [KLine] {
+    func indexKlinesEM(_ code: String, period: String = "daily", limit: Int = 2000) async throws -> [KLine] {
         let klt = ["daily": 101, "weekly": 102, "monthly": 103, "5m": 5, "30m": 30][period] ?? 101
         let sec = Self.indexDefs.first { $0.code == code }?.secid ?? (code.hasPrefix("399") || code.hasPrefix("899") ? "0.\(code)" : "1.\(code)")
         let url = "\(hisURL)?secid=\(sec)&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=\(klt)&fqt=0&beg=19900101&end=20500101&lmt=\(max(10, limit))"
@@ -288,11 +405,26 @@ actor MarketService {
         ("000688", "1.000688", "科创50", "科创50"),
     ]
 
+    private func sinaIndexQuote(_ def: (code: String, secid: String, name: String, short: String)) async -> IndexQuote {
+        let symbol = sinaSymbol(def.code, def.secid)
+        guard let data = try? await net.get("https://hq.sinajs.cn/list=\(symbol)", ttl: 8, key: "sina-iq-\(symbol)"),
+              let text = String(data: data, encoding: .isoLatin1),
+              let payload = text.split(separator: "=\"").dropFirst().first?.split(separator: "\"").first else {
+            return IndexQuote(code: def.code, name: def.name, short: def.short)
+        }
+        let p = payload.split(separator: ",").map(String.init)
+        guard p.count > 9, let price = Double(p[3]), let prev = Double(p[2]), prev > 0 else {
+            return IndexQuote(code: def.code, name: def.name, short: def.short)
+        }
+        return IndexQuote(code: def.code, name: def.name, short: def.short, price: price,
+                          chg: price - prev, pct: (price / prev - 1) * 100, amount: Double(p[9]))
+    }
+
     func indexQuote(_ def: (code: String, secid: String, name: String, short: String)) async -> IndexQuote {
         let url = "\(quoteURL)?secid=\(def.secid)&fltt=2&invt=2&fields=f43,f44,f45,f46,f57,f58,f60,f169,f170,f48"
         guard let obj = try? await net.getJSON(JObj.self, url: url, ttl: 30, key: "idx-\(def.code)"),
               let d = obj["data"]?.dict else {
-            return IndexQuote(code: def.code, name: def.name, short: def.short)
+            return await sinaIndexQuote(def)
         }
         return IndexQuote(
             code: def.code,
