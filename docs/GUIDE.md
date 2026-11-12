@@ -191,7 +191,6 @@ Open **KDJ预警** under Industry News in the HUB right column. It uses akshare 
 4. **Build a watchlist** — click the star in the top bar, search by ticker or name.
 5. **Read today's plan** — back to the HUB, open Daily Plan: market state, position advice and risk notes.
 6. **Check the models** — open Quant Models: HMM suggests total exposure, percolation suggests industries and names.
-7. **Share** — open any detail page and use the share button to create a full-page image for WeChat or Notes.
 
 ### A simple daily routine
 
