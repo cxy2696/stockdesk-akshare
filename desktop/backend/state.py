@@ -311,6 +311,12 @@ def board_detail(code: str) -> dict:
                 break
         if meta:
             break
+    if code.startswith("SINA"):
+        # Sina industry-flow fallback has no constituent list; return its meta
+        # immediately instead of waiting for another blocked Eastmoney call.
+        result = {"meta": meta or {"code": code, "name": code}, "stocks": [], "updated": time.time()}
+        db.cache_set(key, result)
+        return result
     url = (
         f"{market.EM_LIST}?pn=1&pz=40&po=1&np=1&fltt=2&invt=2&fid=f3&fs=b:{code}"
         "&fields=f12,f14,f2,f3,f20,f100"
@@ -460,6 +466,10 @@ def industry_trends(limit: int = 8) -> list[dict]:
     if cached:
         return cached
     inds = boards("industry", "inflow", 100)[:limit]
+    if inds and all(str(b.get("code", "")).startswith("SINA") for b in inds):
+        # The Sina fallback only has today's flow; there is no board history.
+        db.cache_set(f"industry:trends:{limit}", [])
+        return []
     out = []
     for b in inds:
         try:
