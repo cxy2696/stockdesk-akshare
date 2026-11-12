@@ -39,7 +39,7 @@ StockDesk 是一个本地优先、单用户的股票投资工作台。它把持�
 | --- | --- | --- | --- |
 | macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | 约 43 MB | 打开 DMG，把 StockDesk 拖进 Applications |
 | macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | 约 42 MB | 解压后打开 `StockDesk.app` |
-| Windows 10/11 x64 | `StockDesk.exe` | 约 30 MB（以 Release 为准） | 双击运行；需要 WebView2 Runtime |
+| Windows 10/11 x64 | `StockDesk.exe` | 约 52 MB | 双击运行；需要 WebView2 Runtime |
 | iPhone (iOS 17+) | `StockDesk-iOS-3.7.2-unsigned.ipa` | 约 1.3 MB | 用 Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | — | `docker run`，见 `docs/PACKAGES.md` |
 
@@ -177,7 +177,7 @@ StockDesk is a local-first, single-user equity research desk. It combines portfo
 | --- | --- | --- | --- |
 | macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg` | ~43 MB | Open the DMG and drag StockDesk to Applications |
 | macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.zip` | ~42 MB | Unzip and open `StockDesk.app` |
-| Windows 10/11 x64 | `StockDesk.exe` | ~30 MB (see Release) | Double-click; WebView2 Runtime required |
+| Windows 10/11 x64 | `StockDesk.exe` | ~52 MB | Double-click; WebView2 Runtime required |
 | iPhone (iOS 17+) | `StockDesk-iOS-3.7.2-unsigned.ipa` | ~1.3 MB | Re-sign with Sideloadly / AltStore / Xcode |
 | Browser / NAS | GHCR containers | — | `docker run`, see `docs/PACKAGES.md` |
 

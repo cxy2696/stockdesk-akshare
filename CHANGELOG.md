@@ -6,7 +6,7 @@
 
 ### 1.10.2
 
-- **下载体积**：macOS 安装包从 94.3 MB 降到约 43 MB（DMG）/ 42 MB（ZIP），Windows 单文件同步移除未使用的重型依赖，下载和首次解压时间显著缩短。
+- **下载体积**：macOS 安装包从 94.3 MB 降到约 43 MB（DMG）/ 42 MB（ZIP）；Windows 单文件约 52 MB，移除未使用的重型依赖并保持全部功能。
 - PyInstaller 现在排除 `pyarrow`、`scipy`、`matplotlib`、`PIL`、`openpyxl` 等未被桌面端实际调用的可选依赖；保留 pandas / numpy / akshare / lxml / curl_cffi 等运行必需项，并逐项做 API 冒烟测试。
 - 新增 `desktop/package_macos.sh` 与 `desktop/build_win.ps1`，统一生成 DMG、ZIP、Windows exe 和 macOS SHA256 校验和。
 - iOS KDJ 行业卡在东方财富板块分钟线不可达 / 限流时自动回退到标注的 ETF 代理（半导体 512480、通信设备 515880），5m / 30m 不再停在「暂无行情」。
@@ -53,7 +53,7 @@
 
 ### 1.10.2
 
-- **Download size**: the macOS package drops from 94.3 MB to about 43 MB (DMG) / 42 MB (ZIP), and the Windows one-file exe removes the same unused heavy dependencies, cutting download and first-unzip time.
+- **Download size**: the macOS package drops from 94.3 MB to about 43 MB (DMG) / 42 MB (ZIP); the Windows one-file exe stays around 52 MB after removing unused heavy dependencies, with all features intact.
 - PyInstaller now excludes `pyarrow`, `scipy`, `matplotlib`, `PIL`, `openpyxl` and other optional packages the desktop app never imports; pandas / numpy / akshare / lxml / curl_cffi stay, and every endpoint is smoke-tested.
 - Added `desktop/package_macos.sh` and `desktop/build_win.ps1` to produce DMG, ZIP, the Windows exe and macOS SHA256 checksums reproducibly.
 - iOS KDJ sector cards now fall back to the labelled ETF proxy (semiconductor 512480, communications equipment 515880) when Eastmoney board-minute data is unreachable or rate-limited, so 5m / 30m no longer sit on "no data".

@@ -9,7 +9,7 @@
 | 平台 | 推荐文件 | 安装 |
 | --- | --- | --- |
 | macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg`（约 43 MB） | 打开 DMG，拖进 Applications |
-| Windows 10/11 x64 | `StockDesk.exe`（精简单文件） | 双击运行；装好 WebView2 Runtime |
+| Windows 10/11 x64 | `StockDesk.exe`（精简单文件，约 52 MB） | 双击运行；装好 WebView2 Runtime |
 | iPhone iOS 17+ | `StockDesk-iOS-3.7.2-unsigned.ipa` | Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | 见 `PACKAGES.md` |
 

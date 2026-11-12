@@ -16,7 +16,7 @@
 | --- | --- | --- | --- |
 | macOS 12+，Apple Silicon | macOS App | [`StockDesk-macOS-1.10.2.dmg`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk-macOS-1.10.2.dmg) | 约 43 MB |
 | macOS，想自己解压 | macOS ZIP | [`StockDesk-macOS-1.10.2.zip`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk-macOS-1.10.2.zip) | 约 42 MB |
-| Windows 10/11 x64 | Windows exe | [`StockDesk.exe`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk.exe) | 约 30 MB |
+| Windows 10/11 x64 | Windows exe | [`StockDesk.exe`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk.exe) | 约 52 MB |
 | iPhone，iOS 17+ | iOS IPA | [`StockDesk-iOS-3.7.2-unsigned.ipa`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk-iOS-3.7.2-unsigned.ipa) | 约 1.3 MB |
 | 浏览器 / NAS / 服务器 | Docker | `ghcr.io/cxy2696/stockdesk-akshare-a-share:latest` | — |
 | 想改代码 | 源码 | 见第 8 节 | — |
@@ -329,7 +329,7 @@ powershell -ExecutionPolicy Bypass -File .\build_win.ps1
 
 ### 10. 常见问题
 
-- **下载很慢**：优先用 DMG（约 43 MB）或 ZIP（约 42 MB）；Windows exe 已精简到约 30 MB。GitHub Releases 支持断点续传，网络不稳时可以重试。
+- **下载很慢**：优先用 DMG（约 43 MB）或 ZIP（约 42 MB）；Windows exe 已精简到约 52 MB。GitHub Releases 支持断点续传，网络不稳时可以重试。
 - **macOS 提示未签名**：右键 App → 打开；或在「隐私与安全性」里允许。
 - **Windows 没有窗口**：确认 WebView2 Runtime 已安装；没有时会退回浏览器。
 - **iOS 安装失败**：IPA 未签名，必须用自己的 Apple ID 重签；免费签名 7 天有效。
@@ -362,7 +362,7 @@ powershell -ExecutionPolicy Bypass -File .\build_win.ps1
 | --- | --- | --- | --- |
 | macOS 12+, Apple Silicon | macOS app | [`StockDesk-macOS-1.10.2.dmg`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk-macOS-1.10.2.dmg) | ~43 MB |
 | macOS, prefer a zip | macOS ZIP | [`StockDesk-macOS-1.10.2.zip`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk-macOS-1.10.2.zip) | ~42 MB |
-| Windows 10/11 x64 | Windows exe | [`StockDesk.exe`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk.exe) | ~30 MB |
+| Windows 10/11 x64 | Windows exe | [`StockDesk.exe`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk.exe) | ~52 MB |
 | iPhone, iOS 17+ | iOS IPA | [`StockDesk-iOS-3.7.2-unsigned.ipa`](https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.10.2/StockDesk-iOS-3.7.2-unsigned.ipa) | ~1.3 MB |
 | Browser / NAS / server | Docker | `ghcr.io/cxy2696/stockdesk-akshare-a-share:latest` | — |
 | Want to modify code | Source | See section 8 | — |
@@ -526,7 +526,7 @@ Do not trade every day. HMM and percolation describe the present; they are risk 
 
 ### 10. FAQ
 
-- **Slow download**: use the DMG (~43 MB) or ZIP (~42 MB); the Windows exe is about 30 MB. GitHub Releases supports resume, so retry on unstable networks.
+- **Slow download**: use the DMG (~43 MB) or ZIP (~42 MB); the Windows exe is about 52 MB. GitHub Releases supports resume, so retry on unstable networks.
 - **macOS says unsigned**: right-click → Open, or allow it in Privacy & Security.
 - **No window on Windows**: install WebView2 Runtime; otherwise the app opens in the browser.
 - **iOS install fails**: the IPA is unsigned; re-sign it with your Apple ID. Free signatures expire after 7 days.

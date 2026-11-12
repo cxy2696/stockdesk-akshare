@@ -10,7 +10,7 @@
 
 ### 下载很慢怎么办？
 
-优先使用 macOS 的 DMG（约 43 MB）或 ZIP（约 42 MB）；Windows exe 约 30 MB。GitHub Releases 支持断点续传，网络不稳时可以直接重试，不需要重新找链接。
+优先使用 macOS 的 DMG（约 43 MB）或 ZIP（约 42 MB）；Windows exe 约 52 MB。GitHub Releases 支持断点续传，网络不稳时可以直接重试，不需要重新找链接。
 
 ### 这个仓库会影响我正在用的 StockDesk 吗？
 
@@ -44,7 +44,7 @@ The PyInstaller build now excludes optional packages the desktop app never impor
 
 ### What if the download is slow?
 
-Use the macOS DMG (~43 MB) or ZIP (~42 MB); the Windows exe is about 30 MB. GitHub Releases supports resume, so retry the same link on unstable networks.
+Use the macOS DMG (~43 MB) or ZIP (~42 MB); the Windows exe is about 52 MB. GitHub Releases supports resume, so retry the same link on unstable networks.
 
 ### Will this repository affect the StockDesk I am already using?
 
