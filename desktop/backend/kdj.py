@@ -138,8 +138,12 @@ def _fetch(t: dict, period: str) -> dict:
         if t.get("kind") == "行业":
             try:
                 result = _ak_sector(t["board"], period)
+                # akshare sometimes returns an empty frame for a board code
+                # instead of raising; treat that as unavailable and use the
+                # transparent ETF proxy so the sector still has a live series.
+                if len(result.get("rows") or []) < 10:
+                    raise RuntimeError("板块分钟数据为空")
             except Exception:
-                # The ETF is a transparent fallback proxy, not a replacement.
                 result = _ak_index(t["proxy"], period)
                 result["source"] = "akshare · 行业ETF代理"
                 result["proxy"] = True

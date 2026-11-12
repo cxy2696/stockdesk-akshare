@@ -188,7 +188,9 @@ export default function Daily() {
                 { title: '股票', dataIndex: 'name', render: (v: string, r: any) => <span><b>{v}</b> <span className="muted mono small">{r.code}</span></span> },
                 { title: '现价', dataIndex: 'price', align: 'right', render: (v: number) => <span className="num">{fmt.price(v)}</span> },
                 { title: '涨跌幅', dataIndex: 'pct', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
-                { title: '行业', dataIndex: 'industry', render: (v: string) => <span className="muted small">{v || '--'}</span> },
+                ...((picks?.picks ?? []).some((r: any) => r.industry)
+                  ? [{ title: '行业', dataIndex: 'industry', render: (v: string) => <span className="muted small">{v}</span> }]
+                  : []),
                 {
                   title: '触发信号',
                   render: (_: any, r: any) => (

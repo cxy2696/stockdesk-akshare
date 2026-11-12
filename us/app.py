@@ -11,13 +11,13 @@ from fastapi.staticfiles import StaticFiles
 import market_us as m
 
 ROOT = Path(__file__).resolve().parent
-app = FastAPI(title="StockDesk US", version="1.0.0")
+app = FastAPI(title="StockDesk US", version="1.0.1")
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 
 
 @app.get("/api/us/health")
 def health():
-    return {"ok": True, "app": "StockDesk US", "version": "1.0.0"}
+    return {"ok": True, "app": "StockDesk US", "version": "1.0.1"}
 
 
 @app.get("/api/us/overview")
@@ -47,15 +47,9 @@ def overview():
 
 @app.get("/api/us/quotes")
 def quotes(symbols: str = Query(default=",".join(m.DEFAULT_WATCH))):
-    out = []
-    for s in symbols.split(",")[:30]:
-        try:
-            q = m.quote(s)
-        except Exception:
-            q = None
-        if q:
-            out.append(q)
-    return {"ok": True, "items": out}
+    wanted = [s for s in symbols.split(",") if s][:30]
+    found = m.quotes(wanted)
+    return {"ok": True, "items": [found[s.strip().upper()] for s in wanted if s.strip().upper() in found]}
 
 
 @app.get("/api/us/klines/{symbol}")

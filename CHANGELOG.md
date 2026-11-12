@@ -4,6 +4,18 @@
 
 ## 中文
 
+### 1.10.1
+
+- 修复东方财富在 IPv6 网络下 TLS 握手后断连的问题：仅对东方财富域名优先 IPv4，指数、行业、主力资金恢复。
+- 全量行情恢复东方财富主路径：5,580 只 A 股，PE / PB / 总市值 / 换手率 / 主力净流入齐全；分页按代码稳定排序，不再漏股。
+- 行业板块恢复真实 BK 代码、上涨/下跌家数与领涨股；KDJ 行业在板块分钟数据为空时自动使用 ETF 代理并标注。
+- 修复 KDJ 预警横幅在 HUD 主题下白底白字、行业无数据、顶栏标题被裁切。
+- 修复 120% / 150% 下热点榜股票名截断；标题栏随字号增高。
+- 修复 iOS 源码多余花括号导致无法编译；HUB 启动自动刷新；网络熔断避免上游异常时长时间空白。
+- 补齐 PWA manifest；缺失静态资源返回真实 404。
+- CI 新增桌面 OpenAPI / 未定义名称检查、Swift 语法检查；容器标签更新。
+- macOS / Windows 1.10.1；iOS 3.7.1 (28)；美股 1.0.1。
+
 ### 1.10.0
 
 - 新增 KDJ 极值预警，使用 akshare 获取 5m / 30m 行情。
@@ -25,6 +37,18 @@
 - 提供 A 股和美股两个 GHCR 容器。
 
 ## English
+
+### 1.10.1
+
+- Fixed Eastmoney dropping the connection after the TLS handshake on IPv6 networks: Eastmoney hosts now prefer IPv4, restoring indices, sectors and main fund flow.
+- The full snapshot uses Eastmoney again: 5,580 A-shares with PE / PB / market cap / turnover / main inflow; pages are sorted by code so no listings are skipped.
+- Sector boards return real BK codes, up/down counts and leaders; KDJ sectors fall back to a labelled ETF proxy when board minute bars are empty.
+- Fixed the KDJ warning banner being white-on-white in the HUD theme, missing sector data, and clipped page titles.
+- Fixed clipped stock names in the heat list at 120% / 150%; the top bar now grows with the font scale.
+- Fixed a stray brace that stopped the iOS target from compiling; the HUB refreshes on launch and an outage breaker avoids long blank states.
+- Added the PWA manifest and real 404s for missing static assets.
+- CI now checks the desktop OpenAPI schema, undefined names and Swift syntax; container tags updated.
+- macOS / Windows 1.10.1; iOS 3.7.1 (28); US 1.0.1.
 
 ### 1.10.0
 

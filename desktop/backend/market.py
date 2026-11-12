@@ -16,6 +16,11 @@ from typing import Any
 
 from . import db
 from .config import EM_HIS, EM_LIST, EM_QUOTE, EM_UT, INDEXES, KLINE_TTL, QUOTE_TTL, SPOT_TTL
+from .net import prefer_ipv4_eastmoney
+
+# Eastmoney TLS is reachable over IPv4 on networks where its IPv6 route is
+# broken; install the preference before any request is attempted.
+prefer_ipv4_eastmoney()
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
 
@@ -24,26 +29,18 @@ SPOT_FIELDS = "f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f
 FS_A = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
 
 _spot_lock = __import__("threading").Lock()
-_EM_BLOCKED_UNTIL = 0.0
 
 
 def _http_json(url: str, timeout: float = 8.0) -> dict:
-    """GET JSON from Eastmoney, failing fast while the host is unavailable.
+    """GET JSON from Eastmoney with a short socket timeout.
 
-    A single slow/blocked call used to cost 12s; pages chain several of them.
-    After one failure we short-circuit for 15s so the Sina/akshare fallbacks
-    can serve the UI instead of leaving it on a spinner.
+    IPv4 is preferred for these hosts (see backend/net.py). No cross-request
+    breaker is used: a single transient board/quote failure must not poison the
+    unrelated endpoints or force a lower-quality fallback for seconds.
     """
-    global _EM_BLOCKED_UNTIL
-    if time.time() < _EM_BLOCKED_UNTIL:
-        raise RuntimeError("eastmoney cooling down")
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://quote.eastmoney.com/"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode("utf-8", "ignore"))
-    except Exception:
-        _EM_BLOCKED_UNTIL = time.time() + 15
-        raise
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8", "ignore"))
 
 
 def _num(v, default=None):
@@ -223,78 +220,138 @@ def _sina_batch(codes: list[str]) -> dict[str, dict]:
     return out
 
 
+def _sina_market_center() -> dict[str, dict]:
+    """Rich Sina spot snapshot (code, name, price, PE/PB, cap, turnover).
+
+    The Market_Center JSON pages are small and can be fetched concurrently, so
+    the fallback stays complete even when Eastmoney is unavailable. The legacy
+    `ak.stock_zh_a_spot()` path was sequential, slow and carried no valuation
+    fields.
+    """
+    UA_SINA = {"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"}
+
+    def page(n: int) -> list[dict]:
+        url = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+               f"Market_Center.getHQNodeData?page={n}&num=100&sort=amount&asc=0&node=hs_a&symbol=&_s_r_a=page")
+        try:
+            req = urllib.request.Request(url, headers=UA_SINA)
+            with urllib.request.urlopen(req, timeout=12) as r:
+                data = json.loads(r.read().decode("utf-8", "ignore"))
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+
+    out: dict[str, dict] = {}
+    try:
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            for chunk in ex.map(page, range(1, 57)):
+                for r in chunk:
+                    code = str(r.get("code") or "")[-6:]
+                    if not code.isdigit():
+                        continue
+                    price = _num(r.get("trade"))
+                    prev = _num(r.get("settlement"))
+                    if not price:
+                        continue
+                    mcap = _num(r.get("mktcap"))
+                    fcap = _num(r.get("nmc"))
+                    pct = _num(r.get("changepercent"))
+                    out[code] = {
+                        "name": str(r.get("name") or ""),
+                        "price": price,
+                        "pct": pct if pct is not None else (round((price / prev - 1) * 100, 2) if prev else None),
+                        "chg": _num(r.get("pricechange")),
+                        "open": _num(r.get("open")),
+                        "high": _num(r.get("high")),
+                        "low": _num(r.get("low")),
+                        "prev_close": prev,
+                        "volume": _num(r.get("volume")),
+                        "amount": _num(r.get("amount")),
+                        "turnover": _num(r.get("turnoverratio")),
+                        "pe": _num(r.get("per")),
+                        "pb": _num(r.get("pb")),
+                        "mcap": round(mcap * 1e4, 2) if mcap is not None else None,
+                        "fcap": round(fcap * 1e4, 2) if fcap is not None else None,
+                        "volume_ratio": None,
+                        "market": market_of(code),
+                        "industry": "",
+                    }
+    except Exception:
+        return {}
+    return out
+
+
 def _akshare_spot() -> dict:
-    """Full A-share universe fallback: 5,000+ listed symbols plus Sina quotes."""
+    """Complete fallback universe with Sina quotes and Eastmoney-like fields."""
     cached = db.cache_get("spot:ak", 600)
     if cached:
         return cached
+    universe = _universe_symbols()
+    quotes = _sina_market_center()
+    if not quotes:
+        quotes = _sina_batch([code for code, _ in universe])
+    flow = _fund_flow()
+    rows = []
+    universe_map = dict(universe)
+    for code, name in universe:
+        q = quotes.get(code) or {}
+        f = flow.get(code) or {}
+        row = {**q}
+        row.update({
+            "code": code,
+            "name": q.get("name") or name,
+            "main_inflow": f.get("main_inflow"),
+            "inflow": f.get("inflow"),
+            "outflow": f.get("outflow"),
+            "market": market_of(code),
+        })
+        row.setdefault("industry", "")
+        rows.append(row)
+    for code, q in quotes.items():
+        if code in universe_map or not q.get("price"):
+            continue
+        row = {**q}
+        row.update({"code": code, "main_inflow": None, "inflow": None, "outflow": None,
+                    "market": market_of(code)})
+        row.setdefault("industry", "")
+        rows.append(row)
+    out = {
+        "ts": time.time(),
+        "date": time.strftime("%Y-%m-%d"),
+        "total": len(rows),
+        "rows": rows,
+        "source": "sina-market-center" if quotes else "empty",
+    }
+    if rows:
+        db.cache_set("spot:ak", out)
+        db.cache_set("spot:v3", out)
+    return out
+
+
+def _universe_symbols() -> list[tuple[str, str]]:
+    """Bundled complete A-share code/name list (all ~5,580 listings)."""
     try:
-        import akshare as ak
-        universe = []
-        try:
-            import json as _json
-            symbol_file = Path(__file__).resolve().parent / "data" / "all_symbols.json"
-            universe = [(str(x["code"]).zfill(6), str(x["name"])) for x in _json.loads(symbol_file.read_text("utf-8"))]
-        except Exception:
-            try:
-                names = ak.stock_info_a_code_name()
-                universe = [(str(r["code"]).zfill(6), str(r["name"])) for _, r in names.iterrows()]
-            except Exception:
-                universe = []
-        flow = _fund_flow()
-        quotes = {}
-        try:
-            spot = ak.stock_zh_a_spot()
-            for _, r in spot.iterrows():
-                raw = str(r.get("代码") or "")
-                code = raw[-6:]
-                if not code.isdigit():
-                    continue
-                quotes[code] = {
-                    "price": _num(r.get("最新价")), "pct": _num(r.get("涨跌幅")),
-                    "chg": _num(r.get("涨跌额")), "open": _num(r.get("今开")),
-                    "high": _num(r.get("最高")), "low": _num(r.get("最低")),
-                    "prev_close": _num(r.get("昨收")), "volume": _num(r.get("成交量")),
-                    "amount": _num(r.get("成交额")), "turnover": None,
-                }
-        except Exception:
-            quotes = {}
-        missing = [code for code, _ in universe if not (quotes.get(code) or {}).get("price")]
-        if missing:
-            quotes.update(_sina_batch(missing))
-        rows = []
-        for code, name in universe:
-            q = quotes.get(code, {})
-            f = flow.get(code, {})
-            rows.append({"code": code, "name": name, **q, "pe": None, "pb": None,
-                         "mcap": None, "fcap": None, "main_inflow": f.get("main_inflow"),
-                         "inflow": f.get("inflow"), "outflow": f.get("outflow"),
-                         "volume_ratio": None, "market": market_of(code)})
-        if not rows:
-            for code, q in quotes.items():
-                if q.get("price"):
-                    rows.append({"code": code, "name": "", **q, "pe": None, "pb": None,
-                                 "mcap": None, "fcap": None, "main_inflow": None,
-                                 "volume_ratio": None, "market": market_of(code)})
-        out = {"ts": time.time(), "date": time.strftime("%Y-%m-%d"), "total": len(rows), "rows": rows, "source": "akshare-sina"}
-        if rows:
-            db.cache_set("spot:ak", out)
-            db.cache_set("spot:v3", out)
-        return out
+        import json as _json
+        path = Path(__file__).resolve().parent / "data" / "all_symbols.json"
+        data = _json.loads(path.read_text("utf-8"))
+        return [(str(x["code"]).zfill(6), str(x["name"])) for x in data if x.get("code")]
     except Exception:
-        return {"ts": time.time(), "date": time.strftime("%Y-%m-%d"), "total": 0, "rows": []}
+        return []
 
 
 def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
-    """Full A-share snapshot, including all ~5,580 listed names."""
+    """Full A-share snapshot: Eastmoney fields plus the complete symbol list.
+
+    Eastmoney's paged list is fast and carries valuation/fund-flow fields, but
+    pages can overlap while prices move and some Beijing listings are missing.
+    We dedupe by code, then fill every bundled universe symbol from Sina so the
+    table stays complete even when a page is skipped.
+    """
     cached = db.cache_get("spot:v3", ttl)
     if cached and cached.get("total", 0) >= 5500:
         return cached
-    # The Eastmoney clist endpoint omits some Beijing listings and is often
-    # rate-limited; use the complete akshare/Sina universe as the primary list.
-    return _akshare_spot()
     base = (
-        f"{EM_LIST}?po=1&np=1&fltt=2&invt=2&fid=f3&fs={urllib.parse.quote(FS_A)}"
+        f"{EM_LIST}?po=1&np=1&fltt=2&invt=2&fid=f12&fs={urllib.parse.quote(FS_A)}"
         f"&fields={SPOT_FIELDS}"
     )
     try:
@@ -303,36 +360,77 @@ def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
         return _akshare_spot()
     data = (first or {}).get("data") or {}
     total = int(data.get("total") or 0)
-    rows = [_row_from_spot(f) for f in (data.get("diff") or [])]
+    if not total:
+        return _akshare_spot()
+
+    seen: dict[str, dict] = {}
+
+    def take(diff) -> None:
+        for f in diff:
+            r = _row_from_spot(f)
+            if r["code"]:
+                seen[r["code"]] = r
+
+    take(data.get("diff") or [])
     page = 1
-    while len(rows) < total and page < 80:
+    while len(seen) < total and page < 80:
         page += 1
         try:
             d = _http_json(f"{base}&pn={page}&pz=100")
             diff = ((d or {}).get("data") or {}).get("diff") or []
-            if not diff:
-                break
-            rows.extend(_row_from_spot(f) for f in diff)
         except Exception:
             break
+        if not diff:
+            break
+        take(diff)
         if progress:
-            progress(min(99, int(len(rows) / max(total, 1) * 100)))
+            progress(min(99, int(len(seen) / max(total, 1) * 100)))
+
+    if len(seen) < 1000:
+        return _akshare_spot()
+
+    universe = _universe_symbols()
+    uni_map = dict(universe)
+    need = [c for c, _ in universe if c not in seen or not (seen[c].get("price"))]
+    quotes = _sina_batch(need) if need else {}
+    flow = _fund_flow() if need else {}
+    quote_keys = ("price", "high", "low", "open", "volume", "amount", "prev_close", "pct", "chg")
+
+    for code, name in universe:
+        r = seen.get(code)
+        q = quotes.get(code) or {}
+        if r is None:
+            r = {"code": code, "name": name, "price": None, "pct": None, "chg": None,
+                 "volume": None, "amount": None, "amplitude": None, "turnover": None,
+                 "pe": None, "pb": None, "high": None, "low": None, "open": None,
+                 "prev_close": None, "mcap": None, "fcap": None, "volume_ratio": None,
+                 "speed": None, "pct60": None, "pct_ytd": None, "pct5m": None,
+                 "main_inflow": None, "market": market_of(code), "industry": ""}
+            seen[code] = r
+        if not r.get("name"):
+            r["name"] = name
+        if not r.get("price") and q:
+            for key in quote_keys:
+                if q.get(key) is not None:
+                    r[key] = q[key]
+        if r.get("main_inflow") is None:
+            f = flow.get(code) or {}
+            r["main_inflow"] = f.get("main_inflow")
+            r["inflow"] = f.get("inflow")
+            r["outflow"] = f.get("outflow")
+
+    rows = [r for r in seen.values()
+            if r["code"] in uni_map or r.get("price") is not None]
     out = {
         "ts": time.time(),
         "date": time.strftime("%Y-%m-%d"),
         "total": len(rows),
-        "rows": [r for r in rows if r["code"]],
+        "rows": rows,
+        "source": "eastmoney+universe",
     }
-    if out["rows"]:
+    if rows:
         db.cache_set("spot:v3", out)
-    # Eastmoney's list omits some Beijing listings; the akshare/Sina universe
-    # includes all ~5,580 A-share names. Prefer the complete universe.
-    if len(out["rows"]) < 5500:
-        ak_rows = _akshare_spot()
-        if ak_rows.get("total", 0) > len(out["rows"]):
-            return ak_rows
-    return out if out["rows"] else _akshare_spot()
-
+    return out if rows else _akshare_spot()
 
 def _sina_quote(code: str, prefix: str | None = None) -> dict | None:
     """Fallback quote when the Eastmoney push2 endpoint is rate-limited."""
@@ -438,7 +536,10 @@ def quotes(codes: list[str]) -> dict[str, dict]:
     if not codes:
         return {}
     out: dict[str, dict] = {}
-    fresh = [c for c in codes if not (out.setdefault(c, db.cache_get(f"quote:{c}", QUOTE_TTL)))]
+    for c in codes:
+        cached = db.cache_get(f"quote:{c}", QUOTE_TTL)
+        if cached:
+            out[c] = cached
     needed = [c for c in codes if not out.get(c)]
 
     def work(c):

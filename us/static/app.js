@@ -114,6 +114,16 @@ function renderDetail(q) {
 }
 
 function renderBreadth(b) {
+  if (!b || !b.sample) {
+    $('#breadth-ratio').textContent = '--';
+    $('#b-up').textContent = '--'; $('#b-flat').textContent = '--'; $('#b-down').textContent = '--';
+    $('#breadth-up').style.width = '0%'; $('#breadth-flat').style.width = '0%'; $('#breadth-down').style.width = '0%';
+    const hint = document.querySelector('[data-i18n="breadthHint"]');
+    if (hint) hint.textContent = lang === 'en'
+      ? 'Quote source temporarily unavailable; retrying automatically.'
+      : '行情源暂不可用，正在自动重试。';
+    return;
+  }
   $('#breadth-ratio').textContent = `${b.ratio ?? '--'}% ${lang === 'en' ? 'UP' : '上涨'}`;
   $('#b-up').textContent = b.up; $('#b-flat').textContent = b.flat; $('#b-down').textContent = b.down;
   const total = Math.max(b.up + b.flat + b.down, 1);

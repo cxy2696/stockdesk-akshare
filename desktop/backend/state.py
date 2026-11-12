@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from . import clock, db, market
 
@@ -190,7 +191,7 @@ def market_state() -> dict:
         turnover = sum(amounts)
 
     # ---- sectors
-    industries = _boards("m:90+t:2", 60)
+    industries = boards("industry", "pct", 60)
     concepts = _boards("m:90+t:3", 40)
     top_ind = [x for x in industries if x["pct"] is not None][:6]
     bottom_ind = [x for x in industries if x["pct"] is not None][-3:][::-1]
@@ -243,6 +244,96 @@ def market_state() -> dict:
     return result
 
 
+def _ths_industry_flow() -> list[dict]:
+    """90-industry board fallback with breadth, net inflow and leader.
+
+    Uses the THS industry summary, which stays available when Eastmoney's
+    push2 clist is blocked. Falls back to the narrower fund-flow table.
+    """
+    try:
+        import akshare as ak
+        df = ak.stock_board_industry_summary_ths()
+        out = []
+        for i, r in df.iterrows():
+            name = str(r.get("板块") or "").strip()
+            if not name:
+                continue
+            net = market._num(r.get("净流入"))
+            up = market._num(r.get("上涨家数"))
+            down = market._num(r.get("下跌家数"))
+            amount = market._num(r.get("总成交额"))
+            out.append({
+                "code": f"THS{i}", "name": name,
+                "pct": market._num(r.get("涨跌幅")),
+                "inflow": round(net * 1e8, 2) if net is not None else None,
+                "outflow": None,
+                "amount": round(amount * 1e8, 2) if amount is not None else None,
+                "up": int(up) if up is not None else None,
+                "down": int(down) if down is not None else None,
+                "leader": r.get("领涨股"), "leader_code": None,
+                "leader_pct": market._num(r.get("领涨股-涨跌幅")),
+                "companies": int(up + down) if up is not None and down is not None else None,
+                "kind": "industry",
+            })
+        if out:
+            return out
+    except Exception:
+        pass
+    try:
+        import akshare as ak
+        df = ak.stock_fund_flow_industry(symbol="即时")
+        out = []
+        for i, r in df.iterrows():
+            name = str(r.get("行业") or "").strip()
+            if not name:
+                continue
+            net = market._num(r.get("净额"))
+            inflow = market._num(r.get("流入资金"))
+            outflow = market._num(r.get("流出资金"))
+            companies = market._num(r.get("公司家数"))
+            out.append({
+                "code": f"THS{i}", "name": name,
+                "pct": market._num(r.get("行业-涨跌幅")),
+                "inflow": round(net * 1e8, 2) if net is not None else None,
+                "inflow_raw": round(inflow * 1e8, 2) if inflow is not None else None,
+                "outflow": round(outflow * 1e8, 2) if outflow is not None else None,
+                "up": None, "down": None,
+                "leader": r.get("领涨股"), "leader_code": None,
+                "leader_pct": market._num(r.get("领涨股-涨跌幅")),
+                "companies": int(companies) if companies is not None else None,
+                "kind": "industry",
+            })
+        return out
+    except Exception:
+        return []
+
+
+def _ths_board_rows(name: str) -> list[dict]:
+    """Daily K-line history for a THS industry board."""
+    try:
+        import akshare as ak
+        end = time.strftime("%Y%m%d")
+        start = time.strftime("%Y%m%d", time.localtime(time.time() - 420 * 86400))
+        df = ak.stock_board_industry_index_ths(symbol=name, start_date=start, end_date=end)
+        out = []
+        for _, r in df.iterrows():
+            close = market._num(r.get("收盘价"))
+            if close is None:
+                continue
+            out.append({
+                "date": str(r.get("日期")),
+                "open": market._num(r.get("开盘价")),
+                "high": market._num(r.get("最高价")),
+                "low": market._num(r.get("最低价")),
+                "close": close,
+                "volume": market._num(r.get("成交量"), 0),
+                "amount": market._num(r.get("成交额"), 0),
+            })
+        return out
+    except Exception:
+        return []
+
+
 def _board_rows(kind: str = "industry") -> list[dict]:
     fs = "m:90+t:2" if kind == "industry" else "m:90+t:3"
     url = (
@@ -269,17 +360,19 @@ def _board_rows(kind: str = "industry") -> list[dict]:
             "kind": kind,
         })
     if not out and kind == "industry":
-        for i, r in enumerate(market._sina_industry_flow()):
-            name = r.get("name") or ""
-            if not name:
-                continue
-            out.append({
-                "code": f"SINA{i}", "name": name,
-                "pct": r.get("pct"), "inflow": r.get("inflow"),
-                "up": None, "down": None,
-                "leader": r.get("leader"), "leader_code": None,
-                "leader_pct": r.get("leader_pct"), "kind": kind,
-            })
+        out = _ths_industry_flow()
+        if not out:
+            for i, r in enumerate(market._sina_industry_flow()):
+                name = r.get("name") or ""
+                if not name:
+                    continue
+                out.append({
+                    "code": f"SINA{i}", "name": name,
+                    "pct": r.get("pct"), "inflow": r.get("inflow"),
+                    "up": None, "down": None,
+                    "leader": r.get("leader"), "leader_code": None,
+                    "leader_pct": r.get("leader_pct"), "kind": kind,
+                })
     return out
 
 
@@ -294,7 +387,11 @@ def boards(kind: str = "industry", sort: str = "pct", limit: int = 60) -> list[d
     else:
         rows.sort(key=lambda r: r.get("pct") or -999, reverse=True)
     rows = rows[:limit]
-    db.cache_set(key, rows)
+    # Do not cache the degraded Sina board list: it has synthetic SINA* codes
+    # and no breadth, and would otherwise hide a recovered Eastmoney source
+    # for a full minute.
+    if not rows or all(str(b.get("code", "")).startswith("BK") for b in rows):
+        db.cache_set(key, rows)
     return rows
 
 
@@ -311,7 +408,7 @@ def board_detail(code: str) -> dict:
                 break
         if meta:
             break
-    if code.startswith("SINA"):
+    if not code.startswith("BK"):
         # Sina industry-flow fallback has no constituent list; return its meta
         # immediately instead of waiting for another blocked Eastmoney call.
         result = {"meta": meta or {"code": code, "name": code}, "stocks": [], "updated": time.time()}
@@ -468,35 +565,45 @@ def industry_trends(limit: int = 8) -> list[dict]:
     inds = boards("industry", "inflow", 100)[:limit]
     if inds and all(str(b.get("code", "")).startswith("SINA") for b in inds):
         # The Sina fallback only has today's flow; there is no board history.
-        db.cache_set(f"industry:trends:{limit}", [])
+        # Do not cache the empty result so a recovered source is picked up.
         return []
-    out = []
-    for b in inds:
+
+    def history(b: dict) -> list[dict]:
         try:
-            rows = market.klines(b["code"], limit=160, adjust="", secid_override=f"90.{b['code']}")
-            closes = [r["close"] for r in rows]
-            if len(closes) < 25:
-                continue
-            ma5 = _ma(closes, 5)
-            ma20 = _ma(closes, 20)
-            ma60 = _ma(closes, 60)
-            trend = "震荡"
-            if ma20 and ma60:
-                if closes[-1] > ma20 > ma60:
-                    trend = "多头"
-                elif closes[-1] < ma20 < ma60:
-                    trend = "空头"
-            out.append({
-                **b,
-                "pct5": round(_pct(closes, 5), 2) if _pct(closes, 5) is not None else None,
-                "pct20": round(_pct(closes, 20), 2) if _pct(closes, 20) is not None else None,
-                "pct60": round(_pct(closes, 60), 2) if _pct(closes, 60) is not None else None,
-                "trend": trend,
-                "ma20": round(ma20, 2) if ma20 else None,
-                "ma60": round(ma60, 2) if ma60 else None,
-            })
+            if str(b.get("code", "")).startswith("THS"):
+                return _ths_board_rows(b["name"])
+            return market.klines(b["code"], limit=160, adjust="", secid_override=f"90.{b['code']}")
         except Exception:
+            return []
+
+    # Board histories come from several HTTP endpoints; fetch them together
+    # so the Daily page does not spend 8 × request time on the first paint.
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        histories = list(ex.map(history, inds))
+
+    out = []
+    for b, rows in zip(inds, histories):
+        closes = [r["close"] for r in rows]
+        if len(closes) < 25:
             continue
+        ma5 = _ma(closes, 5)
+        ma20 = _ma(closes, 20)
+        ma60 = _ma(closes, 60)
+        trend = "震荡"
+        if ma20 and ma60:
+            if closes[-1] > ma20 > ma60:
+                trend = "多头"
+            elif closes[-1] < ma20 < ma60:
+                trend = "空头"
+        out.append({
+            **b,
+            "pct5": round(_pct(closes, 5), 2) if _pct(closes, 5) is not None else None,
+            "pct20": round(_pct(closes, 20), 2) if _pct(closes, 20) is not None else None,
+            "pct60": round(_pct(closes, 60), 2) if _pct(closes, 60) is not None else None,
+            "trend": trend,
+            "ma20": round(ma20, 2) if ma20 else None,
+            "ma60": round(ma60, 2) if ma60 else None,
+        })
     db.cache_set(f"industry:trends:{limit}", out)
     return out
 
@@ -555,6 +662,39 @@ def _ema(vals: list[float], n: int) -> list[float]:
     return out
 
 
+_US_INDEX_SINA = {"SPX": ".INX", "NDX": ".IXIC", "DJIA": ".DJI"}
+
+
+def _us_index_klines(code: str) -> list[dict]:
+    """Sina daily history for the US indices when Eastmoney is unavailable."""
+    symbol = _US_INDEX_SINA.get(code)
+    if not symbol:
+        return []
+    try:
+        import akshare as ak
+        df = ak.index_us_stock_sina(symbol=symbol)
+        out = []
+        prev = None
+        for _, r in df.tail(420).iterrows():
+            close = market._num(r.get("close"))
+            if close is None:
+                continue
+            out.append({
+                "date": str(r.get("date")),
+                "open": market._num(r.get("open")),
+                "high": market._num(r.get("high")),
+                "low": market._num(r.get("low")),
+                "close": close,
+                "volume": market._num(r.get("volume"), 0),
+                "pct": round((close / prev - 1) * 100, 2) if prev else None,
+                "chg": round(close - prev, 4) if prev else None,
+            })
+            prev = close
+        return out
+    except Exception:
+        return []
+
+
 def index_analysis() -> list[dict]:
     out = []
     for code, name, secid, region, style, desc, note in GLOBAL_INDEXES:
@@ -562,6 +702,8 @@ def index_analysis() -> list[dict]:
             rows = market.klines(code, limit=280, adjust="", secid_override=secid)
         except Exception:
             rows = []
+        if len(rows) < 20:
+            rows = _us_index_klines(code) or rows
         closes = [r["close"] for r in rows]
         if not closes:
             out.append({"code": code, "name": name, "region": region, "style": style, "desc": desc,
@@ -653,6 +795,72 @@ REGION_SUFFIX = {
 }
 
 
+def _sina_region_rows() -> list[dict]:
+    """31-region fallback with true counts, breadth and top leaders.
+
+    Sina's region summary caps the company count at 100; the per-region detail
+    endpoint has the full membership, so enrich each region concurrently.
+    """
+    try:
+        import akshare as ak
+        df = ak.stock_sector_spot(indicator="地域")
+    except Exception:
+        return []
+    out = []
+    for _, r in df.iterrows():
+        name = str(r.get("板块") or "").strip()
+        label = r.get("label")
+        if not name or not label:
+            continue
+        out.append({
+            "name": name, "short": name, "code": label,
+            "count": int(market._num(r.get("公司家数")) or 0),
+            "up": None, "down": None, "flat": None,
+            "pct": market._num(r.get("涨跌幅")),
+            "inflow": None,
+            "leader": r.get("股票名称"), "leader_code": None,
+            "leader_pct": market._num(r.get("个股-涨跌幅")),
+        })
+
+    def enrich(row: dict) -> dict:
+        try:
+            import akshare as ak
+            detail = ak.stock_sector_detail(sector=row["code"])
+        except Exception:
+            return row
+        if detail is None or len(detail) == 0:
+            return row
+        detail = detail.sort_values("changepercent", ascending=False)
+        row["count"] = len(detail)
+        pcts = [market._num(x) for x in detail["changepercent"].tolist()]
+        row["up"] = sum(1 for x in pcts if x is not None and x > 0.01)
+        row["down"] = sum(1 for x in pcts if x is not None and x < -0.01)
+        row["flat"] = len(detail) - row["up"] - row["down"]
+        leaders = []
+        for _, x in detail.head(3).iterrows():
+            code = str(x.get("code") or "")
+            leaders.append({
+                "code": code, "name": x.get("name") or "",
+                "price": market._num(x.get("trade")),
+                "pct": market._num(x.get("changepercent")),
+                "inflow": None, "industry": "",
+            })
+        row["leaders"] = leaders
+        if leaders:
+            row["leader"] = leaders[0]["name"]
+            row["leader_code"] = leaders[0]["code"]
+            row["leader_pct"] = leaders[0]["pct"]
+        return row
+
+    try:
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            out = list(ex.map(enrich, out))
+    except Exception:
+        out = [enrich(x) for x in out]
+    out.sort(key=lambda x: x["count"], reverse=True)
+    return out
+
+
 def company_distribution() -> dict:
     cached = db.cache_get("market:company-map:v1", 600)
     if cached:
@@ -681,6 +889,8 @@ def company_distribution() -> dict:
             "count": total, "up": up, "down": down, "flat": flat,
             "pct": r.get("f3"), "inflow": r.get("f62"),
         })
+    if not out:
+        out = _sina_region_rows()
     out.sort(key=lambda x: x["count"], reverse=True)
     result = {"total": sum(x["count"] for x in out), "provinces": out, "updated": time.time()}
     if out:
@@ -693,6 +903,10 @@ def province_leaders() -> dict:
         return cached
     dist = company_distribution()
     provinces = dist.get("provinces", [])
+    if provinces and provinces[0].get("leaders"):
+        result = {"updated": time.time(), "provinces": [{**p, "industries": []} for p in provinces]}
+        db.cache_set("market:province-leaders:v1", result)
+        return result
 
     def fetch(p: dict) -> dict:
         code = p.get("code")
