@@ -24,12 +24,26 @@ SPOT_FIELDS = "f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f
 FS_A = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
 
 _spot_lock = __import__("threading").Lock()
+_EM_BLOCKED_UNTIL = 0.0
 
 
-def _http_json(url: str, timeout: float = 12.0) -> dict:
+def _http_json(url: str, timeout: float = 8.0) -> dict:
+    """GET JSON from Eastmoney, failing fast while the host is unavailable.
+
+    A single slow/blocked call used to cost 12s; pages chain several of them.
+    After one failure we short-circuit for 15s so the Sina/akshare fallbacks
+    can serve the UI instead of leaving it on a spinner.
+    """
+    global _EM_BLOCKED_UNTIL
+    if time.time() < _EM_BLOCKED_UNTIL:
+        raise RuntimeError("eastmoney cooling down")
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://quote.eastmoney.com/"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8", "ignore"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8", "ignore"))
+    except Exception:
+        _EM_BLOCKED_UNTIL = time.time() + 15
+        raise
 
 
 def _num(v, default=None):
@@ -341,16 +355,18 @@ def _sina_quote(code: str, prefix: str | None = None) -> dict | None:
         prev = _num(p[2])
         if not price or not prev:
             return None
+        high, low = _num(p[4]), _num(p[5])
         return {
-            "code": code, "name": p[0], "price": price, "high": _num(p[4]), "low": _num(p[5]),
+            "code": code, "name": p[0], "price": price, "high": high, "low": low,
             "open": _num(p[1]), "volume": _num(p[8]), "amount": _num(p[9]),
             "prev_close": prev, "pct": round((price / prev - 1) * 100, 2),
             "chg": round(price - prev, 3), "turnover": None, "pe": None, "pb": None,
             "mcap": None, "fcap": None, "volume_ratio": None, "market": market_of(code),
+            "amplitude": round((high - low) / prev * 100, 2) if high and low and prev else None,
             "ts": time.time(), "source": "sina",
         }
     except Exception:
-        return _sina_quote(code)
+        return None
 
 
 def _suggest(keyword: str, limit: int) -> list[dict]:
@@ -403,11 +419,14 @@ def quote(code: str) -> dict | None:
             "pb": _num(x.get("f167")),
             "turnover": _num(x.get("f168")),
             "volume_ratio": _num(x.get("f50")),
+            "amplitude": _num(x.get("f171")),
             "mcap": _num(x.get("f116")),
             "fcap": _num(x.get("f117")),
 
             "ts": time.time(),
         }
+        if out.get("amplitude") is None and out.get("high") and out.get("low") and out.get("prev_close"):
+            out["amplitude"] = round((out["high"] - out["low"]) / out["prev_close"] * 100, 2)
         db.cache_set(key, out)
         return out
     except Exception:
@@ -580,7 +599,9 @@ def index_quote(secid_: str, code: str, name: str, short: str) -> dict:
     except Exception:
         q = _sina_quote(code, "sh" if secid_.startswith("1.") else "sz")
         if q:
-            return {**q, "short": short, "name": name, "code": code}
+            out = {**q, "short": short, "name": name, "code": code}
+            db.cache_set(key, out)
+            return out
         return {"code": code, "name": name, "short": short, "price": None, "pct": None, "ts": time.time()}
 
 

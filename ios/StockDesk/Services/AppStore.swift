@@ -149,18 +149,19 @@ final class AppStore: ObservableObject {
     func refreshAll() async {
         loading = true
         async let idx = market.indices()
-        async let br = market.breadth()
         let codes = Set(watchlist.map(\.code) + trades.map(\.code))
         async let qs = market.quotes(Array(codes))
-        let (i, b, q) = await (idx, br, qs)
-        indices = i
-        breadth = b
-        watchQuotes = q
+        // Paint indices/quotes first: the full-market breadth scan downloads
+        // thousands of rows and must not hold the HUB on a blank timestamp.
+        indices = await idx
         let df = DateFormatter()
         df.dateFormat = "HH:mm:ss"
         lastRefresh = df.string(from: Date())
         recomputeSummary()
         loading = false
+        watchQuotes = await qs
+        recomputeSummary()
+        breadth = await market.breadth()
         await checkAlerts()
         await refreshChips()
     }

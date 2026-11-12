@@ -1,6 +1,8 @@
 """FastAPI app = API + built frontend (single origin, no CORS hassle)."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -46,6 +48,10 @@ def create() -> FastAPI:
             target = FRONT / full_path
             if full_path and target.is_file():
                 return FileResponse(target)
+            # A missing asset must be a real 404, not an HTML page with a 200:
+            # otherwise icons/manifests/bundles fail silently in the UI.
+            if Path(full_path).suffix:
+                return JSONResponse({"ok": False, "error": "not found"}, status_code=404)
             return HTMLResponse(index.read_text(encoding="utf-8"))
     else:
         @root.get("/")

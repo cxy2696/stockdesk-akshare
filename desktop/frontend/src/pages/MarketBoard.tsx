@@ -40,6 +40,7 @@ function BoardsTab({ nav }: { nav: (p: string) => void }) {
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<any>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [open, setOpen] = useState(false)
 
   const load = async () => {
@@ -61,11 +62,14 @@ function BoardsTab({ nav }: { nav: (p: string) => void }) {
   const openBoard = async (b: any) => {
     setDetail({ meta: b, stocks: [] })
     setOpen(true)
+    setDetailLoading(true)
     try {
       const d = await api.get<any>(`/api/market/board/${b.code}`)
       setDetail(d)
     } catch {
-      /* ignore */
+      /* keep the board header visible */
+    } finally {
+      setDetailLoading(false)
     }
   }
 
@@ -158,8 +162,9 @@ function BoardsTab({ nav }: { nav: (p: string) => void }) {
         <Table
           size="small"
           rowKey="code"
-          loading={!detail?.stocks?.length}
+          loading={detailLoading}
           dataSource={detail?.stocks ?? []}
+          locale={{ emptyText: <EmptyState text="当前数据源未提供该板块的成分股明细；东方财富板块接口恢复后会自动补全。" /> }}
           pagination={{ pageSize: 20, size: 'small', showSizeChanger: false }}
           onRow={(r) => ({ onClick: () => { setOpen(false); nav(`/stock/${r.code}`) }, style: { cursor: 'pointer' } })}
           columns={[

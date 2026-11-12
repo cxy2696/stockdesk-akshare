@@ -336,22 +336,21 @@ struct ModelsView: View {
 
     private func loadModels() async {
         lastUpdated = Date().formatted(.dateTime.hour().minute().second())
-            let defs: [(String, String, String)] = [("上证", "000001", "1.000001"), ("沪深300", "000300", "1.000300"), ("创业板", "399006", "0.399006"), ("深证", "399001", "0.399001"), ("科创50", "000688", "1.000688")]
-            var built: [IndexHMM] = []
-            for (name, code, sec) in defs {
-                let kl = (try? await MarketService.shared.klines(code, limit: 420, adjust: "", secidOverride: sec)) ?? []
-                let closes = kl.map(\.close)
-                guard closes.count > 61 else { continue }
-                let rets = (1..<closes.count).map { (log(closes[$0] / closes[$0 - 1])) * 100 }
-                if let h = QuantModels.hmm(rets) { built.append(IndexHMM(name: name, snapshot: h)) }
-            }
-            hmms = built
-            let rows: [Quote]
-            if store.spotRows.count > 100 { rows = store.spotRows }
-            else { rows = (try? await MarketService.shared.spot(ttl: 300).rows) ?? [] }
-            perc = QuantModels.percolation(rows)
-            loading = false
-    }
+        let defs: [(String, String, String)] = [("上证", "000001", "1.000001"), ("沪深300", "000300", "1.000300"), ("创业板", "399006", "0.399006"), ("深证", "399001", "0.399001"), ("科创50", "000688", "1.000688")]
+        var built: [IndexHMM] = []
+        for (name, code, sec) in defs {
+            let kl = (try? await MarketService.shared.klines(code, limit: 420, adjust: "", secidOverride: sec)) ?? []
+            let closes = kl.map(\.close)
+            guard closes.count > 61 else { continue }
+            let rets = (1..<closes.count).map { (log(closes[$0] / closes[$0 - 1])) * 100 }
+            if let h = QuantModels.hmm(rets) { built.append(IndexHMM(name: name, snapshot: h)) }
+        }
+        hmms = built
+        let rows: [Quote]
+        if store.spotRows.count > 100 { rows = store.spotRows }
+        else { rows = (try? await MarketService.shared.spot(ttl: 300).rows) ?? [] }
+        perc = QuantModels.percolation(rows)
+        loading = false
     }
 
     private func strategyKV(_ k: String, _ v: String) -> some View {

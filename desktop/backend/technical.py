@@ -225,5 +225,3 @@ def fibonacci(code: str, days: int = 120) -> dict:
         "rsi": round(rsi, 1),
         "disclaimer": "黄金分割与筹码分布均为技术参考，不构成投资建议。",
     }
-    db.cache_set(key, result)
-    return result

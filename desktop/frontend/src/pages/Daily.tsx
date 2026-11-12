@@ -363,6 +363,9 @@ function IndustryTrendCard({ trends }: { trends: any[] }) {
     <Card title="行业趋势" desc="资金流入前列行业的多周期表现">
       <div className="industry-trends">
         <div className="it-head"><span>行业</span><span>5日</span><span>20日</span><span>60日</span><span>趋势</span><span>主力</span></div>
+        {(!trends || trends.length === 0) && (
+          <EmptyState text="当前行情源未返回板块历史数据；东方财富板块接口恢复后，5/20/60 日趋势会自动补全。" />
+        )}
         {(trends ?? []).map((t) => (
           <div key={t.code} className="it-row">
             <span><b>{t.name}</b></span>

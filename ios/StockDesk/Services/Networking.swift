@@ -6,11 +6,12 @@ actor Networking {
 
     private let session: URLSession
     private let cacheDir: URL
+    private var emBlockedUntil = Date.distantPast
 
     init() {
         let cfg = URLSessionConfiguration.default
-        cfg.timeoutIntervalForRequest = 15
-        cfg.timeoutIntervalForResource = 25
+        cfg.timeoutIntervalForRequest = 8
+        cfg.timeoutIntervalForResource = 20
         cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
         cfg.httpAdditionalHeaders = [
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
@@ -33,10 +34,22 @@ actor Networking {
             return data
         }
         guard let url = URL(string: urlString) else { throw APIError.badURL }
+        let isEastmoney = url.host?.contains("eastmoney.com") == true
+        // Serve the Sina fallbacks immediately after an Eastmoney outage
+        // instead of waiting for a fresh socket timeout on every panel.
+        if isEastmoney, Date() < emBlockedUntil { throw APIError.http(-2) }
         var req = URLRequest(url: url)
         req.setValue("application/json", forHTTPHeaderField: "Accept")
-        let (data, resp) = try await session.data(for: req)
+        let data: Data
+        let resp: URLResponse
+        do {
+            (data, resp) = try await session.data(for: req)
+        } catch {
+            if isEastmoney { emBlockedUntil = Date().addingTimeInterval(15) }
+            throw error
+        }
         guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            if isEastmoney { emBlockedUntil = Date().addingTimeInterval(15) }
             throw APIError.http((resp as? HTTPURLResponse)?.statusCode ?? -1)
         }
         if !data.isEmpty {

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from typing import Optional
 
 from fastapi import APIRouter, Body, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware

@@ -13,6 +13,26 @@ SEARCH = "https://searchapi.eastmoney.com/api/suggest/get"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36"
 TTL = 30
 _cache: dict[str, tuple[float, Any]] = {}
+_blocked_until = 0.0
+
+
+def _get(url: str) -> Any:
+    """Fetch JSON from Eastmoney with a short outage breaker.
+
+    When the quote host is rate-limiting, every call would otherwise wait for
+    its own timeout and leave the dashboard blank for a minute or more. After
+    the first failure we fail fast for 20s so the UI can still render.
+    """
+    global _blocked_until
+    if time.time() < _blocked_until:
+        raise RuntimeError("quote source cooling down")
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://quote.eastmoney.com/"})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            return json.loads(r.read().decode("utf-8", "replace"))
+    except Exception:
+        _blocked_until = time.time() + 20
+        raise
 
 INDEXES = [
     {"symbol": "DJIA", "secid": "100.DJIA", "name": "道琼斯", "en": "Dow Jones"},
@@ -22,18 +42,19 @@ INDEXES = [
 DEFAULT_WATCH = ["AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "META", "GOOGL", "SPY"]
 
 
-def _get(url: str) -> Any:
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://quote.eastmoney.com/"})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read().decode("utf-8", "replace"))
-
-
 def _cached(key: str, loader, ttl: int = TTL):
     now = time.time()
     hit = _cache.get(key)
     if hit and now - hit[0] < ttl:
         return hit[1]
-    data = loader()
+    try:
+        data = loader()
+    except Exception:
+        # Serve the last good payload instead of failing the whole page when
+        # the upstream quote API is rate-limited or temporarily unavailable.
+        if hit:
+            return hit[1]
+        raise
     _cache[key] = (now, data)
     return data
 
@@ -86,7 +107,10 @@ def movers(limit: int = 12, asc: bool = False) -> list[dict]:
             if len(out) >= limit:
                 break
         return out
-    return _cached(f"movers:{limit}:{asc}", load)
+    try:
+        return _cached(f"movers:{limit}:{asc}", load)
+    except Exception:
+        return []
 
 
 def breadth() -> dict:
@@ -101,7 +125,10 @@ def breadth() -> dict:
         flat = len(rows) - up - down
         return {"up": up, "down": down, "flat": flat, "sample": len(rows),
                 "ratio": round(up / max(up + down, 1) * 100, 2)}
-    return _cached("breadth", load, ttl=60)
+    try:
+        return _cached("breadth", load, ttl=60)
+    except Exception:
+        return {"up": 0, "down": 0, "flat": 0, "sample": 0, "ratio": 0}
 
 
 def resolve(symbol: str) -> tuple[str, str] | None:

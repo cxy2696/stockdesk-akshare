@@ -299,6 +299,14 @@ struct MoreView: View {
                 .padding(.bottom, 90)
             }
             .background(Theme.bg)
+            .task {
+                // The HUB is the launch screen; without this it shows the cached
+                // account snapshot and a blank "数据更新 --:--:--" until the
+                // user pulls to refresh somewhere else.
+                if store.lastRefresh.isEmpty {
+                    await store.refreshAll()
+                }
+            }
             .overlay(alignment: .bottomTrailing) {
                 if !path.isEmpty {
                     Button(action: shareScreenshot) {

@@ -11,8 +11,34 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m compileall -q desktop/backend us
-      - run: pip install fastapi uvicorn
+      - run: pip install fastapi uvicorn numpy pandas
       - run: python -c "import sys; sys.path.insert(0,'us'); import app; print('us app ok')"
+      - name: Desktop app import + OpenAPI schema
+        env:
+          STOCKDESK_DATA: ${{ runner.temp }}/stockdesk-ci
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "desktop")
+          from backend.app import create
+
+          app = create()
+          schema = app.openapi()
+          required = [
+              "/api/health",
+              "/api/portfolio/account",
+              "/api/backtest/run",
+              "/api/market/spot",
+          ]
+          missing = [p for p in required if p not in schema["paths"]]
+          if missing:
+              raise SystemExit(f"missing API paths: {missing}")
+          print(f"desktop app ok: {len(schema['paths'])} paths")
+          PY
+      - name: Undefined names
+        run: |
+          pip install ruff==0.13.2
+          ruff check desktop/backend us --select F821
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -21,3 +47,14 @@ jobs:
         with:
           node-version: '20'
       - run: cd desktop/frontend && npm ci && npm run build
+
+  ios-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift syntax check
+        # A full simulator build needs macOS; this catches the class of syntax
+        # error (stray braces, unbalanced blocks) that broke the iOS target.
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/src" -w /src swift:5.10 \
+            sh -c 'find ios/StockDesk -name "*.swift" -print0 | xargs -0 swiftc -parse'
