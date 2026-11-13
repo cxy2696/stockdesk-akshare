@@ -13,16 +13,16 @@ Mac · Windows · iPhone · iPad · US Equities
 
 ![Mac HUB](screenshots/mac-hub.png)
 
-> **1.11.0 说明**：本轮更新以源码为准，桌面与 iOS 安装包仍沿用最近一次构建的 1.10.3 / 3.7.3。重新运行构建脚本即可生成 1.11.0 安装包。
+> **1.11.0 安装包**：macOS、Windows 与 iOS 安装包已全部更新到 1.11.0 / 3.8.0，可直接从 GitHub Release 下载；macOS 校验和见 release 附件。
 
 ## 下载 / Download
 
 | 平台 Platform | 文件 File | 版本 Version | 说明 Notes |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.dmg` / `.zip` | 1.10.3 | 打开 DMG，双击 `Install-StockDesk.command` |
-| Windows 10/11 x64 | `StockDesk.exe` | 1.10.3 | 双击；需要 WebView2 |
-| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | 3.7.3 | 用 Sideloadly / AltStore / Xcode 重签 |
-| 浏览器 / NAS | GHCR 容器 | latest（1.10.3 构建） | 见 [PACKAGES](docs/PACKAGES.md) |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.dmg` / `.zip` | 1.11.0 | 打开 DMG，双击 `Install-StockDesk.command` |
+| Windows 10/11 x64 | `StockDesk.exe` | 1.11.0 | 双击；需要 WebView2 |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.8.0-unsigned.ipa` | 3.8.0 | 用 Sideloadly / AltStore / Xcode 重签 |
+| 浏览器 / NAS | GHCR 容器 | latest | 见 [PACKAGES](docs/PACKAGES.md) |
 | 源码 | `main` 分支 | **1.11.0** | 见下方快速开始 |
 
 - 安装包在 [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
@@ -130,10 +130,8 @@ stockdesk-akshare/
 
 | 平台 | 版本 |
 | --- | --- |
-| macOS / Windows（源码） | **1.11.0** |
-| macOS / Windows（最近安装包） | 1.10.3 |
-| iOS（源码） | **3.8.0 (31)** |
-| iOS（最近安装包） | 3.7.3 (30) |
+| macOS / Windows | **1.11.0** |
+| iOS | **3.8.0 (31)** |
 | US | 1.0.2 |
 | 容器 | `stockdesk-akshare-a-share:latest` / `stockdesk-akshare-us:1.0.2` |
 
@@ -141,9 +139,9 @@ stockdesk-akshare/
 
 StockDesk is a local-first, single-user equity research desk for macOS, Windows, iOS and the web. It combines portfolio tracking, quotes, review analytics, backtests, HMM/percolation/TD models, KDJ alerts and regional/industry views in a HUD-style interface. Account data and market caches stay local.
 
-**Download:** installers are still the latest built release (desktop 1.10.3, iOS 3.7.3); the `main` branch is 1.11.0 and can be built from source with the commands above. macOS is Apple Silicon only; run `Install-StockDesk.command` after downloading to clear Gatekeeper quarantine. Windows needs WebView2; choose More info → Run anyway if SmartScreen blocks it. The iOS IPA is unsigned and must be re-signed.
+**Download:** macOS, Windows and iOS installers are all updated to 1.11.0 / 3.8.0 and are attached to the v1.11.0 release. The `main` branch matches the installers and can also be built from source with the commands above. macOS is Apple Silicon only; run `Install-StockDesk.command` after downloading to clear Gatekeeper quarantine. Windows needs WebView2; choose More info → Run anyway if SmartScreen blocks it. The iOS IPA is unsigned and must be re-signed.
 
 **1.11.0 highlights:** the HUB centre now opens Portfolio; the former Industry News entry is now Index Analysis; Daily Plan merges market headlines with clickable full-text links, fixes main-force flow, and adds HMM/percolation/TD conclusions plus industry focus; Portfolio combines overview, asset analysis, advice and trades; TD Sequential and upgraded HMM/percolation live on the Models page; Review charts get distinct colours and first-day handling; Regions covers all 34 province-level divisions; the stock heatmap is drillable, searchable and filterable; the in-app Guide is a full nine-chapter manual.
 
-**Versions:** desktop source 1.11.0 · iOS source 3.8.0 (31) · US 1.0.2.<br>
+**Versions:** macOS/Windows 1.11.0 · iOS 3.8.0 (31) · US 1.0.2.<br>
 **License:** MIT. Market data is for research only, not investment advice.

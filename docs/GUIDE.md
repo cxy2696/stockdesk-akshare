@@ -2,7 +2,7 @@
 
 [中文](#中文) · [English](#english) · [下载页](https://cxy2696.github.io/stockdesk-akshare/#download) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)
 
-> 适用版本：源码 macOS / Windows **1.11.0** · iOS **3.8.0 (31)**；安装包为最近构建 **1.10.3 / 3.7.3**（可用第 2 节命令自行构建）· 美股 **1.0.2**
+> 适用版本：macOS / Windows **1.11.0** · iOS **3.8.0 (31)** · 美股 **1.0.2**
 >
 > 第一次用只看第 1、2 节。后面的页面说明当字典查，不用一次读完。
 
@@ -12,13 +12,13 @@
 
 | 平台 | 推荐文件 | 大小 | 安装 |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.zip` | 42 MB | 解压后双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.zip` | 41 MB | 解压后双击 `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe` | 52 MB | 双击；需要 WebView2 |
-| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | 1.9 MB | Sideloadly / AltStore / Xcode 重签 |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.8.0-unsigned.ipa` | 1.9 MB | Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | — | 见 [PACKAGES](PACKAGES.md) |
 
-> 表格里的安装包是最近一次构建版本。1.11.0 目前以源码为准：`cd desktop && ./build_app.sh`（macOS）或 `build_win.ps1`（Windows）；iOS 用 `xcodegen generate` 后从 Xcode 打包。
+> 安装包与源码版本一致，均为 1.11.0 / iOS 3.8.0；需要自行构建时用 `cd desktop && ./build_app.sh`（macOS）或 `build_win.ps1`（Windows），iOS 用 `xcodegen generate` 后从 Xcode 打包。
 
 #### macOS 首次打开
 
@@ -359,10 +359,10 @@ Windows 打包：`cd desktop && powershell -ExecutionPolicy Bypass -File .\build
 
 | Platform | File | Size | Install |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.dmg` | 43 MB | Open the DMG and run `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.zip` | 42 MB | Unzip and run `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.dmg` | 43 MB | Open the DMG and run `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.zip` | 41 MB | Unzip and run `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe` | 52 MB | Double-click; WebView2; SmartScreen → More info → Run anyway |
-| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | 1.9 MB | Re-sign with Sideloadly / AltStore / Xcode |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.8.0-unsigned.ipa` | 1.9 MB | Re-sign with Sideloadly / AltStore / Xcode |
 
 The macOS app is ad-hoc signed. The installer clears `com.apple.quarantine`; manual fallback:
 
