@@ -4,6 +4,14 @@
 
 ## 中文
 
+### 1.10.3
+
+- **资产中枢菜单**：点击 HUB 中央资产中枢，直接打开「持仓管理 / 资产分析 / 投资建议 / 指数分析」，不再从「地域」页进入。
+- **地域页精简**：移除资产分析、投资建议、指数分析三张跳转卡和对应的重复请求，地域页只保留地图、省份概览、领涨公司和搜索。
+- **页面标题补全**：资产分析、投资建议、使用指南、笔记、异常提醒都有独立标题和副标题，不再显示 “StockDesk”。
+- **端口与请求**：美股版端口被占用时自动顺延并打印实际地址；桌面端保持自动换端口；地域页不再重复请求组合、每日策略和指数数据。
+- **文档与展示**：README、使用指南、安装文档、官网下载区和版本号统一到 macOS/Windows 1.10.3、iOS 3.7.3 (30)、美股 1.0.2；HUB 章节说明资产中枢菜单。
+
 ### 1.10.2
 
 - **下载体积**：macOS 安装包从 94.3 MB 降到约 43 MB（DMG）/ 42 MB（ZIP）；Windows 单文件约 52 MB，移除未使用的重型依赖并保持全部功能。
@@ -52,6 +60,14 @@
 - 提供 A 股和美股两个 GHCR 容器。
 
 ## English
+
+### 1.10.3
+
+- **Asset hub menu**: clicking the central hub now opens Portfolio, Asset Analysis, Advice and Index Analysis directly; these entries no longer live under Regions.
+- **Regions cleanup**: removed the three jump cards and their duplicate requests; Regions now only keeps the map, province overview, leaders and search.
+- **Page titles**: Asset Analysis, Advice, Guide, Notes and Anomalies now have their own titles/subtitles instead of “StockDesk”.
+- **Ports and requests**: the US edition picks the next free port and prints the real URL; the desktop launcher keeps auto-port behavior; Regions no longer re-fetches portfolio, daily and index data.
+- **Docs/site**: synced to macOS/Windows 1.10.3, iOS 3.7.3 (30), US 1.0.2; the HUB chapter describes the asset-hub menu.
 
 ### 1.10.2
 

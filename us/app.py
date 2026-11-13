@@ -11,13 +11,13 @@ from fastapi.staticfiles import StaticFiles
 import market_us as m
 
 ROOT = Path(__file__).resolve().parent
-app = FastAPI(title="StockDesk US", version="1.0.1")
+app = FastAPI(title="StockDesk US", version="1.0.2")
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 
 
 @app.get("/api/us/health")
 def health():
-    return {"ok": True, "app": "StockDesk US", "version": "1.0.1"}
+    return {"ok": True, "app": "StockDesk US", "version": "1.0.2"}
 
 
 @app.get("/api/us/overview")

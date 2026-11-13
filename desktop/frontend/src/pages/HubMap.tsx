@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import * as echarts from 'echarts'
 import { Card, Kpi } from '../components/ui'
 import EChart from '../components/EChart'
@@ -19,20 +18,14 @@ ensureMap()
 
 export default function HubMap() {
   const [dist, setDist] = useState<any>(null)
-  const [summary, setSummary] = useState<any>(null)
-  const [daily, setDaily] = useState<any>(null)
-  const [indexes, setIndexes] = useState<any[]>([])
   const [leaders, setLeaders] = useState<any[]>([])
   const [selected, setSelected] = useState<any>(null)
 
   useEffect(() => {
     Promise.all([
       api.get<any>('/api/market/company-map').catch(() => null),
-      api.get<any>('/api/portfolio/summary').catch(() => null),
-      api.get<any>('/api/market/daily').catch(() => null),
-      api.get<any>('/api/market/index-analysis').catch(() => []),
       api.get<any>('/api/market/province-leaders').catch(() => null),
-    ]).then(([m, s, d, ix, pl]) => { setDist(m); setSummary(s); setDaily(d); setIndexes(ix || []); setSelected(m?.provinces?.[0] ?? null); setLeaders(pl?.provinces ?? []) })
+    ]).then(([m, pl]) => { setDist(m); setSelected(m?.provinces?.[0] ?? null); setLeaders(pl?.provinces ?? []) })
   }, [])
 
   const option = useMemo<echarts.EChartsOption>(() => ({
@@ -64,10 +57,6 @@ export default function HubMap() {
     }],
   }), [dist])
 
-  const top = (dist?.provinces ?? []).slice(0, 10)
-  const adv = daily?.advice ?? {}
-  const cashPct = summary?.total ? (summary.cash / summary.total) * 100 : 0
-  const maxWeight = Math.max(0, ...(summary?.positions ?? []).map((p: any) => p.weight ?? 0))
 
   return (
     <div>
@@ -127,26 +116,6 @@ export default function HubMap() {
         </Card>
       </div>
 
-      <div className="hud-map-sections">
-        <Link to="/asset-analysis" className="hud-map-link">
-          <span className="k">资产分析</span>
-          <b>¥{fmt.money(summary?.total)}</b>
-          <em>现金 {cashPct.toFixed(1)}% · 最大持仓 {maxWeight.toFixed(1)}%</em>
-          <i>资金分配 · 交易偏好 · 趋势与习惯 →</i>
-        </Link>
-        <Link to="/advice-center" className="hud-map-link">
-          <span className="k">投资建议</span>
-          <b>{daily?.verdict?.label ?? '--'} · 温度 {daily?.score ?? '--'}</b>
-          <em>建议仓位 {adv.target_low ?? '--'}%–{adv.target_high ?? '--'}%</em>
-          <i>历史总结 · 未来趋势 · 标的推荐 →</i>
-        </Link>
-        <Link to="/index-analysis" className="hud-map-link">
-          <span className="k">指数分析</span>
-          <b>{indexes.length} 个指数</b>
-          <em>{indexes.slice(0, 3).map((x: any) => `${x.name} ${fmt.pct(x.pct)}`).join(' · ')}</em>
-          <i>上证 / 沪深300 / 创业板 / 科创50 / 美股三大指数 →</i>
-        </Link>
-      </div>
     </div>
   )
 }

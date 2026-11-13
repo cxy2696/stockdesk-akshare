@@ -39,7 +39,6 @@ import AssetAnalysis from './pages/AssetAnalysis'
 import AdviceCenter from './pages/AdviceCenter'
 import IndexAnalysis from './pages/IndexAnalysis'
 import HubMap from './pages/HubMap'
-import Regions from './pages/Regions'
 import IndustryNews from './pages/IndustryNews'
 import Models from './pages/Models'
 import Kdj from './pages/Kdj'
@@ -95,7 +94,12 @@ export default function App() {
     if (lang === 'en') {
       if (loc.pathname.startsWith('/stock/')) return { title: 'Stock Detail', sub: 'Quote · flows · fundamentals' }
       if (loc.pathname === '/settings') return { title: 'Settings', sub: 'Assets · data and cache' }
-      if (loc.pathname === '/regions' || loc.pathname === '/hub-map') return { title: 'Regions', sub: 'China listed-company map · analysis' }
+      if (loc.pathname === '/regions' || loc.pathname === '/hub-map') return { title: 'Regions', sub: 'China listed-company map · province leaders' }
+      if (loc.pathname === '/guide') return { title: 'Guide', sub: 'Install · first run · daily workflow' }
+      if (loc.pathname === '/notes') return { title: 'Notes', sub: 'Local notes and observations' }
+      if (loc.pathname === '/anomalies') return { title: 'Anomalies', sub: 'Triggered conditions and current hits' }
+      if (loc.pathname === '/asset-analysis') return { title: 'Asset Analysis', sub: 'Allocation · trading habits · trends' }
+      if (loc.pathname === '/advice-center') return { title: 'Advice', sub: 'History · outlook · candidates' }
       if (loc.pathname === '/index-analysis') return { title: 'Index Analysis', sub: 'A-share and global indices' }
       if (loc.pathname === '/models') return { title: 'Quant Models', sub: 'HMM · percolation · position plans' }
       if (loc.pathname === '/kdj') return { title: 'KDJ Alerts', sub: '5m / 30m · J extremes · central zone' }
@@ -104,7 +108,12 @@ export default function App() {
     }
     if (loc.pathname.startsWith('/stock/')) return { title: '个股详情', sub: '行情 · 筹码 · 财务' }
     if (loc.pathname === '/settings') return { title: '设置', sub: '账户资产 · 数据与缓存' }
-    if (loc.pathname === '/regions' || loc.pathname === '/hub-map') return { title: '地域', sub: '中国上市公司分布 · 资产分析 · 投资建议 · 指数分析' }
+    if (loc.pathname === '/regions' || loc.pathname === '/hub-map') return { title: '地域', sub: '中国上市公司分布 · 省份龙头 · 行业偏好' }
+    if (loc.pathname === '/guide') return { title: '使用指南', sub: '安装 · 第一次打开 · 每天的使用顺序' }
+    if (loc.pathname === '/notes') return { title: '笔记', sub: '本地记录与观察' }
+    if (loc.pathname === '/anomalies') return { title: '异常提醒', sub: '触发条件与当前命中' }
+    if (loc.pathname === '/asset-analysis') return { title: '资产分析', sub: '资金分配 · 交易偏好 · 趋势与习惯' }
+    if (loc.pathname === '/advice-center') return { title: '投资建议', sub: '历史总结 · 未来趋势 · 标的推荐' }
     if (loc.pathname === '/index-analysis') return { title: '指数分析', sub: 'A股主要宽基 · 海外指数 · 建议结论' }
     if (loc.pathname === '/models') return { title: '量化模型', sub: 'HMM · 渗流 · 行业临界 · 仓位建议' }
     if (loc.pathname === '/kdj') return { title: 'KDJ 预警', sub: '5m / 30m · 极值区 · 近似中枢' }

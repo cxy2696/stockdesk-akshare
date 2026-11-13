@@ -17,7 +17,7 @@ docker run --rm -p 8765:8765 \
 打开 <http://127.0.0.1:8765>。
 
 - 镜像：`ghcr.io/cxy2696/stockdesk-akshare-a-share`
-- 标签：`1.10.2`、`latest`
+- 标签：`1.10.3`、`latest`
 - 数据：`/data` 卷，建议长期保留
 - 页面：FastAPI + React HUD
 
@@ -31,7 +31,7 @@ docker run --rm -p 8770:8770 \
 打开 <http://127.0.0.1:8770>。
 
 - 镜像：`ghcr.io/cxy2696/stockdesk-akshare-us`
-- 标签：`1.0.1`、`latest`
+- 标签：`1.0.2`、`latest`
 - 页面：FastAPI + 原生 HTML/CSS/JS + 本地 ECharts
 
 ### 说明
@@ -55,7 +55,7 @@ docker run --rm -p 8765:8765 \
 Open <http://127.0.0.1:8765>.
 
 - Image: `ghcr.io/cxy2696/stockdesk-akshare-a-share`
-- Tags: `1.10.2`, `latest`
+- Tags: `1.10.3`, `latest`
 - Data: the `/data` volume; keep it between runs
 - UI: FastAPI + React HUD
 
@@ -69,7 +69,7 @@ docker run --rm -p 8770:8770 \
 Open <http://127.0.0.1:8770>.
 
 - Image: `ghcr.io/cxy2696/stockdesk-akshare-us`
-- Tags: `1.0.1`, `latest`
+- Tags: `1.0.2`, `latest`
 - UI: FastAPI + plain HTML/CSS/JS + local ECharts
 
 ### Notes

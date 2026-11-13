@@ -17,13 +17,13 @@ jobs:
           - name: a-share
             image: stockdesk-akshare-a-share
             file: desktop/Dockerfile
-            version: '1.10.2'
+            version: '1.10.3'
             port: '8765'
             health: 'api/health'
           - name: us
             image: stockdesk-akshare-us
             file: us/Dockerfile
-            version: '1.0.1'
+            version: '1.0.2'
             port: '8770'
             health: 'api/us/health'
     steps:

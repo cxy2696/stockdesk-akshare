@@ -8,9 +8,9 @@
 
 | 平台 | 推荐文件 | 安装 |
 | --- | --- | --- |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.2.dmg`（约 43 MB） | 打开 DMG，双击 `Install-StockDesk.command` |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.10.3.dmg`（约 43 MB） | 打开 DMG，双击 `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe`（精简单文件，约 52 MB） | 双击运行；装好 WebView2 Runtime；SmartScreen 拦截时「更多信息 → 仍要运行」 |
-| iPhone iOS 17+ | `StockDesk-iOS-3.7.2-unsigned.ipa` | Sideloadly / AltStore / Xcode 重签 |
+| iPhone iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | 见 `PACKAGES.md` |
 
 下载页：<https://cxy2696.github.io/stockdesk-akshare/#download>
@@ -23,7 +23,7 @@ open /Applications/StockDesk.app
 
 不要直接双击 DMG 里的 App 运行；先运行安装脚本或拖入 Applications 后再清除隔离标记。
 
-Release：<https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2>
+Release：<https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.3>
 
 ## 中文
 
@@ -60,19 +60,19 @@ python main.py --browser
 - 如果 Windows SmartScreen 提示「已保护你的电脑」：点「更多信息」→「仍要运行」。
 - 需要 WebView2 Runtime；没有时程序会退回默认浏览器。
 - 双击后没有窗口：查看 `%LOCALAPPDATA%\StockDesk\stockdesk.log`；也可以运行 `StockDesk.exe --browser`，用浏览器打开。
-- 1.10.2 在启动失败时会弹出错误提示，不再静默退出。
+- 1.10.3 在启动失败时会弹出错误提示，不再静默退出。
 
 ### 打包 macOS App
 
 ```bash
 cd desktop
-VERSION=1.10.2 ./package_macos.sh
+VERSION=1.10.3 ./package_macos.sh
 ```
 
 脚本会构建前端、用 PyInstaller 生成 `dist/StockDesk.app`，并输出：
 
-- `release/StockDesk-macOS-1.10.2.dmg` —— 打开后把 App 拖进 Applications
-- `release/StockDesk-macOS-1.10.2.zip` —— 解压后打开 `StockDesk.app`
+- `release/StockDesk-macOS-1.10.3.dmg` —— 打开后把 App 拖进 Applications
+- `release/StockDesk-macOS-1.10.3.zip` —— 解压后打开 `StockDesk.app`
 - `release/SHA256SUMS-macOS.txt` —— 下载校验和
 
 `stockdesk.spec` 已排除 `pyarrow`、`scipy`、`matplotlib`、`PIL`、`openpyxl` 等未使用的可选依赖，DMG 约 43 MB、ZIP 约 42 MB；首次打开如果被 Gatekeeper 拦住，右键 → 打开即可。
@@ -159,13 +159,13 @@ python main.py --browser
 
 ```bash
 cd desktop
-VERSION=1.10.2 ./package_macos.sh
+VERSION=1.10.3 ./package_macos.sh
 ```
 
 The script builds the frontend, runs PyInstaller, and writes:
 
-- `release/StockDesk-macOS-1.10.2.dmg` — open and drag the app into Applications
-- `release/StockDesk-macOS-1.10.2.zip` — unzip and open `StockDesk.app`
+- `release/StockDesk-macOS-1.10.3.dmg` — open and drag the app into Applications
+- `release/StockDesk-macOS-1.10.3.zip` — unzip and open `StockDesk.app`
 - `release/SHA256SUMS-macOS.txt` — download checksums
 
 `stockdesk.spec` excludes unused optional packages such as `pyarrow`, `scipy`, `matplotlib`, `PIL` and `openpyxl`; the DMG is about 43 MB and the ZIP about 42 MB. If Gatekeeper blocks the first launch, right-click → Open.

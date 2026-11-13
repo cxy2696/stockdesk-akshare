@@ -1,11 +1,8 @@
 import SwiftUI
 
 struct HubMapView: View {
-    @EnvironmentObject private var store: AppStore
     @State private var dist = CompanyDistribution()
     @State private var selected: ProvinceDistribution?
-    @State private var daily: MarketState?
-    @State private var indexes: [IndexAnalysisRow] = []
     @State private var prefs: [ProvincePreference] = []
 
     var body: some View {
@@ -69,9 +66,6 @@ struct HubMapView: View {
                     if prefs.isEmpty { ProgressView().padding(.vertical, 10) }
                 }
 
-                NavigationLink { AssetAnalysisView() } label: { linkCard("资产分析", "¥\(store.summary.total.fmt(0))", "资金分配 · 交易偏好 · 趋势与习惯") }
-                NavigationLink { AdviceCenterView() } label: { linkCard("投资建议", daily?.label ?? "--", "历史总结 · 未来趋势 · 标的推荐") }
-                NavigationLink { IndexAnalysisView() } label: { linkCard("指数分析", "\(indexes.count) 个指数", "上证/沪深300/创业板/科创50/美股三大指数") }
             }
             .padding(14)
         }
@@ -80,12 +74,8 @@ struct HubMapView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             async let d = MarketService.shared.companyDistribution()
-            async let m = MarketService.shared.marketState()
-            async let ix = MarketService.shared.indexAnalysis()
             async let pl = MarketService.shared.provinceLeaders()
             dist = await d
-            daily = await m
-            indexes = await ix
             prefs = await pl
             if selected == nil { selected = dist.provinces.first }
         }
@@ -96,19 +86,4 @@ struct HubMapView: View {
             .frame(maxWidth: .infinity)
     }
 
-    private func linkCard(_ title: String, _ value: String, _ sub: String) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.accent)
-                Text(value).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-                Text(sub).font(.system(size: 9)).foregroundStyle(Theme.textDim)
-            }
-            Spacer()
-            Image(systemName: "chevron.right").foregroundStyle(Theme.textDim)
-        }
-        .padding(12)
-        .background(Theme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 3))
-        .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Theme.accent.opacity(0.16), lineWidth: 1))
-    }
 }

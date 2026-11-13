@@ -9,7 +9,7 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iOS · US Equities
 
-[项目主页](https://cxy2696.github.io/stockdesk-akshare/) · [使用指南](docs/GUIDE.md) · [安装构建](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2) · [容器](docs/PACKAGES.md) · [English](#english)
+[项目主页](https://cxy2696.github.io/stockdesk-akshare/) · [使用指南](docs/GUIDE.md) · [安装构建](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.3) · [容器](docs/PACKAGES.md) · [English](#english)
 
 ![Mac HUB](screenshots/mac-hub.png)
 
@@ -17,13 +17,13 @@ Mac · Windows · iOS · US Equities
 
 | 平台 Platform | 文件 File | 大小 Size | 安装 Install |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.2.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.2.zip` | 42 MB | 解压后双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.zip` | 42 MB | 解压后双击 `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe` | 52 MB | 双击；需要 WebView2；SmartScreen 选「更多信息 → 仍要运行」 |
-| iPhone iOS 17+ | `StockDesk-iOS-3.7.2-unsigned.ipa` | 1.9 MB | 用 Sideloadly / AltStore / Xcode 重签 |
+| iPhone iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | 1.9 MB | 用 Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | — | 见 [PACKAGES](docs/PACKAGES.md) |
 
-- 全部文件在 [Releases v1.10.2](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
+- 全部文件在 [Releases v1.10.3](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.3)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
 - macOS App 为 ad-hoc 签名，下载后需运行安装脚本清除 `com.apple.quarantine`。脚本被拦截时右键 → 打开；手动命令：
   ```bash
   xattr -dr com.apple.quarantine /Applications/StockDesk.app
@@ -39,7 +39,7 @@ A local-first, single-user equity desk: portfolio, quotes, review, backtests, HM
 > 本仓库是独立副本，不影响你当前本地正在使用的 StockDesk。<br>
 > This is an independent snapshot and does not affect your existing StockDesk install.
 
-## 1.10.2 更新 / What's new
+## 1.10.3 更新 / What's new
 
 - macOS 安装包从 94.3 MB 降到 **43 MB DMG / 42 MB ZIP**；新增 `Install-StockDesk.command`，自动安装并清除下载隔离。
 - iOS KDJ 行业卡在东方财富不可达时回退到标注的 ETF 代理；板块跟踪回退到新浪行业/概念资金流；修正北证 50 代码。
@@ -51,7 +51,7 @@ A local-first, single-user equity desk: portfolio, quotes, review, backtests, HM
 
 | 模块 | 说明 |
 | --- | --- |
-| HUD 指挥舱 | 资产中枢、7 个入口、管理员名片、LIVE 状态栏 |
+| HUD 指挥舱 | 资产中枢菜单（持仓/资产分析/投资建议/指数分析）、7 个入口、管理员名片、LIVE |
 | 每日策略 | 市场状态、仓位建议、今日标的、行业趋势、要闻 |
 | 持仓与复盘 | 交易流水、移动成本、已实现/浮动盈亏、净值、回撤、夏普 |
 | 自选与个股 | 实时行情、日/周/月 K、MACD、九转、筹码、黄金分割、支撑压力 |
@@ -116,10 +116,10 @@ stockdesk-akshare/
 
 | 平台 | 版本 |
 | --- | --- |
-| macOS / Windows | **1.10.2** |
-| iOS | **3.7.2 (29)** |
-| US | **1.0.1** |
-| 容器 | `stockdesk-akshare-a-share:1.10.2` / `stockdesk-akshare-us:1.0.1` |
+| macOS / Windows | **1.10.3** |
+| iOS | **3.7.3 (30)** |
+| US | **1.0.2** |
+| 容器 | `stockdesk-akshare-a-share:1.10.3` / `stockdesk-akshare-us:1.0.2` |
 
 ## English
 
@@ -129,5 +129,5 @@ StockDesk is a local-first, single-user equity research desk for macOS, Windows,
 
 **Features:** HUD, Daily Plan, Portfolio/Review, Watchlist/Stock Detail, Sectors, Backtest, Quant Models, KDJ Alerts, Regions/Industry News, sharing and 100%/120%/150% scaling. See the [Guide](docs/GUIDE.md) for screenshots and the daily workflow; see [Install](docs/INSTALL.md) for source builds and packaging.
 
-**Versions:** macOS/Windows 1.10.2 · iOS 3.7.2 (29) · US 1.0.1.<br>
+**Versions:** macOS/Windows 1.10.3 · iOS 3.7.3 (30) · US 1.0.2.<br>
 **License:** MIT. Market data is for research only, not investment advice.

@@ -2040,28 +2040,6 @@ body {
   z-index: 4;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 }
-.hud-hub-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding-top: 4px;
-}
-.hud-hub-actions button {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
-  padding: 16px;
-  border: 1px solid rgba(242, 201, 76, 0.22);
-  background: linear-gradient(160deg, rgba(242, 201, 76, 0.10), rgba(20, 26, 24, 0.96));
-  color: #f2f2ea;
-  cursor: pointer;
-  text-align: left;
-  clip-path: polygon(0 0, 96% 0, 100% 16%, 100% 100%, 4% 100%, 0 84%);
-}
-.hud-hub-actions button:hover { border-color: rgba(242, 201, 76, 0.65); background: linear-gradient(160deg, rgba(242, 201, 76, 0.22), rgba(20, 26, 24, 0.96)); }
-.hud-hub-actions b { font-size: calc(14px * var(--fs, 1)); letter-spacing: 0.08em; }
-.hud-hub-actions span { font-size: calc(10px * var(--fs, 1)); color: #8d968f; letter-spacing: 0.04em; }
 @media (max-width: 1180px) {
   .hud-console-grid { grid-template-columns: 190px minmax(0, 1fr) 240px; }
   .hud-left-stack .hud-silver { width: 178px; }
@@ -2310,16 +2288,6 @@ body {
 .hud-province-row:hover { background: rgba(242, 201, 76, 0.08); }
 .hud-province-row b { font-size: calc(12px * var(--fs, 1)); color: var(--text); }
 .hud-province-row span:last-child { text-align: right; font-family: 'SF Mono', monospace; font-size: calc(11px * var(--fs, 1)); }
-.hud-map-sections { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
-.hud-map-link { display: flex; flex-direction: column; gap: 3px; padding: 16px 18px; border: 1px solid var(--border); background: linear-gradient(160deg, rgba(242, 201, 76, 0.06), var(--card)); color: var(--text); text-decoration: none; }
-.hud-map-link:hover { border-color: var(--accent); }
-.hud-map-link .k { font-size: calc(10px * var(--fs, 1)); color: var(--text-dim); letter-spacing: 0.12em; }
-.hud-map-link b { font-size: calc(16px * var(--fs, 1)); color: var(--text); }
-.hud-map-link em { font-style: normal; font-size: calc(10.5px * var(--fs, 1)); color: var(--text-sub); }
-.hud-map-link i { font-style: normal; font-size: calc(9.5px * var(--fs, 1)); color: var(--accent); margin-top: 5px; }
-@media (max-width: 900px) {
-  .hud-map-sections { grid-template-columns: 1fr; }
-}
 
 /* align left stack first button with right second row */
 .hud-left-stack { padding-top: 104px; }
@@ -2468,7 +2436,6 @@ html, body { overflow-x: hidden; }
 .scale-150 .hud-disc { width: min(100%, 560px); }
 .scale-150 .grid-2, .scale-150 .grid-3 { grid-template-columns: 1fr; }
 .scale-150 .model-index-grid { grid-template-columns: repeat(3, 1fr); }
-.scale-150 .hud-map-sections { grid-template-columns: 1fr; }
 
 /* 150%: compact three-column HUB that fits the effective viewport */
 .scale-150 .hud-console { min-height: auto; padding-bottom: 26px; }
@@ -2679,4 +2646,114 @@ html, body { overflow-x: hidden; }
   flex: 0 0 190px;
   width: 190px;
   overflow: visible;
+}
+
+/* Asset hub menu: the central disc is the single entry for portfolio,
+   asset analysis, advice and index analysis. */
+.hud-hub-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 6, 5, 0.76);
+  backdrop-filter: blur(4px);
+}
+.hud-hub-dialog {
+  width: min(720px, 94vw);
+  padding: 20px;
+  background: linear-gradient(160deg, #121915, #080d0a);
+  border: 1px solid rgba(242, 201, 76, 0.32);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.62);
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+}
+.hud-hub-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(242, 201, 76, 0.18);
+}
+.hud-hub-dialog-head span {
+  display: block;
+  color: var(--accent);
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: calc(10px * var(--fs, 1));
+  letter-spacing: 0.16em;
+}
+.hud-hub-dialog-head em {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-sub);
+  font-style: normal;
+  font-size: calc(11px * var(--fs, 1));
+}
+.hud-hub-close {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.hud-hub-close:hover { color: var(--accent); border-color: var(--accent); }
+.hud-hub-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+.hud-hub-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 13px 14px;
+  text-align: left;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.022);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.hud-hub-action:hover {
+  border-color: var(--accent);
+  background: rgba(242, 201, 76, 0.07);
+}
+.hud-hub-action-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: #171a19;
+  background: var(--accent);
+  border-radius: 50%;
+  font-size: 16px;
+}
+.hud-hub-action-text { flex: 1 1 auto; min-width: 0; }
+.hud-hub-action-text b {
+  display: block;
+  font-size: calc(13px * var(--fs, 1));
+  font-weight: 600;
+}
+.hud-hub-action-text em {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-sub);
+  font-style: normal;
+  font-size: calc(9.5px * var(--fs, 1));
+  line-height: 1.45;
+}
+.hud-hub-action > i {
+  color: var(--accent);
+  font-style: normal;
+  font-size: 15px;
+}
+@media (max-width: 680px) {
+  .hud-hub-actions { grid-template-columns: 1fr; }
 }

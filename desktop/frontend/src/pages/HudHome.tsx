@@ -26,6 +26,13 @@ const RIGHT = [
 
 const SEG_COLORS = ['#F2C94C', '#55D6C2', '#B08CFF', '#FF8A5C', '#6EA8FF', '#7D8B86']
 
+const HUB_ACTIONS = [
+  { key: '/portfolio', label: '持仓管理', en: 'Portfolio', desc: '交易流水 · 成本 · 盈亏 · 支撑压力', descEn: 'Trades · cost · P&L · support', icon: <ProfileOutlined /> },
+  { key: '/asset-analysis', label: '资产分析', en: 'Asset Analysis', desc: '资金分配 · 交易偏好 · 趋势与习惯', descEn: 'Allocation · habits · trends', icon: <PieChartOutlined /> },
+  { key: '/advice-center', label: '投资建议', en: 'Advice', desc: '历史总结 · 未来趋势 · 标的推荐', descEn: 'History · outlook · candidates', icon: <AimOutlined /> },
+  { key: '/index-analysis', label: '指数分析', en: 'Index Analysis', desc: 'A 股宽基 · 海外指数 · 结论', descEn: 'A-share and global indices', icon: <LineChartOutlined /> },
+]
+
 export default function HudHome({ overview }: { overview: any }) {
   const { lang } = useTheme()
   const nav = useNavigate()
@@ -34,6 +41,7 @@ export default function HudHome({ overview }: { overview: any }) {
   })
   const [state, setState] = useState<any>(null)
   const [hot, setHot] = useState<any>(null)
+  const [hubMenu, setHubMenu] = useState(false)
   const [ready, setReady] = useState(false)
   const admin = useAdmin()
   const [now, setNow] = useState(new Date())
@@ -46,6 +54,13 @@ export default function HudHome({ overview }: { overview: any }) {
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (!hubMenu) return
+    const close = (e: KeyboardEvent) => { if (e.key === 'Escape') setHubMenu(false) }
+    window.addEventListener('keydown', close)
+    return () => window.removeEventListener('keydown', close)
+  }, [hubMenu])
 
   useEffect(() => {
     let raf = 0
@@ -164,7 +179,7 @@ export default function HudHome({ overview }: { overview: any }) {
         </aside>
 
         <section className="hud-core">
-          <div className="hud-disc" onClick={() => nav('/portfolio')} style={{ cursor: 'pointer' }}>
+          <div className="hud-disc" onClick={() => setHubMenu(true)} style={{ cursor: 'pointer' }}>
             <div ref={pulseRef} className="hud-pulse" />
             <svg ref={orbitRef} className="hud-orbit" viewBox="0 0 600 600">
               <circle cx="300" cy="300" r="292" fill="none" stroke="rgba(242,201,76,0.65)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="110 1400" />
@@ -240,6 +255,33 @@ export default function HudHome({ overview }: { overview: any }) {
         </aside>
       </div>
 
+
+      {hubMenu && (
+        <div className="hud-hub-overlay" onClick={() => setHubMenu(false)}>
+          <div className="hud-hub-dialog" role="dialog" aria-modal="true" aria-label={lang === 'en' ? 'Asset hub' : '资产中枢'} onClick={(e) => e.stopPropagation()}>
+            <div className="hud-hub-dialog-head">
+              <div>
+                <span>{lang === 'en' ? 'ASSET HUB' : '资产中枢'}</span>
+                <em>{lang === 'en' ? 'Total assets' : '总资产'} ¥{fmt.money(summary?.total)} · {lang === 'en' ? 'Exposure' : '仓位'} {((summary?.market_value ?? 0) / Math.max(summary?.total ?? 1, 1) * 100).toFixed(1)}%</em>
+              </div>
+              <button className="hud-hub-close" onClick={() => setHubMenu(false)} aria-label={lang === 'en' ? 'Close' : '关闭'}>×</button>
+            </div>
+            <div className="hud-hub-actions">
+              {HUB_ACTIONS.map((a) => (
+                <button key={a.key} className="hud-hub-action" onClick={() => { setHubMenu(false); nav(a.key) }}>
+                  <span className="hud-hub-action-icon">{a.icon}</span>
+                  <span className="hud-hub-action-text">
+                    <b>{lang === 'en' ? a.en : a.label}</b>
+                    <em>{lang === 'en' ? a.descEn : a.desc}</em>
+                  </span>
+                  <i>→</i>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="hud-console-bottom">
         <span className="hud-live"><i /> LIVE</span>
         <span>{lang === 'en' ? 'SSE' : '上证'} {fmt.price(overview?.indices?.[0]?.price)} {fmt.pct(overview?.indices?.[0]?.pct)}</span>
@@ -249,7 +291,7 @@ export default function HudHome({ overview }: { overview: any }) {
         <span>{lang === 'en' ? 'Net inflow' : '主力净流入'} {hot?.inflow?.[0]?.name ?? '--'} {fmt.big(hot?.inflow?.[0]?.inflow)}</span>
         <span>{lang === 'en' ? 'Now' : '当前'} {now.toLocaleTimeString('zh-CN', { hour12: false })}</span>
         <span>{lang === 'en' ? 'Data' : '数据'} {hot?.updated ? new Date(hot.updated * 1000).toLocaleTimeString('zh-CN', { hour12: false }) : '--:--:--'}</span>
-        <span className="hud-version">COMMAND DECK · v1.10.2</span>
+        <span className="hud-version">COMMAND DECK · v1.10.3</span>
       </div>
     </div>
   )

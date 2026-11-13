@@ -86,14 +86,14 @@ struct InvestHudHeader: View {
         .sheet(isPresented: $showSearch) {
             SearchSheet(onSelect: { q in path.append("stock:\(q.code)") })
         }
-        .confirmationDialog("资产中枢", isPresented: $showHub, titleVisibility: .visible) {
-            Button("资产分析") { path.append("asset-analysis") }
-            Button("投资建议") { path.append("advice-center") }
-            Button("指数分析") { path.append("index-analysis") }
-            Button("持仓管理") { path.append("portfolio") }
-            Button("取消", role: .cancel) {}
+        .confirmationDialog(lang == "en" ? "Asset hub" : "资产中枢", isPresented: $showHub, titleVisibility: .visible) {
+            Button(lang == "en" ? "Portfolio" : "持仓管理") { path.append("portfolio") }
+            Button(lang == "en" ? "Asset Analysis" : "资产分析") { path.append("asset-analysis") }
+            Button(lang == "en" ? "Advice" : "投资建议") { path.append("advice-center") }
+            Button(lang == "en" ? "Index Analysis" : "指数分析") { path.append("index-analysis") }
+            Button(lang == "en" ? "Cancel" : "取消", role: .cancel) {}
         } message: {
-            Text("总资产 ¥\(store.summary.total.fmt()) · 仓位 \((store.summary.total > 0 ? store.summary.marketValue / store.summary.total * 100 : 0).pct(0))")
+            Text((lang == "en" ? "Total assets ¥" : "总资产 ¥") + store.summary.total.fmt() + (lang == "en" ? " · Exposure " : " · 仓位 ") + (store.summary.total > 0 ? store.summary.marketValue / store.summary.total * 100 : 0).pct(0))
         }
     }
 
@@ -189,7 +189,7 @@ struct InvestHudHeader: View {
         }
         .aspectRatio(1, contentMode: .fit)
         .contentShape(Circle())
-        .onTapGesture { path.append("portfolio") }
+        .onTapGesture { showHub = true }
         .onAppear { scan = true }
     }
 
@@ -283,7 +283,7 @@ struct MoreView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("StockDesk").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
-                                Text("v3.7.2 · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
+                                Text("v3.7.3 · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
                                 Text("当前 \(ctx.date.formatted(.dateTime.hour().minute().second())) · 数据更新 \(store.lastRefresh.isEmpty ? "--:--:--" : store.lastRefresh)")
                                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.textDim)
                             }

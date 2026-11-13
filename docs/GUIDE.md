@@ -1,8 +1,8 @@
 # 使用指南与流程 · Guide & Workflow
 
-[中文](#中文) · [English](#english) · [下载页](https://cxy2696.github.io/stockdesk-akshare/#download) · [Release v1.10.2](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.2)
+[中文](#中文) · [English](#english) · [下载页](https://cxy2696.github.io/stockdesk-akshare/#download) · [Release v1.10.3](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.3)
 
-> 适用版本：macOS / Windows **1.10.2** · iOS **3.7.2 (29)** · 美股 **1.0.1**
+> 适用版本：macOS / Windows **1.10.3** · iOS **3.7.3 (30)** · 美股 **1.0.2**
 >
 > 第一次使用只需看「安装」和「第一次打开」；后面的页面说明可以当字典查。
 
@@ -12,10 +12,10 @@
 
 | 平台 | 推荐文件 | 大小 | 安装 |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.2.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.2.zip` | 42 MB | 解压后双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.zip` | 42 MB | 解压后双击 `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe` | 52 MB | 双击；需要 WebView2 |
-| iPhone iOS 17+ | `StockDesk-iOS-3.7.2-unsigned.ipa` | 1.9 MB | Sideloadly / AltStore / Xcode 重签 |
+| iPhone iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | 1.9 MB | Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | — | 见 [PACKAGES](PACKAGES.md) |
 
 #### macOS 首次打开
@@ -52,9 +52,13 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 
 ![StockDesk HUB](assets/hub.png)
 
-1. **HUB**：中央资产中枢，左侧每日策略/板块/复盘，右侧回测/地域/要闻/模型/KDJ；顶部是设置、异常、笔记、自选、搜索。
+![资产中枢菜单](assets/hub-menu.png)
+
+*资产中枢菜单：持仓管理 / 资产分析 / 投资建议 / 指数分析。*
+
+1. **HUB**：点中央资产中枢打开菜单（持仓管理/资产分析/投资建议/指数分析）；左侧每日策略/板块/复盘，右侧回测/地域/要闻/模型/KDJ；顶部是设置、异常、笔记、自选、搜索。
 2. **设置账户**：齿轮 → 初始资产、管理员名称、UID。初始资产只是收益基准。
-3. **记一笔交易**：进入资产中枢或持仓 → 记一笔交易（代码/方向/价格/数量/日期）。
+3. **记一笔交易**：资产中枢 → 持仓管理 → 记一笔交易（代码/方向/价格/数量/日期）。
 4. **加自选**：点顶部星号，搜索代码或名称。
 5. **看每日策略**：市场状态、仓位建议、今日标的、行业趋势、要闻。
 6. **看模型与 KDJ**：模型看 HMM 仓位和渗流扩散；KDJ 看 5m/30m 是否进入极值区。
@@ -64,7 +68,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 
 | 页面 | 看什么 | 关键动作 |
 | --- | --- | --- |
-| HUB | 总资产、今日盈亏、仓位、市场温度、LIVE | 点中枢进持仓；右侧进各模块 |
+| HUB | 总资产、今日盈亏、仓位、市场温度、LIVE | 点中枢打开资产菜单；右侧进各模块 |
 | 每日策略 | 市场状态、7/20/30/60 日、仓位区间、今日标的 | 先看风险，再看标的 |
 | 自选 | 实时价、涨跌幅、20/60 日走势 | 搜索添加；点进个股 |
 | 持股 | 成本、现价、浮动/已实现盈亏、支撑压力 | 记交易、改交易、删除 |
@@ -173,7 +177,7 @@ HUB → LIVE 看指数/广度/成交额 → 每日策略定攻守 → 持仓看�
 ### 9. 常见问题
 
 - **macOS 无法打开 / 已损坏**：运行 `Install-StockDesk.command`；或 `xattr -dr com.apple.quarantine /Applications/StockDesk.app`。仍被拦截到「隐私与安全性」点「仍要打开」。
-- **macOS 空白页**：确认从 Applications 启动；查看 `~/Library/Application Support/StockDesk/stockdesk.log`。1.10.2 启动失败会弹原生错误提示。
+- **macOS 空白页**：确认从 Applications 启动；查看 `~/Library/Application Support/StockDesk/stockdesk.log`。1.10.3 启动失败会弹原生错误提示。
 - **Windows 没窗口**：装 WebView2；SmartScreen 选「更多信息 → 仍要运行」；或 `StockDesk.exe --browser`。
 - **iOS 安装失败**：IPA 未签名，必须重签；免费签名 7 天过期。
 - **端口被占用**：启动器自动换端口，看日志里的实际地址。
@@ -191,7 +195,7 @@ cd frontend && npm ci && npm run build && cd ..
 python main.py            # --browser 仅浏览器
 ```
 
-macOS 打包：`cd desktop && VERSION=1.10.2 ./package_macos.sh`<br>
+macOS 打包：`cd desktop && VERSION=1.10.3 ./package_macos.sh`<br>
 Windows 打包：`cd desktop && powershell -ExecutionPolicy Bypass -File .\build_win.ps1`
 
 完整依赖、iOS/容器构建与发版见 [INSTALL](INSTALL.md)。
@@ -202,10 +206,10 @@ Windows 打包：`cd desktop && powershell -ExecutionPolicy Bypass -File .\build
 
 | Platform | File | Size | Install |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.2.dmg` | 43 MB | Open the DMG and run `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.2.zip` | 42 MB | Unzip and run `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.dmg` | 43 MB | Open the DMG and run `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.zip` | 42 MB | Unzip and run `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe` | 52 MB | Double-click; WebView2; SmartScreen → More info → Run anyway |
-| iPhone iOS 17+ | `StockDesk-iOS-3.7.2-unsigned.ipa` | 1.9 MB | Re-sign with Sideloadly / AltStore / Xcode |
+| iPhone iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | 1.9 MB | Re-sign with Sideloadly / AltStore / Xcode |
 
 The macOS app is ad-hoc signed. The installer clears `com.apple.quarantine`; manual fallback:
 
@@ -268,7 +272,7 @@ cd frontend && npm ci && npm run build && cd ..
 python main.py
 ```
 
-macOS package: `VERSION=1.10.2 ./package_macos.sh`<br>
+macOS package: `VERSION=1.10.3 ./package_macos.sh`<br>
 Windows package: `powershell -ExecutionPolicy Bypass -File .\build_win.ps1`
 
 See [INSTALL](INSTALL.md) for full build/release steps. Market data is for research only, not investment advice.
