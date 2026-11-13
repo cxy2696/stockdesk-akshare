@@ -696,14 +696,26 @@ def _us_index_klines(code: str) -> list[dict]:
 
 
 def index_analysis() -> list[dict]:
-    out = []
-    for code, name, secid, region, style, desc, note in GLOBAL_INDEXES:
+    # Fifteen indices used to be fetched one by one. Use a small pool so the
+    # page paints in roughly the slowest single request instead of the sum.
+    from concurrent.futures import ThreadPoolExecutor
+
+    def fetch(item):
+        code, _name, secid, _region, _style, _desc, _note = item
         try:
             rows = market.klines(code, limit=280, adjust="", secid_override=secid)
         except Exception:
             rows = []
         if len(rows) < 20:
             rows = _us_index_klines(code) or rows
+        return secid, rows
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        fetched = dict(pool.map(fetch, GLOBAL_INDEXES))
+
+    out = []
+    for code, name, secid, region, style, desc, note in GLOBAL_INDEXES:
+        rows = fetched.get(secid, [])
         closes = [r["close"] for r in rows]
         if not closes:
             out.append({"code": code, "name": name, "region": region, "style": style, "desc": desc,

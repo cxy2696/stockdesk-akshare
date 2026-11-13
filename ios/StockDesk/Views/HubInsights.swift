@@ -172,7 +172,9 @@ struct IndexAnalysisView: View {
         ScrollView {
             VStack(spacing: 12) {
                 if rows.isEmpty {
-                    ProgressView("加载 15 个指数…").padding(.top, 100)
+                    ProgressView("加载 15 个指数…")
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 100)
                 } else {
                 Card(title: "A股主要宽基 · 综合结论", subtitle: "共 \(aRows.count) 个指数") {
                     HStack(alignment: .top) {
@@ -195,7 +197,8 @@ struct IndexAnalysisView: View {
             }
             .padding(14)
         }
-        .background(Theme.bg)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.bg.ignoresSafeArea())
         .navigationTitle("指数分析")
         .navigationBarTitleDisplayMode(.inline)
         .task { rows = await MarketService.shared.indexAnalysis() }

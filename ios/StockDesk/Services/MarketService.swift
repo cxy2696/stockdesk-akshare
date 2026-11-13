@@ -648,6 +648,8 @@ actor MarketService {
         ]
         var out: [IndexAnalysisRow] = []
         for (code, name, sec, region, style, desc, note) in defs {
+            // Keep this sequential: Sina/Eastmoney rate-limit concurrent index
+            // requests and return empty rows, which made every card "无数据".
             let rows = (try? await klines(code, limit: 280, adjust: "", secidOverride: sec)) ?? []
             let closes = rows.map(\.close)
             guard !closes.isEmpty else {
