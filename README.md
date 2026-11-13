@@ -42,6 +42,7 @@ A local-first, single-user equity desk: portfolio, quotes, review, backtests, HM
 ## 1.10.3 更新 / What's new
 
 - **资产中枢菜单**：点击 HUB 中央，直接进入持仓管理 / 资产分析 / 投资建议 / 指数分析；这些入口已从「地域」移除。
+- **iPad 适配**：iOS App 支持 iPhone / iPad；iPad 放大 HUB、四列 KPI、双列 KDJ 图表，长页面限制阅读宽度；桌面端 1700px 以上自动放大 HUB。
 - macOS 安装包从 94.3 MB 降到 **43 MB DMG / 42 MB ZIP**；新增 `Install-StockDesk.command`，自动安装并清除下载隔离。
 - iOS KDJ 行业卡在东方财富不可达时回退到标注的 ETF 代理；板块跟踪回退到新浪行业/概念资金流；修正北证 50 代码。
 - App 启动失败、前端资源缺失或页面 JS 加载失败时，会弹出/显示错误提示并写日志，不再静默空白。
