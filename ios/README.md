@@ -9,19 +9,17 @@
 完全独立的原生 iOS / iPadOS 股票投资 App：**不依赖 Mac 后端**，行情、K 线、财务、持仓、复盘、回测、选股、提醒全部在 iPhone 本地完成。
 SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切换明亮/深色；设置内可切换中文 / English。
 
-**v3.7.3**：HUB 精简为 3+4；分享只在进入子页面后出现，滚动内容自动拼接为完整长图，可经系统分享到微信/Notes；HMM/渗流新增个股建议、行业临界和最大连通簇理由；资产快照缓存；资产分析含资金分配、交易偏好、趋势与交易习惯；投资建议含历史总结、未来趋势与标的推荐；指数分析覆盖 7 个指数；顶部放大镜/星号/信封/铃铛；底部显示当前时间与数据更新时间。，持仓、复盘、总览、自选、回测、设置全部收进「投资」；K 线可拖动查看每日数据；公司概况补全；九转/底部钝化、7/20/30/60 日分析、行业趋势、行情要闻与指标说明。
+**v3.8.0 (31)**：HUB 中央圆盘直接进持仓管理，右侧第三个入口从「行业要闻」改为「指数分析」；每日策略的主力追踪改成三列（个股流入 / 个股流出 / 行业流入），新增「模型结论」和「九转模型分析」两张卡；持仓管理顶部加「资产分析 / 投资建议」快捷入口；要闻标题可点开东方财富全文并显示摘要；量化模型页补上九转卡片（模型版本 v2.1.0）。
+
+上一版 3.7.3 的内容保留：HUB 3+4、长图分享、个股仓位建议、行业临界、资产快照缓存、指数分析、顶部搜索/自选/笔记/提醒、K 线拖动查看每日数据、筹码与黄金分割、九转与底部钝化。
 
 | 每日策略（多周期/行业） | 板块跟踪 | 投资 HUD |
 | --- | --- | --- |
 | ![每日](docs/ios-daily.png) | ![板块](docs/ios-market.png) | ![投资](docs/ios-invest.png) |
 
 | 指数分析 | 投资 HUD 横屏 | 设置（主题 / 横屏） |
-| --- | --- |
+| --- | --- | --- |
 | ![指数](docs/ios-index.png) | ![横屏](docs/ios-landscape.png) | ![设置](docs/ios-settings.png) |
-
-| 设置（主题 / 横屏） |
-| --- |
-| ![设置](docs/ios-settings.png) |
 
 | 个股热图 | 黄金分割 + 筹码 | 复盘总结 |
 | --- | --- | --- |
@@ -84,11 +82,11 @@ xcrun simctl launch booted com.stockdesk.app
 - **总览**：总资产、持仓市值、可用现金、今日盈亏、浮动/已实现盈亏、累计收益率、账户净值迷你曲线、自选列表、涨幅/资金流榜
 - **自选**：实时价格与涨跌幅、搜索添加（代码/名称）、左滑删除、涨跌家数
 - **个股**：实时报价、日/周/月 K 线（MA5/10/20 + 成交量 + **MACD 副图**）、**拖动查看每日 OHLC/涨跌**、**九转序列 9 标记**、**筹码分布与筹码分析**、**黄金分割位**、支撑/压力、**完整公司概况（董事长/董秘/法人/地址/网站/主营/经营范围等）**、近 8 期财务指标
-- **投资**：总览、自选、持仓、复盘、回测、设置统一收进「投资」页
-- **持仓**：**总资产 = 可用现金 + 持仓市值**、初始资产基准、移动平均成本、数量、成本价、现价、浮动盈亏、仓位、**每只持仓的支撑/压力**；**单笔删除交易、整只删除持仓（带确认）**；交易流水增删改
+- **HUD 首页**：HUB 即启动页，没有底部 Tab；总览、自选、持仓、复盘、回测、设置都从左右模块进
+- **持仓（持仓管理）**：顶部「资产分析 / 投资建议」快捷入口；**总资产 = 可用现金 + 持仓市值**、初始资产基准、移动平均成本、数量、成本价、现价、浮动盈亏、仓位、**每只持仓的支撑/压力**；**单笔删除交易、整只删除持仓（带确认）**；交易流水增删改
 - **复盘**：**复盘总结、仓位管理推荐、趋势分析（净值 vs 20/60 日线）、行情判断、市场情况**、净值曲线（沪深300 + 上证双基准）、回撤、累计/年化/超额收益、夏普、Beta、月度收益热力图、FIFO 胜率/盈亏比、个股贡献
 - **回测**：双均线、动量突破、RSI、MACD、布林带、唐奇安通道、均线+RSI、布林突破、KDJ、放量突破 **10 套策略**；次日开盘成交、手续费/印花税/滑点、资金曲线与完整交易明细
-- **每日策略**：每日行情、主力追踪、热点榜（涨跌前 10）、行情分析（7/20/30/60 日 + MA5/10/20/60 + RSI + MACD + 九转 + 底部钝化 + 支撑压力）、行业趋势、行情要闻、指标说明、仓位管理推荐、今日标的
+- **每日策略**：每日行情、模型结论（温度 + MA20 + 九转 → 进攻 / 均衡 / 防守）、主力追踪三列（个股流入 / 个股流出 / 行业流入）、行情分析（7/20/30/60 日 + MA5/10/20/60 + RSI + MACD + 九转 + 底部钝化 + 支撑压力）、九转模型（5 个指数的买卖进度与倒计时）、行业趋势、行业要闻（点标题读全文）、指标说明、仓位管理推荐、今日标的
 - **板块跟踪**：行业/概念板块、市场情绪与涨停池、全市场个股热图、10 类形态选股
 - **自选**：20 日 / 60 日迷你走势、涨跌家数、搜索添加
 - **本地运行**：无服务器、无登录、无上传；行情来自东方财富公开接口，账户数据保存在 App 沙盒
@@ -96,9 +94,11 @@ xcrun simctl launch booted com.stockdesk.app
 - **iPad 适配**：HUB 放大资产中枢与左右模块，Dashboard 四列 KPI，KDJ 双列图表，地域地图加高，设置页限制阅读宽度；iPhone 保持原布局
 - **指挥舱 HUD**：取消底部选择，14 个银色模块；底部 StockDesk 卡片显示当前时间（秒）与数据更新时间
 - **顶栏交互**：放大镜搜索股票名称/代码、星号自选、信封笔记、铃铛异常提醒
-- **资产中枢**：中国上市公司分布地图（5,570 家 / 31 地区），双指缩放；地域概览下方可折叠查看全部省份领涨公司；下方直达资产分析、投资建议、指数分析
-- **新增 HUB 入口**：地域（全部省份/城市行业偏好）、行业要闻（行业情况分析与投资趋势）、量化模型
-- **量化模型**：5 个 A 股核心指数 HMM 切换；个股仓位/买卖建议；行业临界、关键标的、细分行业渗流、随机重排稳健性
+- **资产中枢**：中央圆盘点击直接进持仓管理，不再弹「资产分析 / 投资建议 / 指数分析」菜单；名称与 UID 在设置里改
+- **HUB 右侧**：策略回测、地域、指数分析、量化模型、KDJ 预警；`industry-news` 旧路由也解析到指数分析
+- **量化模型**：5 个 A 股核心指数 HMM 切换；个股仓位/买卖建议；行业临界、关键标的、细分行业渗流、随机重排稳健性；新增九转模型卡片，版本显示 v2.1.0
+- **指数分析**：A 股宽基与海外指数的多周期、均线、RSI、MACD、支撑压力与偏多/偏空评分
+- **九转怎么看**：建仓结构 9 根（收盘价对比 4 日前）、倒计时 13 根（对比 2 日前高/低）；9/9 只说明这一段动能衰竭，不是反转保证。买结构完成后等放量收阳或收复 5 日线再试仓，卖结构完成且跌破 5 日线先减一半；7/9 只观察
 - **KDJ 预警**：半导体 / 通信设备 + 9 个 A 股指数，5m / 30m 的 K/D/J、RSV、MA5/20、量比与近似中枢；板块分钟数据不可达时自动使用并标注 ETF 代理，不再停在「暂无行情」
 - **稳定性**：资产快照本地缓存，启动先展示上次资产再刷新
 - **分享**：HUD 顶栏及详情页浮动按钮可分享当前界面截图
@@ -135,10 +135,12 @@ StockDesk/
 ## 重新构建
 
 ```bash
-./build_ios.sh
+cd ios
+xcodegen generate          # 由 project.yml 生成 StockDesk.xcodeproj
+open StockDesk.xcodeproj   # ⌘R 跑真机或模拟器；Product → Archive 打 IPA
 ```
 
-依赖：Xcode 15+、XcodeGen（`brew install xcodegen`）。
+依赖：Xcode 15+、XcodeGen（`brew install xcodegen`）。工程版本由 `project.yml` 的 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` 决定，当前 3.8.0 (31)。
 
 ## 已知限制
 
@@ -158,14 +160,17 @@ StockDesk/
 
 ## English
 
-StockDesk for iOS is a fully standalone SwiftUI app. It does **not** require the Mac backend: quotes, candles, fundamentals, portfolio, review, backtest, screening and alerts all run on the iPhone.
+StockDesk for iOS is a fully standalone SwiftUI app, now at **3.8.0 (31)**. It does **not** require the Mac backend: quotes, candles, fundamentals, portfolio, review, backtest, screening and alerts all run on the iPhone.
 
 - SwiftUI + Swift Charts
-- HUB home with three left actions and four right modules
+- HUB home with three left actions and five right modules (Backtest, Regions, Index Analysis, Quant Models, KDJ Alerts); the central disc opens Portfolio directly
+- Daily Plan: three-column main-force flow (inflow / outflow / industry), a model-conclusion card (temperature + MA20 + TD) and a TD Sequential card
+- Portfolio: asset-analysis and advice shortcuts at the top, plus positions and trade history
+- Index Analysis for A-share broad indices and overseas markets; the legacy `industry-news` route resolves to the same screen
 - 100% / 120% / 150% font scaling; 150% uses a single-column HUB
 - Built-in Chinese / English switch in Settings
 - Full-page image sharing via the system share sheet (WeChat, Notes, Files)
-- HMM and percolation models with per-stock position guidance
+- HMM, percolation and TD models with per-stock position guidance (model registry v2.1.0)
 - KDJ extreme-zone panel for two sectors and nine A-share indices, with 5m / 30m K/D/J, RSV, MA5/20, volume ratio and an approximate central zone; a labelled ETF proxy keeps sector cards live when board-minute data is unavailable
 - Local-only storage; no login and no uploads
 

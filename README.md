@@ -9,21 +9,23 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iPhone · iPad · US Equities
 
-[项目主页](https://cxy2696.github.io/stockdesk-akshare/) · [使用指南](docs/GUIDE.md) · [安装构建](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.3) · [容器](docs/PACKAGES.md) · [English](#english)
+[项目主页](https://cxy2696.github.io/stockdesk-akshare/) · [使用指南](docs/GUIDE.md) · [安装构建](docs/INSTALL.md) · [模型说明](docs/MODELS.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases) · [English](#english)
 
 ![Mac HUB](screenshots/mac-hub.png)
 
+> **1.11.0 说明**：本轮更新以源码为准，桌面与 iOS 安装包仍沿用最近一次构建的 1.10.3 / 3.7.3。重新运行构建脚本即可生成 1.11.0 安装包。
+
 ## 下载 / Download
 
-| 平台 Platform | 文件 File | 大小 Size | 安装 Install |
+| 平台 Platform | 文件 File | 版本 Version | 说明 Notes |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.zip` | 42 MB | 解压后双击 `Install-StockDesk.command` |
-| Windows 10/11 x64 | `StockDesk.exe` | 52 MB | 双击；需要 WebView2；SmartScreen 选「更多信息 → 仍要运行」 |
-| iPhone iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | 1.9 MB | 用 Sideloadly / AltStore / Xcode 重签 |
-| 浏览器 / NAS | GHCR 容器 | — | 见 [PACKAGES](docs/PACKAGES.md) |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.dmg` / `.zip` | 1.10.3 | 打开 DMG，双击 `Install-StockDesk.command` |
+| Windows 10/11 x64 | `StockDesk.exe` | 1.10.3 | 双击；需要 WebView2 |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | 3.7.3 | 用 Sideloadly / AltStore / Xcode 重签 |
+| 浏览器 / NAS | GHCR 容器 | 1.11.0 源码 | 见 [PACKAGES](docs/PACKAGES.md) |
+| 源码 | `main` 分支 | **1.11.0** | 见下方快速开始 |
 
-- 全部文件在 [Releases v1.10.3](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.3)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
+- 安装包在 [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
 - macOS App 为 ad-hoc 签名，下载后需运行安装脚本清除 `com.apple.quarantine`。脚本被拦截时右键 → 打开；手动命令：
   ```bash
   xattr -dr com.apple.quarantine /Applications/StockDesk.app
@@ -32,40 +34,46 @@ Mac · Windows · iPhone · iPad · US Equities
 
 ## 这是什么 / What it is
 
-StockDesk 是一个本地优先、单用户的股票投资工作台：持仓、行情、复盘、策略回测、HMM/渗流模型、KDJ 极值和地域/行业数据，都在一个 HUD 风格界面里。账户和缓存只保存在本机。
+StockDesk 是一个本地优先、单用户的股票投资工作台：持仓、行情、复盘、策略回测、HMM/渗流/九转模型、KDJ 极值和地域/行业数据，都在一个 HUD 风格界面里。账户和缓存只保存在本机。
 
-A local-first, single-user equity desk: portfolio, quotes, review, backtests, HMM/percolation models, KDJ alerts and regional/industry views in one HUD. Account data and caches stay on your machine.
+A local-first, single-user equity desk: portfolio, quotes, review, backtests, HMM/percolation/TD models, KDJ alerts and regional/industry views in one HUD. Account data and caches stay on your machine.
 
 > 本仓库是独立副本，不影响你当前本地正在使用的 StockDesk。<br>
 > This is an independent snapshot and does not affect your existing StockDesk install.
 
-## 1.10.3 更新 / What's new
+## 1.11.0 更新 / What's new
 
-- **资产中枢菜单**：点击 HUB 中央，直接进入持仓管理 / 资产分析 / 投资建议 / 指数分析；这些入口已从「地域」移除。
-- **iPad 适配**：iOS App 支持 iPhone / iPad；iPad 放大 HUB、四列 KPI、双列 KDJ 图表，长页面限制阅读宽度；桌面端 1700px 以上自动放大 HUB。
-- macOS 安装包从 94.3 MB 降到 **43 MB DMG / 42 MB ZIP**；新增 `Install-StockDesk.command`，自动安装并清除下载隔离。
-- iOS KDJ 行业卡在东方财富不可达时回退到标注的 ETF 代理；板块跟踪回退到新浪行业/概念资金流；修正北证 50 代码。
-- App 启动失败、前端资源缺失或页面 JS 加载失败时，会弹出/显示错误提示并写日志，不再静默空白。
-- Windows 仍为约 52 MB 单文件；新增 SmartScreen、WebView2、`--browser` 和日志排查说明。
-- 新增带截图的[使用指南](docs/GUIDE.md)。
+- **信息架构收拢**：HUB 中央直接进入「持仓管理」；右侧「行业要闻」更名为「指数分析」。侧栏新增完整「使用指南」。
+- **每日策略成为主入口**：行情、模型结论、主力追踪、九转、行业关注、行业要闻、仓位、标的在一个页面里；行业要闻与行情要闻合并，全部可点击打开全文。
+- **主力追踪修复**：拆成个股净流入 / 个股净流出 / 行业净流入三列；修正负值标红、空值混入流出榜、并发重复请求的问题；增加资金榜净额与数据来源。
+- **持仓管理三合一**：持仓总览 / 资产分析 / 投资建议 / 交易流水四个视图；原「资产分析」「投资建议」页自动重定向。
+- **九转模型（TD Sequential）**：建仓结构 9、倒计时 13，覆盖 5 个核心指数、持仓和临界行业龙头，给出中文解读与买卖进度。
+- **HMM / 渗流升级**：HMM 多起点拟合、置信度、状态年龄、每状态风险统计；渗流新增跨越、susceptibility、随机重排 p 值、50×50 分块图和行业/板块分组。模型注册表 2.1.0。
+- **收益复盘图表**：趋势分析（净值/MA20/MA60）与净值曲线（账户/沪深300）颜色区分清楚；首日单点数据不再空白。
+- **地域全省份**：34 个省级行政区可搜索、可逐个切换，地图点击联动，省份概览含行业与龙头。
+- **个股热图可交互**：下钻、面包屑、搜索、涨跌筛选、悬停高亮；隐藏过小方块，避免几千个 2px 色块糊成一片。
+- **性能与容错**：东方财富短熔断、新浪日线兜底、全市场快照/板块/资金流单飞锁；网络受限时每日策略从数分钟降到数十秒内返回。
 
 ## 功能 / Features
 
 | 模块 | 说明 |
 | --- | --- |
-| HUD 指挥舱 | 资产中枢菜单（持仓/资产分析/投资建议/指数分析）、7 个入口、管理员名片、LIVE |
-| 每日策略 | 市场状态、仓位建议、今日标的、行业趋势、要闻 |
-| 持仓与复盘 | 交易流水、移动成本、已实现/浮动盈亏、净值、回撤、夏普 |
-| 自选与个股 | 实时行情、日/周/月 K、MACD、九转、筹码、黄金分割、支撑压力 |
-| 板块跟踪 | 行业/概念、市场情绪、涨停池、个股热图、形态选股 |
+| HUD 指挥舱 | 中央资产中枢 → 持仓管理；左侧 3 个入口；右侧 5 个模块；LIVE 状态条；管理员名片 |
+| 每日策略 | 行情、模型结论、主力追踪、行情分析、九转、行业关注、行业要闻、仓位建议、明日支撑压力、今日标的 |
+| 持仓管理 | 持仓总览、资产分析、投资建议、交易流水；移动成本、已实现/浮动盈亏、支撑压力、FIFO |
+| 收益复盘 | 净值/回撤、20/60 日均线、双基准、月度热力图、仓位现金、交易统计 |
+| 自选与个股 | 实时行情、日/周/月 K、MACD、九转、筹码、黄金分割、支撑压力、九转与行业关注卡 |
+| 板块跟踪 | 行业/概念、市场情绪、涨停池、可交互个股热图、形态选股 |
 | 策略回测 | 10 套策略、手续费/印花税/滑点、资金曲线、交易明细 |
-| 量化模型 | 5 指数 3 状态 HMM、渗流最大连通簇、行业临界、个股仓位建议 |
+| 量化模型 | 5 指数 3 状态 HMM、渗流最大连通簇、九转结构、行业关注、个股仓位建议 |
+| 指数分析 | A 股 12 个宽基 + 海外指数：趋势、均线、RSI、MACD、支撑压力与结论 |
 | KDJ 预警 | 半导体/通信设备 + 9 个 A 股指数，5m/30m K/D/J、RSV、MA5/20、量比、中枢 |
-| 地域与要闻 | 中国上市公司地图、省份龙头、行业新闻与关键标的 |
+| 地域与行业 | 中国上市公司地图、34 个省级行政区切换、省份龙头、行业要闻（已并入每日策略） |
+| 使用指南 | 9 章：上手、每日流程、页面地图、指标词典、仓位风控、数据隐私、快捷键、FAQ、版本 |
 | 分享与缩放 | 子页面长图分享；100% / 120% / 150% 文字缩放，自动换行 |
-| iOS / iPad | SwiftUI 原生 App；HUB 资产菜单、KDJ、板块、横竖屏；iPad 自动放大 HUB、四列 KPI、双列 KDJ 图表 |
+| iOS / iPad | SwiftUI 原生；HUB 直接进持仓管理、指数分析入口、三列主力追踪、九转卡片、持仓快捷入口 |
 
-English modules: HUD, Daily Plan, Portfolio & Review, Watchlist/Stock Detail, Sectors, Backtest, Quant Models, KDJ Alerts, Regions/Industry News, Sharing & Scaling.
+English modules: HUD, Daily Plan, Portfolio (overview/analysis/advice/trades), Review, Watchlist/Stock Detail, Sectors, Backtest, Quant Models, Index Analysis, KDJ Alerts, Regions, Guide, Sharing & Scaling.
 
 ## 快速开始 / Quick start
 
@@ -99,9 +107,9 @@ pip install -r requirements.txt && python run.py
 
 ## 数据与缩放 / Data & scaling
 
-- A 股/指数：东方财富公开行情接口；美股：东方财富美股公开接口；HTTP 直连，`akshare` 用于部分分钟线/板块回退。
+- A 股/指数：东方财富公开行情接口；美股：东方财富美股公开接口；HTTP 直连，`akshare` 用于部分分钟线/板块回退；东方财富不可用时自动回退新浪日线/资金流。
+- 单飞锁避免同一时刻重复下载全市场快照；东方财富连续失败会短暂熔断，页面不会卡在超时上。
 - 缩放只改文字：按钮/卡片自动增高，表格自动换行；地图和图表不拉伸；120%/150% 隐藏 ticker；iOS 150% 单列 HUB。
-- 桌面端 1700px 以上自动放大 HUB；iPad 自动放大 HUB、四列 KPI、双列 KDJ 图表和地图高度。
 - 所有行情仅用于研究，不构成投资建议。
 
 ## 项目结构 / Layout
@@ -109,6 +117,8 @@ pip install -r requirements.txt && python run.py
 ```
 stockdesk-akshare/
 ├── desktop/        FastAPI + React 桌面端
+│   ├── backend/    market / portfolio / models / td / daily / api
+│   └── frontend/   HUB、每日策略、持仓管理、指数分析、模型、热图
 ├── ios/            SwiftUI iOS
 ├── us/             美股独立仪表盘
 ├── docs/           指南、安装、架构、模型、容器
@@ -120,18 +130,20 @@ stockdesk-akshare/
 
 | 平台 | 版本 |
 | --- | --- |
-| macOS / Windows | **1.10.3** |
-| iOS | **3.7.3 (30)** |
-| US | **1.0.2** |
-| 容器 | `stockdesk-akshare-a-share:1.10.3` / `stockdesk-akshare-us:1.0.2` |
+| macOS / Windows（源码） | **1.11.0** |
+| macOS / Windows（最近安装包） | 1.10.3 |
+| iOS（源码） | **3.8.0 (31)** |
+| iOS（最近安装包） | 3.7.3 (30) |
+| US | 1.0.2 |
+| 容器 | `stockdesk-akshare-a-share:latest` / `stockdesk-akshare-us:1.0.2` |
 
 ## English
 
-StockDesk is a local-first, single-user equity research desk for macOS, Windows, iOS and the web. It combines portfolio tracking, quotes, review analytics, backtests, HMM/percolation models, KDJ alerts and regional/industry views in a HUD-style interface. Account data and market caches stay local.
+StockDesk is a local-first, single-user equity research desk for macOS, Windows, iOS and the web. It combines portfolio tracking, quotes, review analytics, backtests, HMM/percolation/TD models, KDJ alerts and regional/industry views in a HUD-style interface. Account data and market caches stay local.
 
-**Download:** use the table above. macOS is Apple Silicon only; run `Install-StockDesk.command` after downloading to clear Gatekeeper quarantine. Windows needs WebView2; choose More info → Run anyway if SmartScreen blocks it. The iOS IPA is unsigned and must be re-signed.
+**Download:** installers are still the latest built release (desktop 1.10.3, iOS 3.7.3); the `main` branch is 1.11.0 and can be built from source with the commands above. macOS is Apple Silicon only; run `Install-StockDesk.command` after downloading to clear Gatekeeper quarantine. Windows needs WebView2; choose More info → Run anyway if SmartScreen blocks it. The iOS IPA is unsigned and must be re-signed.
 
-**Features:** HUD with an asset-hub menu (portfolio, asset analysis, advice, indices), Daily Plan, Portfolio/Review, Watchlist/Stock Detail, Sectors, Backtest, Quant Models, KDJ Alerts, Regions/Industry News, sharing and 100%/120%/150% scaling. See the [Guide](docs/GUIDE.md) for screenshots and the daily workflow; see [Install](docs/INSTALL.md) for source builds and packaging.
+**1.11.0 highlights:** the HUB centre now opens Portfolio; the former Industry News entry is now Index Analysis; Daily Plan merges market headlines with clickable full-text links, fixes main-force flow, and adds HMM/percolation/TD conclusions plus industry focus; Portfolio combines overview, asset analysis, advice and trades; TD Sequential and upgraded HMM/percolation live on the Models page; Review charts get distinct colours and first-day handling; Regions covers all 34 province-level divisions; the stock heatmap is drillable, searchable and filterable; the in-app Guide is a full nine-chapter manual.
 
-**Versions:** macOS/Windows 1.10.3 · iOS 3.7.3 (30) · US 1.0.2.<br>
+**Versions:** desktop source 1.11.0 · iOS source 3.8.0 (31) · US 1.0.2.<br>
 **License:** MIT. Market data is for research only, not investment advice.

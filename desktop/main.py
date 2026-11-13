@@ -22,6 +22,10 @@ sys.path.insert(0, str(ROOT))
 def free_port(preferred: int = 8765) -> int:
     for port in range(preferred, preferred + 40):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            # Allow rebinding a port that is still in TIME_WAIT after an app
+            # restart; without this the app drifts to 8766/8767 and the Vite
+            # proxy or a bookmarked URL points at nothing.
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind(("127.0.0.1", port))
                 return port

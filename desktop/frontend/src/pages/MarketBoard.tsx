@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Drawer, Segmented, Select, Skeleton, Table, Tag, Tooltip, message } from 'antd'
+import { Button, Drawer, Input, Segmented, Select, Skeleton, Table, Tag, Tooltip, message } from 'antd'
 import { ReloadOutlined, RiseOutlined, FallOutlined, FireOutlined } from '@ant-design/icons'
 import { api } from '../api'
 import { Card, EmptyState } from '../components/ui'
-import HeatmapChart from '../components/HeatmapChart'
+import HeatmapChart, { filterHeatmapGroups } from '../components/HeatmapChart'
+import type { HeatDirection, HeatGroup, HeatStock } from '../components/HeatmapChart'
 import { fmt, trendClass } from '../utils'
+import { useTheme } from '../ThemeContext'
 
 const TABS = [
   { label: '板块跟踪', value: 'boards' },
@@ -418,14 +420,18 @@ function PatternsTab({ nav }: { nav: (p: string) => void }) {
 }
 
 function HeatmapTab({ nav }: { nav: (p: string) => void }) {
-  const [groups, setGroups] = useState<any[]>([])
+  const { colors } = useTheme()
+  const [groups, setGroups] = useState<HeatGroup[]>([])
   const [loading, setLoading] = useState(true)
+  const [dimension, setDimension] = useState<'industry' | 'market'>('industry')
+  const [query, setQuery] = useState('')
+  const [direction, setDirection] = useState<HeatDirection>('all')
 
   const load = async () => {
     setLoading(true)
     try {
       const d = await api.get<any>('/api/market/heatmap?groups=100&per_group=2000')
-      setGroups(d.groups ?? [])
+      setGroups(Array.isArray(d?.groups) ? d.groups : [])
     } catch (e: any) {
       message.error(e.message)
     } finally {
@@ -437,31 +443,194 @@ function HeatmapTab({ nav }: { nav: (p: string) => void }) {
     load()
   }, [])
 
-  const stats = useMemo(() => {
-    let up = 0, down = 0
-    groups.forEach((g) => g.children.forEach((c: any) => { if ((c.pct ?? 0) > 0) up++; else if ((c.pct ?? 0) < 0) down++ }))
-    return { up, down }
-  }, [groups])
+  // 后端当前可能按行业分组，也可能在行业字段缺失时退回市场分组。
+  // 市场维度可以稳定地从前缀重排；行业维度在没有 industry 字段时保留原分组并给出说明。
+  const processed = useMemo(() => {
+    if (dimension === 'market') return { groups: regroupByMarket(groups), fallback: false }
+    return regroupByIndustry(groups)
+  }, [groups, dimension])
+
+  const displayGroups = processed.groups
+  const industryFallback = dimension === 'industry' && processed.fallback
+  const rootLabel = dimension === 'industry' && !industryFallback ? '行业' : '市场'
+
+  const filtered = useMemo(
+    () => filterHeatmapGroups(displayGroups, query, direction),
+    [displayGroups, query, direction],
+  )
+  const stocks = useMemo(() => filtered.flatMap((g) => g.children), [filtered])
+  const totalStocks = useMemo(() => groups.reduce((n, g) => n + (g.children?.length ?? 0), 0), [groups])
+  const upCount = stocks.filter((s) => (Number(s.pct) || 0) > 0).length
+  const downCount = stocks.filter((s) => (Number(s.pct) || 0) < 0).length
+  const avgPct = stocks.length
+    ? stocks.reduce((sum, s) => sum + (Number.isFinite(Number(s.pct)) ? Number(s.pct) : 0), 0) / stocks.length
+    : 0
+
+  const reset = () => {
+    setQuery('')
+    setDirection('all')
+    setDimension('industry')
+  }
+
+  const handleSelect = useCallback((code: string) => nav(`/stock/${code}`), [nav])
+
+  const groupText = dimension === 'market'
+    ? '按市场分组'
+    : industryFallback
+      ? '按市场分组（行业字段暂缺）'
+      : '按行业分组'
 
   return (
     <Card
       title="个股热图"
-      desc={`按行业分组 · 面积=总市值 · 颜色=涨跌幅 · ${stats.up} 涨 / ${stats.down} 跌`}
-      extra={<Button size="small" icon={<ReloadOutlined />} onClick={load}>刷新</Button>}
+      desc={`${groupText} · 面积=总市值 · 颜色=涨跌幅`}
+      extra={<Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button>}
     >
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+        <Segmented
+          size="small"
+          value={dimension}
+          onChange={(v) => setDimension(v as 'industry' | 'market')}
+          options={[{ label: '行业', value: 'industry' }, { label: '市场', value: 'market' }]}
+        />
+        <Input
+          allowClear
+          size="small"
+          placeholder="搜索代码 / 名称"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ width: 190 }}
+        />
+        <Segmented
+          size="small"
+          value={direction}
+          onChange={(v) => setDirection(v as HeatDirection)}
+          options={[
+            { label: '全部', value: 'all' },
+            { label: '只看上涨', value: 'up' },
+            { label: '只看下跌', value: 'down' },
+          ]}
+        />
+        <Button size="small" onClick={reset}>重置</Button>
+        <span className="muted small" style={{ marginLeft: 'auto' }}>
+          单击板块下钻 · 单击个股查看详情
+        </span>
+      </div>
+
+      {industryFallback && (
+        <div
+          className="muted small"
+          style={{ marginBottom: 10, padding: '7px 10px', borderRadius: 8, background: 'var(--tag-bg)', lineHeight: 1.6 }}
+        >
+          数据源当前未返回个股行业字段，行业分组暂按市场分组展示；接口补齐后会按行业拆开。
+        </div>
+      )}
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          flexWrap: 'wrap',
+          marginBottom: 10,
+          padding: '8px 10px',
+          border: '1px solid var(--border-soft)',
+          borderRadius: 8,
+        }}
+      >
+        <span className="small"><b className="up">{upCount}</b> 上涨</span>
+        <span className="small"><b className="down">{downCount}</b> 下跌</span>
+        <span className="small">
+          平均涨跌 <b className={(Number(avgPct) || 0) >= 0 ? 'up' : 'down'}>{fmt.pct(avgPct)}</b>
+        </span>
+        <span className="muted small">筛选后 {stocks.length} 只 / 全量 {totalStocks} 只</span>
+        <div className="heat-legend" style={{ marginLeft: 'auto', marginTop: 0 }}>
+          <span className="down">-10%</span>
+          <div
+            style={{
+              width: 180,
+              height: 8,
+              borderRadius: 99,
+              background: `linear-gradient(90deg, ${colors.down}, ${colors.axis}, ${colors.up})`,
+            }}
+          />
+          <span className="up">+10%</span>
+        </div>
+      </div>
+
       {loading && !groups.length ? (
         <Skeleton active paragraph={{ rows: 10 }} />
       ) : groups.length ? (
-        <HeatmapChart groups={groups} height={620} onSelect={(code) => nav(`/stock/${code}`)} />
+        <HeatmapChart
+          groups={displayGroups}
+          query={query}
+          direction={direction}
+          rootLabel={rootLabel}
+          onSelect={handleSelect}
+        />
       ) : (
-        <EmptyState text="热图数据加载中" icon="▦" />
+        <EmptyState text="热图数据暂未返回，点右上角刷新重试" icon="▦" />
       )}
-      <div className="heat-legend">
-        <span className="down">-10%</span>
-        <div className="heat-scale" />
-        <span className="up">+10%</span>
-        <span className="muted small" style={{ marginLeft: 10 }}>点击方块进入个股详情</span>
-      </div>
     </Card>
   )
+}
+
+const MARKET_NAMES = new Set(['沪市主板', '深市主板', '科创板', '创业板', '北交所', '其他'])
+
+function marketOfStock(stock: HeatStock) {
+  if (stock.market && MARKET_NAMES.has(stock.market)) return stock.market
+  const code = String(stock.code ?? '')
+  if (code.startsWith('688') || code.startsWith('689')) return '科创板'
+  if (code.startsWith('300') || code.startsWith('301') || code.startsWith('302')) return '创业板'
+  if (code.startsWith('600') || code.startsWith('601') || code.startsWith('603') || code.startsWith('605')) return '沪市主板'
+  if (code.startsWith('000') || code.startsWith('001') || code.startsWith('002') || code.startsWith('003')) return '深市主板'
+  if (code.startsWith('920') || code.startsWith('4') || code.startsWith('8')) return '北交所'
+  return '其他'
+}
+
+function makeGroup(name: string, items: HeatStock[]): HeatGroup {
+  const sorted = [...items].sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0))
+  const value = sorted.reduce((sum, s) => sum + (Number(s.value) || 0), 0)
+  const pct = value > 0
+    ? sorted.reduce((sum, s) => sum + (Number(s.pct) || 0) * (Number(s.value) || 0), 0) / value
+    : 0
+  return { name, value: +value.toFixed(2), pct: +pct.toFixed(2), children: sorted }
+}
+
+function sortGroups(map: Map<string, HeatStock[]>): HeatGroup[] {
+  return [...map.entries()]
+    .map(([name, items]) => makeGroup(name, items))
+    .filter((g) => g.children.length)
+    .sort((a, b) => b.value - a.value)
+}
+
+function regroupByMarket(groups: HeatGroup[]): HeatGroup[] {
+  const buckets = new Map<string, HeatStock[]>()
+  groups.forEach((g) => {
+    (g.children ?? []).forEach((c) => {
+      const key = marketOfStock(c)
+      const list = buckets.get(key) ?? []
+      list.push(c)
+      buckets.set(key, list)
+    })
+  })
+  return sortGroups(buckets)
+}
+
+function regroupByIndustry(groups: HeatGroup[]): { groups: HeatGroup[]; fallback: boolean } {
+  const hasIndustry = groups.some((g) => (g.children ?? []).some((c) => !!c.industry))
+  if (!hasIndustry) {
+    const fallback = groups.length > 0 && groups.every((g) => MARKET_NAMES.has(g.name))
+    return { groups, fallback }
+  }
+  const buckets = new Map<string, HeatStock[]>()
+  groups.forEach((g) => {
+    (g.children ?? []).forEach((c) => {
+      const key = (c.industry || g.name || '其他').trim() || '其他'
+      const list = buckets.get(key) ?? []
+      list.push(c)
+      buckets.set(key, list)
+    })
+  })
+  return { groups: sortGroups(buckets), fallback: false }
 }

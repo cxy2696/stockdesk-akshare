@@ -1,4 +1,8 @@
-"""Position-sizing advice derived from the account and the market regime."""
+"""Position-sizing advice derived from the account and the market regime.
+
+The wording is deliberately written like a desk note: short sentences, concrete
+numbers, no "the system automatically generated" boilerplate.
+"""
 from __future__ import annotations
 
 from . import portfolio, state
@@ -59,27 +63,28 @@ def position_advice() -> dict:
     else:
         action, urgency = "持有", "低"
 
+    verdict = m.get("verdict", {}).get("label") or "震荡"
     reasons = [
-        f"市场温度 {score}（{m.get('verdict', {}).get('label')}），对应建议总仓位 {low}%–{high}%。",
-        f"当前仓位 {cur:.1f}%（持仓市值 {mv:,.0f} 元，可用现金 {cash:,.0f} 元）。",
+        f"市场温度 {score} 分，属于{verdict}环境，对应总仓位 {low}%–{high}%。",
+        f"你现在仓位 {cur:.1f}%，持仓市值 {mv:,.0f} 元，可用现金 {cash:,.0f} 元。",
     ]
     if trend.get("label"):
-        reasons.append(f"{trend['label']}，当前回撤 {dd:.2f}%。")
+        reasons.append(f"{trend['label']}，账户当前回撤 {dd:.2f}%。")
     if top:
-        reasons.append(f"第一大持仓 {top.get('name')} 占 {top_w:.1f}%，单票上限建议 {single_cap}%。")
+        reasons.append(f"第一大持仓是{top.get('name')}，占 {top_w:.1f}%，单票上限先按 {single_cap}% 控。")
 
     warnings = []
     if top_w > single_cap:
-        warnings.append(f"{top.get('name')} 权重 {top_w:.1f}% 超过单票上限 {single_cap}%，建议分批降至 {single_cap}% 以内。")
-    if len(positions) and len(positions) < 3:
-        warnings.append("持仓少于 3 只，个股风险集中，建议适度分散。")
+        warnings.append(f"{top.get('name')} 权重 {top_w:.1f}%，已经超过 {single_cap}% 的单票上限，建议分两批降下来。")
+    if 0 < len(positions) < 3:
+        warnings.append("持仓少于 3 只，一只票出问题就会明显拖累账户，考虑再分散一点。")
     if len(positions) > 10:
-        warnings.append("持仓超过 10 只，跟踪成本偏高，可合并弱逻辑标的。")
-    if cash / total * 100 < 8 if total else False:
-        warnings.append("现金低于 8%，遇到回撤缺少补仓与机动空间。")
+        warnings.append("持仓超过 10 只，跟踪成本太高，弱逻辑的可以合并掉。")
+    if total and cash / total * 100 < 8:
+        warnings.append("现金不到 8%，回撤时没有补仓和周转的余地。")
     losers = [p for p in positions if (p.get("total_pnl_pct") or 0) <= -15]
     for p in losers[:3]:
-        warnings.append(f"{p.get('name')} 累计亏损 {p.get('total_pnl_pct'):.1f}%，检查是否已跌破支撑并执行止损纪律。")
+        warnings.append(f"{p.get('name')} 累计亏损 {p.get('total_pnl_pct'):.1f}%，先看有没有跌破支撑，跌破就按纪律处理。")
 
     risk_positions = []
     for p in positions:
@@ -90,22 +95,29 @@ def position_advice() -> dict:
                 "support": sup, "loss_pct": p.get("total_pnl_pct"),
             })
     if risk_positions:
-        warnings.append(f"{len(risk_positions)} 只持仓已跌破最近支撑：" + "、".join(x["name"] for x in risk_positions[:4]) + "。")
+        warnings.append(f"{len(risk_positions)} 只持仓跌破最近支撑：" + "、".join(x["name"] for x in risk_positions[:4]) + "。")
 
     actions = []
     if action == "减仓":
-        actions.append(f"将总仓位从 {cur:.0f}% 降至 {low}%–{high}%，优先减持权重超 {single_cap}% 或跌破支撑的标的。")
-        actions.append("减仓资金先留作现金，不急于切换，等待市场温度回到 55 以上。")
+        actions.append(f"把总仓位从 {cur:.0f}% 降到 {low}%–{high}%，先减权重超 {single_cap}% 和跌破支撑的。")
+        actions.append("减出来的钱先放现金，不急着换股；等市场温度回到 55 以上再考虑进攻。")
     elif action == "加仓":
-        actions.append(f"分 2–3 批将总仓位从 {cur:.0f}% 提升至 {low}%–{high}%，单次不超过 10% 仓位。")
-        actions.append("优先选择均线多头、放量突破或九转买入信号，且不追涨停。")
+        actions.append(f"分 2–3 批把仓位从 {cur:.0f}% 提到 {low}%–{high}%，单次别超过 10% 仓位。")
+        actions.append("优先选均线多头、放量突破或刚出现九转买结构的票，涨停板上不追。")
     else:
-        actions.append(f"维持总仓位 {low}%–{high}%，单票不超过 {single_cap}%，现金保留 {100 - high}% 左右。")
-    actions.append("对跌破最近支撑的持仓设置止损；盈利超过 15% 的标的可上移止盈线。")
+        actions.append(f"仓位维持在 {low}%–{high}%，单票不超过 {single_cap}%，现金留 {100 - high}% 左右。")
+    actions.append("跌破最近支撑的持仓设好止损；浮盈超过 15% 的，把止盈线往上移。")
+
+    if action == "减仓":
+        headline = f"仓位偏高，先降到 {low}%–{high}% 再谈进攻。"
+    elif action == "加仓":
+        headline = f"仓位偏低，可以分批加到 {low}%–{high}%，但别一次打满。"
+    else:
+        headline = f"仓位合适，维持 {low}%–{high}%，把精力放在选股和止损上。"
 
     return {
         "score": score,
-        "regime": m.get("verdict", {}).get("label"),
+        "regime": verdict,
         "current_pct": round(cur, 1),
         "target_low": low,
         "target_high": high,
@@ -115,6 +127,7 @@ def position_advice() -> dict:
         "urgency": urgency,
         "single_cap": single_cap,
         "cash_floor": round(100 - high, 1),
+        "headline": headline,
         "reasons": reasons,
         "warnings": warnings,
         "actions": actions,

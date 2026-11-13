@@ -16,7 +16,9 @@ struct DailyView: View {
                     ProgressView().padding(.top, 80)
                 } else if let s = state {
                     summaryCard(s)
+                    modelBriefCard(s)
                     analysisCard(s)
+                    tdCard(s)
                     levelsCard(s)
                     industryTrendCard(s)
                     flowCard(s)
@@ -346,57 +348,178 @@ struct DailyView: View {
     }
 
     private func flowCard(_ s: MarketState) -> some View {
-        Card(title: "主力追踪", subtitle: "个股 / 行业主力净流入") {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("个股净流入").font(.system(size: 9)).foregroundStyle(Theme.textDim)
-                        ForEach(s.inflow.prefix(6)) { q in
-                            NavigationLink {
-                                StockDetailView(code: q.code, name: q.name)
-                            } label: {
-                                HStack(spacing: 3) {
-                                    Text(q.name).font(.system(size: 10)).foregroundStyle(Theme.text).lineLimit(1)
-                                    Spacer(minLength: 2)
-                                    Text(shortMoney(q.mainInflow)).font(.system(size: 9, design: .rounded)).foregroundStyle(Theme.up)
-                                }
-                                .padding(.vertical, 2)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("行业净流入").font(.system(size: 9)).foregroundStyle(Theme.textDim)
-                        ForEach(s.industriesIn.prefix(6)) { b in
-                            HStack(spacing: 3) {
-                                Text(b.name).font(.system(size: 10)).foregroundStyle(Theme.text).lineLimit(1)
-                                Spacer(minLength: 2)
-                                Text(shortMoney(b.inflow)).font(.system(size: 9, design: .rounded)).foregroundStyle(Theme.up)
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        let inflowRows = Array(s.inflow.prefix(5))
+        let outflowRows = Array(s.outflow.prefix(5))
+        let industryRows = Array(s.industriesIn.prefix(5))
+        let totalIn = s.inflow.reduce(0) { $0 + ($1.mainInflow ?? 0) }
+        let totalOut = s.outflow.reduce(0) { $0 + ($1.mainInflow ?? 0) }
+        return Card(title: "主力追踪", subtitle: "个股与行业当日主力净额") {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(spacing: 6) {
+                    flowMetric("净流入", shortMoney(totalIn), Theme.up)
+                    flowMetric("净流出", shortMoney(totalOut), Theme.down)
+                    flowMetric("净额", shortMoney(totalIn + totalOut), Theme.trendColor(totalIn + totalOut))
                 }
+                HStack(alignment: .top, spacing: 10) {
+                    flowColumn("个股净流入", rows: inflowRows, positive: true)
+                    flowColumn("个股净流出", rows: outflowRows, positive: false)
+                    industryFlowColumn(industryRows)
+                }
+                let chips = Array(s.industriesIn.prefix(4))
                 HStack(spacing: 5) {
-                    ForEach(s.industriesIn.prefix(4)) { b in
-                        Text("行业推荐 · \(b.name)").font(.system(size: 8.5))
+                    ForEach(chips) { b in
+                        Text("资金 · \(b.name)")
+                            .font(.system(size: 8.5))
                             .padding(.horizontal, 5).padding(.vertical, 3)
                             .background(Theme.accent.opacity(0.08))
                             .foregroundStyle(Theme.accent)
                             .clipShape(Capsule())
                     }
                 }
-                if !s.outflow.isEmpty {
-                    HStack(spacing: 6) {
-                        Text("净流出").font(.system(size: 8.5)).foregroundStyle(Theme.textDim)
-                        ForEach(s.outflow.prefix(3)) { q in
-                            Text(q.name).font(.system(size: 8.5)).foregroundStyle(Theme.down)
-                        }
+                Text("主力净额 = 超大单 + 大单净买入。单日容易被一笔大单带偏，连看 3–5 天更可靠。")
+                    .font(.system(size: 9)).foregroundStyle(Theme.textDim).lineSpacing(2)
+            }
+        }
+    }
+
+    private func flowMetric(_ label: String, _ value: String, _ color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.system(size: 8.5)).foregroundStyle(Theme.textDim)
+            Text(value).font(.system(size: 11, weight: .semibold, design: .rounded)).foregroundStyle(color).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(6)
+        .background(Theme.cardSoft)
+        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+    }
+
+    private func flowColumn(_ title: String, rows: [Quote], positive: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title).font(.system(size: 8.5)).foregroundStyle(Theme.textDim)
+            ForEach(rows) { q in
+                NavigationLink {
+                    StockDetailView(code: q.code, name: q.name)
+                } label: {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(q.name).font(.system(size: 9.5)).foregroundStyle(Theme.text).lineLimit(1)
+                        Text(shortMoney(q.mainInflow)).font(.system(size: 8.5, design: .rounded))
+                            .foregroundStyle(positive ? Theme.up : Theme.down).lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 2)
+                }
+                .buttonStyle(.plain)
+            }
+            if rows.isEmpty {
+                Text("暂无数据").font(.system(size: 9)).foregroundStyle(Theme.textDim)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func industryFlowColumn(_ rows: [Board]) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("行业净流入").font(.system(size: 8.5)).foregroundStyle(Theme.textDim)
+            ForEach(rows) { b in
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 2) {
+                        Text(b.name).font(.system(size: 9.5)).foregroundStyle(Theme.text).lineLimit(1)
+                        Spacer(minLength: 1)
+                        Text(b.pct.pct()).font(.system(size: 8)).foregroundStyle(Theme.trendColor(b.pct))
+                    }
+                    Text(shortMoney(b.inflow)).font(.system(size: 8.5, design: .rounded))
+                        .foregroundStyle(Theme.trendColor(b.inflow)).lineLimit(1)
+                }
+                .padding(.vertical, 2)
+            }
+            if rows.isEmpty {
+                Text("板块资金暂缺").font(.system(size: 9)).foregroundStyle(Theme.textDim)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func modelBriefCard(_ s: MarketState) -> some View {
+        let above = s.indices.filter(\.above20).count
+        let buys = s.indices.filter { $0.tdBuy >= 7 }.count
+        let sells = s.indices.filter { $0.tdSell >= 7 }.count
+        let stance: String = s.score >= 58 ? "进攻" : (s.score >= 45 ? "均衡" : "防守")
+        return Card(title: "模型结论", subtitle: "温度 + 均线 + 九转，先定仓位再选股") {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(stance).font(.system(size: 22, weight: .bold)).foregroundStyle(Theme.trendColor(Double(s.score - 50)))
+                    Text("市场温度 \(s.score) · \(s.label)").font(.system(size: 11)).foregroundStyle(Theme.textSub)
+                    Spacer()
+                    NavigationLink { ModelsView() } label: {
+                        Text("量化模型 →").font(.system(size: 10)).foregroundStyle(Theme.accent)
                     }
                 }
+                Text(modelBriefText(s, above: above, buys: buys, sells: sells))
+                    .font(.system(size: 11)).foregroundStyle(Theme.text).lineSpacing(3)
+                HStack(spacing: 5) {
+                    Text("HMM/渗流见量化模型").font(.system(size: 8.5))
+                    Text("站上 MA20 \(above)/\(s.indices.count)").font(.system(size: 8.5))
+                    Text("九转 买 \(buys) / 卖 \(sells)").font(.system(size: 8.5))
+                }
+                .foregroundStyle(Theme.textDim)
             }
+        }
+    }
+
+    private func modelBriefText(_ s: MarketState, above: Int, buys: Int, sells: Int) -> String {
+        let total = max(s.indices.count, 1)
+        var text = "现在市场温度 \(s.score) 分，属于\(s.label)环境。"
+        if above * 2 >= total {
+            text += " \(above)/\(total) 个指数站在 MA20 上方，趋势还在，可以按计划拿住。"
+        } else {
+            text += " 只有 \(above)/\(total) 个指数站在 MA20 上方，先控制仓位，等指数重新站上均线再谈进攻。"
+        }
+        if sells > buys {
+            text += " 九转卖出结构 \(sells) 个、买入结构 \(buys) 个，上涨动能更疲惫，兑现优先于加仓。"
+        } else if buys > sells {
+            text += " 九转买入结构 \(buys) 个、卖出结构 \(sells) 个，低吸机会更多，但要等止跌确认。"
+        } else {
+            text += " 九转买卖结构数量相当，方向不明，按趋势和资金执行。"
+        }
+        return text
+    }
+
+    private func tdCard(_ s: MarketState) -> some View {
+        let buys = s.indices.filter { $0.tdBuy >= 7 }.count
+        let sells = s.indices.filter { $0.tdSell >= 7 }.count
+        return Card(title: "九转模型分析", subtitle: "TD Sequential · 建仓 9 根 / 倒计时 13 根") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("当前 \(buys) 个指数出现买入结构、\(sells) 个出现卖出结构。九转只说明这一段动能累了，不保证立刻反转；买结构要等放量收阳，卖结构跌破 5 日线再减。")
+                    .font(.system(size: 10.5)).foregroundStyle(Theme.textSub).lineSpacing(2)
+                ForEach(s.indices) { i in
+                    HStack(spacing: 8) {
+                        Text(i.short).font(.system(size: 10)).frame(width: 42, alignment: .leading)
+                        tdMeter("买", value: i.tdBuy, color: Theme.up)
+                        tdMeter("卖", value: i.tdSell, color: Theme.down)
+                        Text(i.tdBuy >= 9 ? "买 9/9" : (i.tdSell >= 9 ? "卖 9/9" : "结构未满"))
+                            .font(.system(size: 8.5))
+                            .foregroundStyle(i.tdBuy >= 9 ? Theme.up : (i.tdSell >= 9 ? Theme.down : Theme.textDim))
+                            .frame(width: 52, alignment: .trailing)
+                    }
+                    .padding(.vertical, 2)
+                }
+                Text("怎么用：9 转完成只是衰竭提示；倒计时 13 比 9 更严格。和 MA20、成交额、行业广度同向时，信号才值得下单。")
+                    .font(.system(size: 9)).foregroundStyle(Theme.textDim).lineSpacing(2)
+            }
+        }
+    }
+
+    private func tdMeter(_ label: String, value: Int, color: Color) -> some View {
+        HStack(spacing: 3) {
+            Text(label).font(.system(size: 8)).foregroundStyle(Theme.textDim)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.borderSoft).frame(height: 4)
+                    Capsule().fill(color).frame(width: geo.size.width * min(1, Double(value) / 9), height: 4)
+                }
+            }
+            .frame(height: 4)
+            Text("\(value)/9").font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim).frame(width: 25, alignment: .trailing)
         }
     }
 
@@ -436,14 +559,20 @@ struct DailyView: View {
     }
 
     private func newsCard(_ s: MarketState) -> some View {
-        Card(title: "行情要闻", subtitle: "7×24 快讯 · 推荐关注") {
+        Card(title: "行业要闻", subtitle: "7×24 快讯 · 点击读全文") {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(news.prefix(6)) { n in
                     Link(destination: URL(string: n.url ?? "") ?? URL(string: "https://finance.eastmoney.com/")!) {
                         HStack(alignment: .top, spacing: 6) {
                             Text(String(n.time.suffix(5))).font(.system(size: 8.5, design: .monospaced)).foregroundStyle(Theme.textDim)
-                            Text(n.title).font(.system(size: 10.5)).foregroundStyle(Theme.text).lineLimit(2)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(n.title).font(.system(size: 10.5)).foregroundStyle(Theme.text).lineLimit(2)
+                                if let summary = n.summary, !summary.isEmpty {
+                                    Text(summary).font(.system(size: 8.5)).foregroundStyle(Theme.textDim).lineLimit(1)
+                                }
+                            }
                             Spacer(minLength: 0)
+                            Image(systemName: "arrow.up.right").font(.system(size: 8)).foregroundStyle(Theme.textDim)
                         }
                         .padding(.vertical, 2)
                     }

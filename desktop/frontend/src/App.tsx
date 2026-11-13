@@ -8,6 +8,7 @@ import {
   LineChartOutlined,
   PieChartOutlined,
   ProfileOutlined,
+  ReadOutlined,
   SettingOutlined,
   StarOutlined,
   SyncOutlined,
@@ -35,11 +36,8 @@ import SettingsPage from './pages/Settings'
 import Guide from './pages/Guide'
 import Notes from './pages/Notes'
 import Anomalies from './pages/Anomalies'
-import AssetAnalysis from './pages/AssetAnalysis'
-import AdviceCenter from './pages/AdviceCenter'
 import IndexAnalysis from './pages/IndexAnalysis'
 import HubMap from './pages/HubMap'
-import IndustryNews from './pages/IndustryNews'
 import Models from './pages/Models'
 import Kdj from './pages/Kdj'
 
@@ -47,7 +45,7 @@ const EN_NAV: Record<string, { label: string; title: string; sub: string }> = {
   '/': { label: 'Overview', title: 'Investment Overview', sub: 'Assets, holdings and today\'s market' },
   '/daily': { label: 'Daily Plan', title: 'Daily Plan', sub: 'Market · position sizing · candidates' },
   '/watchlist': { label: 'Watchlist', title: 'Watchlist', sub: 'Symbols you follow' },
-  '/portfolio': { label: 'Portfolio', title: 'Portfolio', sub: 'Trades · cost · P&L' },
+  '/portfolio': { label: 'Portfolio', title: 'Portfolio', sub: 'Positions · analysis · advice · trades' },
   '/analytics': { label: 'Review', title: 'Performance Review', sub: 'NAV · drawdown · statistics' },
   '/backtest': { label: 'Backtest', title: 'Strategy Backtest', sub: 'Test rules on historical data' },
   '/screener': { label: 'Sectors', title: 'Sector Tracker', sub: 'Boards · mood · heatmap' },
@@ -57,7 +55,7 @@ const NAV = [
   { key: '/', label: '总览', icon: <AppstoreOutlined />, title: '投资总览', sub: '资产、持仓与今日市场' },
   { key: '/daily', label: '每日策略', icon: <CalendarOutlined />, title: '每日策略', sub: '每日行情 · 仓位建议 · 标的推荐' },
   { key: '/watchlist', label: '自选行情', icon: <StarOutlined />, title: '自选行情', sub: '关注的标的与分时走势' },
-  { key: '/portfolio', label: '持仓账簿', icon: <ProfileOutlined />, title: '持仓账簿', sub: '交易流水 · 成本 · 盈亏' },
+  { key: '/portfolio', label: '持仓管理', icon: <ProfileOutlined />, title: '持仓管理', sub: '持仓 · 资产分析 · 投资建议 · 交易流水' },
   { key: '/analytics', label: '收益复盘', icon: <PieChartOutlined />, title: '收益复盘', sub: '净值曲线 · 回撤 · 交易统计' },
   { key: '/backtest', label: '策略回测', icon: <ExperimentOutlined />, title: '策略回测', sub: '用历史数据检验交易规则' },
   { key: '/screener', label: '板块跟踪', icon: <FundOutlined />, title: '板块跟踪', sub: '板块 · 市场情绪 · 个股热图' },
@@ -98,12 +96,12 @@ export default function App() {
       if (loc.pathname === '/guide') return { title: 'Guide', sub: 'Install · first run · daily workflow' }
       if (loc.pathname === '/notes') return { title: 'Notes', sub: 'Local notes and observations' }
       if (loc.pathname === '/anomalies') return { title: 'Anomalies', sub: 'Triggered conditions and current hits' }
-      if (loc.pathname === '/asset-analysis') return { title: 'Asset Analysis', sub: 'Allocation · trading habits · trends' }
-      if (loc.pathname === '/advice-center') return { title: 'Advice', sub: 'History · outlook · candidates' }
-      if (loc.pathname === '/index-analysis') return { title: 'Index Analysis', sub: 'A-share and global indices' }
+      if (loc.pathname === '/asset-analysis') return { title: 'Portfolio', sub: 'Asset analysis merged into Portfolio' }
+      if (loc.pathname === '/advice-center') return { title: 'Portfolio', sub: 'Advice merged into Portfolio' }
+      if (loc.pathname === '/index-analysis' || loc.pathname === '/industry-news') return { title: 'Index Analysis', sub: 'A-share and global indices · conclusions' }
       if (loc.pathname === '/models') return { title: 'Quant Models', sub: 'HMM · percolation · position plans' }
       if (loc.pathname === '/kdj') return { title: 'KDJ Alerts', sub: '5m / 30m · J extremes · central zone' }
-      if (loc.pathname === '/industry-news') return { title: 'Industry News', sub: 'Sector headlines and key names' }
+      if (loc.pathname === '/industry-news') return { title: 'Index Analysis', sub: 'A-share and global indices · conclusions' }
       return EN_NAV[loc.pathname] ?? { title: 'StockDesk', sub: '' }
     }
     if (loc.pathname.startsWith('/stock/')) return { title: '个股详情', sub: '行情 · 筹码 · 财务' }
@@ -112,10 +110,10 @@ export default function App() {
     if (loc.pathname === '/guide') return { title: '使用指南', sub: '安装 · 第一次打开 · 每天的使用顺序' }
     if (loc.pathname === '/notes') return { title: '笔记', sub: '本地记录与观察' }
     if (loc.pathname === '/anomalies') return { title: '异常提醒', sub: '触发条件与当前命中' }
-    if (loc.pathname === '/asset-analysis') return { title: '资产分析', sub: '资金分配 · 交易偏好 · 趋势与习惯' }
-    if (loc.pathname === '/advice-center') return { title: '投资建议', sub: '历史总结 · 未来趋势 · 标的推荐' }
-    if (loc.pathname === '/index-analysis') return { title: '指数分析', sub: 'A股主要宽基 · 海外指数 · 建议结论' }
-    if (loc.pathname === '/models') return { title: '量化模型', sub: 'HMM · 渗流 · 行业临界 · 仓位建议' }
+    if (loc.pathname === '/asset-analysis') return { title: '持仓管理', sub: '资产分析已并入持仓管理' }
+    if (loc.pathname === '/advice-center') return { title: '持仓管理', sub: '投资建议已并入持仓管理' }
+    if (loc.pathname === '/index-analysis' || loc.pathname === '/industry-news') return { title: '指数分析', sub: 'A股主要宽基 · 海外指数 · 操作结论' }
+    if (loc.pathname === '/models') return { title: '量化模型', sub: 'HMM · 渗流 · 九转 · 行业关注 · 仓位建议' }
     if (loc.pathname === '/kdj') return { title: 'KDJ 预警', sub: '5m / 30m · 极值区 · 近似中枢' }
     return NAV.find((n) => n.key === loc.pathname) ?? { title: 'StockDesk', sub: '' }
   }, [loc.pathname, lang])
@@ -142,7 +140,11 @@ export default function App() {
           </Link>
         ))}
 
-        <div className="nav-group-label">工具</div>
+        <div className="nav-group-label">{lang === 'en' ? 'TOOLS' : '工具'}</div>
+        <Link to="/guide" className={`nav-item ${loc.pathname === '/guide' ? 'active' : ''}`}>
+          <ReadOutlined />
+          <span>{lang === 'en' ? 'Guide' : '使用指南'}</span>
+        </Link>
         <Tooltip title="布局与数据设置" placement="right">
           <Link to="/settings" className={`nav-item ${loc.pathname === '/settings' ? 'active' : ''}`}>
             <SettingOutlined />
@@ -224,12 +226,12 @@ export default function App() {
               <Route path="/guide" element={<Guide />} />
               <Route path="/notes" element={<Notes />} />
               <Route path="/anomalies" element={<Anomalies />} />
-              <Route path="/asset-analysis" element={<AssetAnalysis />} />
-              <Route path="/advice-center" element={<AdviceCenter />} />
+              <Route path="/asset-analysis" element={<Navigate to="/portfolio?tab=analysis" replace />} />
+              <Route path="/advice-center" element={<Navigate to="/portfolio?tab=advice" replace />} />
               <Route path="/index-analysis" element={<IndexAnalysis />} />
               <Route path="/hub-map" element={<Navigate to="/regions" replace />} />
               <Route path="/regions" element={<HubMap />} />
-              <Route path="/industry-news" element={<IndustryNews />} />
+              <Route path="/industry-news" element={<IndexAnalysis />} />
               <Route path="/models" element={<Models />} />
               <Route path="/kdj" element={<Kdj />} />
               <Route path="*" element={<Navigate to="/" replace />} />

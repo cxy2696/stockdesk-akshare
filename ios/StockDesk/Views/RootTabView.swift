@@ -13,7 +13,6 @@ struct InvestHudHeader: View {
     @AppStorage("stockdesk.lang") private var lang = "zh"
     @AppStorage("stockdesk.uiScale") private var uiScale = 1.0
     @Environment(\.horizontalSizeClass) private var hSize
-    @State private var showHub = false
     @AppStorage("stockdesk.admin.name") private var adminName = "StockDesk"
     @AppStorage("stockdesk.admin.uid") private var adminUid = "LOCAL-0001"
 
@@ -27,7 +26,7 @@ struct InvestHudHeader: View {
     private let right: [(String, String, String)] = [
         ("策略回测", "flask.fill", "backtest"),
         ("地域", "mappin.and.ellipse", "regions"),
-        ("行业要闻", "newspaper.fill", "industry-news"),
+        ("指数分析", "chart.line.uptrend.xyaxis", "index-analysis"),
         ("量化模型", "brain.head.profile", "models"),
         ("KDJ预警", "waveform.path.ecg", "kdj"),
     ]
@@ -90,19 +89,6 @@ struct InvestHudHeader: View {
         .sheet(isPresented: $showSearch) {
             SearchSheet(onSelect: { q in path.append("stock:\(q.code)") })
         }
-        .confirmationDialog(lang == "en" ? "Asset hub" : "资产中枢", isPresented: $showHub, titleVisibility: .visible) {
-            Button(lang == "en" ? "Portfolio" : "持仓管理") { path.append("portfolio") }
-            Button(lang == "en" ? "Asset Analysis" : "资产分析") { path.append("asset-analysis") }
-            Button(lang == "en" ? "Advice" : "投资建议") { path.append("advice-center") }
-            Button(lang == "en" ? "Index Analysis" : "指数分析") { path.append("index-analysis") }
-            Button(lang == "en" ? "Cancel" : "取消", role: .cancel) {}
-        } message: {
-            Text((lang == "en" ? "Total assets ¥" : "总资产 ¥") + store.summary.total.fmt() + (lang == "en" ? " · Exposure " : " · 仓位 ") + (store.summary.total > 0 ? store.summary.marketValue / store.summary.total * 100 : 0).pct(0))
-        }
-        .onAppear {
-            // Screenshot/QA hook: `-showHub` opens the asset-hub dialog.
-            if ProcessInfo.processInfo.arguments.contains("-showHub") { showHub = true }
-        }
     }
 
     private func icon(_ name: String, _ route: String?) -> some View {
@@ -129,7 +115,7 @@ struct InvestHudHeader: View {
 
     private func itemLabel(_ data: (String, String, String)) -> some View {
         let en = ["每日策略": "Daily Plan", "板块跟踪": "Sectors", "收益复盘": "Review",
-                  "策略回测": "Backtest", "地域": "Regions", "行业要闻": "Industry News",
+                  "策略回测": "Backtest", "地域": "Regions", "指数分析": "Index Analysis",
                   "量化模型": "Quant Models", "KDJ预警": "KDJ Alerts"][data.0] ?? data.0
         return HStack(spacing: 7) {
             Image(systemName: data.1).font(.system(size: isPad ? 14 : 12)).foregroundStyle(.black).frame(width: isPad ? 18 : 16)
@@ -191,13 +177,13 @@ struct InvestHudHeader: View {
                 Text("资产中枢").font(.system(size: 15, weight: .bold)).tracking(2).foregroundStyle(.white)
                 HStack(spacing: 4) {
                     Circle().fill(Theme.accent).frame(width: 4, height: 4)
-                    Text("运行中").font(.system(size: 8)).tracking(1.4).foregroundStyle(Theme.accent)
+                    Text(lang == "en" ? "PORTFOLIO" : "持仓管理 · 点击进入").font(.system(size: 8)).tracking(1.2).foregroundStyle(Theme.accent)
                 }
             }
         }
         .aspectRatio(1, contentMode: .fit)
         .contentShape(Circle())
-        .onTapGesture { showHub = true }
+        .onTapGesture { path.append("portfolio") }
         .onAppear { scan = true }
     }
 
@@ -291,7 +277,7 @@ struct MoreView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("StockDesk").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
-                                Text("v3.7.3 · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
+                                Text("v3.8.0 · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
                                 Text("当前 \(ctx.date.formatted(.dateTime.hour().minute().second())) · 数据更新 \(store.lastRefresh.isEmpty ? "--:--:--" : store.lastRefresh)")
                                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.textDim)
                             }
@@ -359,7 +345,7 @@ struct MoreView: View {
                 case "index-analysis": IndexAnalysisView()
                 case "hub-map": HubMapView()
                 case "regions": HubMapView()
-                case "industry-news": IndustryNewsView()
+                case "industry-news": IndexAnalysisView()
                 case "models": ModelsView()
                 case "kdj": KDJView()
                 default:

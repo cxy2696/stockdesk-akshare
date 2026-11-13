@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import advice, backtest, clock, daily, db, kdj, market, patterns as pattern_lib, portfolio, repo, screener, state, technical
+from . import advice, backtest, clock, daily, db, kdj, market, patterns as pattern_lib, portfolio, repo, screener, state, td as td_model, technical
 from .config import APP_VERSION, INDEXES
 
 router = APIRouter()
@@ -65,6 +65,37 @@ def market_models():
 def company_map():
     from .state import company_distribution
     return ok(company_distribution())
+
+
+@router.get("/api/market/td/{code}")
+def market_td(code: str, limit: int = Query(220, ge=30, le=800)):
+    """TD Sequential state for one index or stock."""
+    try:
+        kl = market.klines(code, limit=limit, adjust="")
+    except Exception:
+        kl = []
+    if not kl:
+        raise HTTPException(404, "没有可用的历史行情")
+    seq = td_model.td_sequence(
+        [r["close"] for r in kl],
+        [r.get("high") for r in kl] if all(r.get("high") is not None for r in kl) else None,
+        [r.get("low") for r in kl] if all(r.get("low") is not None for r in kl) else None,
+    )
+    return ok({"code": code, "bars": len(kl), "td": seq,
+               "source": kl[0].get("source") or "eastmoney"})
+
+
+@router.get("/api/market/industry-focus")
+def market_industry_focus():
+    """Industry breadth + flow + key names from the cached model snapshot."""
+    snap = db.cache_get("market:models:v5", 900)
+    if snap:
+        return ok({"focus": snap.get("industry_focus") or [], "td": snap.get("td") or {},
+                   "conclusion": snap.get("conclusion") or {}, "cached": True})
+    from .models import model_snapshot
+    snap = model_snapshot()
+    return ok({"focus": snap.get("industry_focus") or [], "td": snap.get("td") or {},
+               "conclusion": snap.get("conclusion") or {}, "cached": False})
 
 
 @router.get("/api/market/index-analysis")
@@ -180,6 +211,45 @@ def stock_detail(code: str):
         }
     except Exception:
         data["technical"] = {}
+
+    # TD Sequential (九转) on the same daily history used by the chart.
+    try:
+        kl = market.klines(code, limit=220, adjust="")
+        data["td"] = td_model.td_sequence(
+            [r["close"] for r in kl],
+            [r.get("high") for r in kl] if all(r.get("high") is not None for r in kl) else None,
+            [r.get("low") for r in kl] if all(r.get("low") is not None for r in kl) else None,
+        )
+    except Exception:
+        data["td"] = {}
+
+    # Industry focus: use the cached model snapshot instead of triggering a
+    # full-market recompute while the user is just opening a stock.
+    try:
+        snap = db.cache_get("market:models:v5", 900)
+        if snap:
+            ind = data.get("industry") or ""
+            focus = next((x for x in (snap.get("industry_focus") or []) if x.get("name") == ind), None)
+            conclusion = snap.get("conclusion") or {}
+            if focus:
+                data["industry_context"] = {
+                    "name": ind,
+                    "status": focus.get("status"),
+                    "ratio": focus.get("ratio"),
+                    "giant_occupied": focus.get("giant_occupied"),
+                    "flow": focus.get("flow"),
+                    "pct": focus.get("pct"),
+                    "focus": focus.get("focus"),
+                    "watch": focus.get("watch") or [],
+                }
+            elif conclusion:
+                data["industry_context"] = {
+                    "name": ind or "行业数据尚未就绪",
+                    "focus": conclusion.get("text"),
+                    "watch": [],
+                }
+    except Exception:
+        pass
     return ok(data)
 
 

@@ -31,16 +31,48 @@ FS_A = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
 _spot_lock = __import__("threading").Lock()
 
 
-def _http_json(url: str, timeout: float = 8.0) -> dict:
+_EM_STATE = {"fails": 0, "last": 0.0, "down_until": 0.0}
+_EM_LOCK = __import__("threading").Lock()
+
+
+def _em_available() -> bool:
+    return time.time() >= _EM_STATE["down_until"]
+
+
+def _em_failed() -> None:
+    """Open a short circuit after two quick failures.
+
+    Eastmoney occasionally answers 502 for minutes at a time.  Without a
+    breaker every kline/board/quote call waits for its own 8 s timeout and the
+    daily page takes minutes to paint.  The circuit is per-host and self-heals
+    after 45 s, so a single transient error still falls through normally.
+    """
+    now = time.time()
+    with _EM_LOCK:
+        if now - _EM_STATE["last"] > 30:
+            _EM_STATE["fails"] = 0
+        _EM_STATE["fails"] += 1
+        _EM_STATE["last"] = now
+        if _EM_STATE["fails"] >= 2:
+            _EM_STATE["down_until"] = now + 45
+
+
+def _http_json(url: str, timeout: float = 6.0) -> dict:
     """GET JSON from Eastmoney with a short socket timeout.
 
-    IPv4 is preferred for these hosts (see backend/net.py). No cross-request
-    breaker is used: a single transient board/quote failure must not poison the
-    unrelated endpoints or force a lower-quality fallback for seconds.
+    IPv4 is preferred for these hosts (see backend/net.py).  A very short
+    per-host circuit breaker keeps a blocked quote host from serialising every
+    page behind its timeout.
     """
+    if not _em_available():
+        raise RuntimeError("eastmoney circuit open")
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://quote.eastmoney.com/"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8", "ignore"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8", "ignore"))
+    except Exception:
+        _em_failed()
+        raise
 
 
 def _num(v, default=None):
@@ -127,16 +159,37 @@ def _money_cn(v) -> float | None:
         return None
 
 
-def _fund_flow() -> dict[str, dict]:
+_FUND_LOCK = __import__("threading").Lock()
+
+
+def _fund_flow(top: int = 900) -> dict[str, dict]:
+    """Individual main-force flow from Sina, merged from both tails.
+
+    The old request asked for all ~6,000 rows at once and took 20–40 s on a
+    normal connection.  The page only needs the strongest inflows and
+    outflows, so we fetch both sorted tails (900 rows each) in parallel and
+    merge them.  That keeps the card complete while cutting payload ~3×.
+    """
     cached = db.cache_get("fund:individual", 60)
     if cached is not None:
         return cached
-    out: dict[str, dict] = {}
-    try:
-        url = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
-               "MoneyFlow.ssl_bkzj_ssggzj?page=1&num=6000&sort=netamount&asc=0")
-        req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
-        rows = json.loads(urllib.request.urlopen(req, timeout=15).read().decode("utf-8", "ignore"))
+    with _FUND_LOCK:
+        cached = db.cache_get("fund:individual", 60)
+        if cached is not None:
+            return cached
+        out: dict[str, dict] = {}
+        base = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+                "MoneyFlow.ssl_bkzj_ssggzj?page=1&num={num}&sort=netamount&asc={asc}")
+
+        def fetch(asc: int):
+            url = base.format(num=max(100, top), asc=asc)
+            req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
+            return json.loads(urllib.request.urlopen(req, timeout=10).read().decode("utf-8", "ignore"))
+
+        rows = []
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            for part in ex.map(fetch, (0, 1)):
+                rows.extend(part or [])
         for r in rows:
             code = str(r.get("symbol") or "")[-6:]
             if not code.isdigit():
@@ -146,14 +199,13 @@ def _fund_flow() -> dict[str, dict]:
                 "inflow": _num(r.get("inamount")),
                 "outflow": _num(r.get("outamount")),
             }
-    except Exception as e:
-        try:
-            db.cache_set("fund:error", {"error": repr(e)[:900], "ts": time.time()})
-        except Exception:
-            pass
-    if out:
-        db.cache_set("fund:individual", out)
-    return out
+        if out:
+            db.cache_set("fund:individual", out)
+        else:
+            # Cache the failure briefly so a blocked Sina endpoint does not add
+            # a fresh timeout to every page that renders flows.
+            db.cache_set("fund:individual", {})
+        return out
 
 
 def _sina_industry_flow() -> list[dict]:
@@ -346,10 +398,23 @@ def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
     pages can overlap while prices move and some Beijing listings are missing.
     We dedupe by code, then fill every bundled universe symbol from Sina so the
     table stays complete even when a page is skipped.
+
+    Only one thread may build the snapshot.  Without this lock the daily page,
+    the model snapshot and the hot board all trigger their own full-market
+    download the moment the cache expires, which turned a 3 s fetch into a
+    multi-minute stall on a slow network.
     """
     cached = db.cache_get("spot:v3", ttl)
     if cached and cached.get("total", 0) >= 5500:
         return cached
+    with _spot_lock:
+        cached = db.cache_get("spot:v3", ttl)
+        if cached and cached.get("total", 0) >= 5500:
+            return cached
+        return _fetch_spot_unlocked(ttl, progress)
+
+
+def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
     base = (
         f"{EM_LIST}?po=1&np=1&fltt=2&invt=2&fid=f12&fs={urllib.parse.quote(FS_A)}"
         f"&fields={SPOT_FIELDS}"
@@ -594,6 +659,49 @@ def _akshare_klines(code: str, period: str, limit: int, adjust: str, secid_overr
         return []
 
 
+def _sina_klines(code: str, period: str, limit: int, adjust: str, secid_override: str | None = None) -> list[dict]:
+    """Stdlib Sina daily-bar fallback.
+
+    Works without akshare and is markedly faster than the token endpoint on
+    networks where Eastmoney is rate-limited.  Only daily bars are available;
+    prices are unadjusted, which is fine for patterns, TD and regime work.
+    """
+    if period != "daily":
+        return []
+    sec = secid_override or secid(code)
+    if sec.startswith("1."):
+        prefix = "sh"
+    elif code.startswith(("4", "8", "92")):
+        prefix = "bj"
+    else:
+        prefix = "sz"
+    symbol = f"{prefix}{code}"
+    url = (f"https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+           f"CN_MarketData.getKLineData?symbol={symbol}&scale=240&ma=no&datalen={max(20, min(1023, int(limit)))}")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
+        data = json.loads(urllib.request.urlopen(req, timeout=8).read().decode("utf-8", "ignore"))
+    except Exception:
+        return []
+    rows = []
+    prev = None
+    for r in data or []:
+        close = _num(r.get("close"))
+        if close is None:
+            continue
+        pct = ((close / prev - 1) * 100) if prev else 0.0
+        rows.append({
+            "date": str(r.get("day") or "")[:10], "open": _num(r.get("open")),
+            "close": close, "high": _num(r.get("high")), "low": _num(r.get("low")),
+            "volume": _num(r.get("volume"), 0), "amount": _num(r.get("amount"), 0),
+            "amplitude": None, "pct": round(pct, 2),
+            "chg": round(close - prev, 3) if prev else 0, "turnover": None,
+            "source": "sina",
+        })
+        prev = close
+    return rows[-max(10, int(limit)):]
+
+
 def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qfq", secid_override: str | None = None) -> list[dict]:
     adjust = adjust if adjust in ("", "qfq", "hfq") else "qfq"
     fqt = {"": 0, "qfq": 1, "hfq": 2}[adjust]
@@ -636,6 +744,8 @@ def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qf
             }
         )
     rows = rows[-max(10, int(limit)):]
+    if not rows:
+        rows = _sina_klines(code, period, limit, adjust, secid_override)
     if not rows:
         return _akshare_klines(code, period, limit, adjust, secid_override)
     if rows and any((r["close"] or 0) < 0 for r in rows):

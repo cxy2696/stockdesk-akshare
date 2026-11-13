@@ -166,7 +166,7 @@ export default function SettingsPage() {
         <Card title="关于 StockDesk">
           <Descriptions size="small" column={2} colon={false} labelStyle={{ color: 'var(--text-sub)', width: 110 }} contentStyle={{ color: 'var(--text)' }}>
             <Descriptions.Item label="应用">StockDesk · 个人股票投资台</Descriptions.Item>
-            <Descriptions.Item label="版本">v1.9.0</Descriptions.Item>
+            <Descriptions.Item label="版本">v1.11.0</Descriptions.Item>
             <Descriptions.Item label="定位">本地优先、单用户、离线可用的投资工作台</Descriptions.Item>
             <Descriptions.Item label="技术栈">FastAPI + React + ECharts</Descriptions.Item>
             <Descriptions.Item label="数据存储">SQLite（本地 data 目录）</Descriptions.Item>

@@ -10,7 +10,6 @@ import { fmt, trendClass, UP, DOWN } from '../utils'
 import { useTheme } from '../ThemeContext'
 
 export default function Analytics() {
-  const { mode } = useTheme()
   const [data, setData] = useState<any>(null)
   const [market, setMarket] = useState<any>(null)
   const [advice, setAdvice] = useState<any>(null)
@@ -333,7 +332,7 @@ function ReviewCard({ data, market }: { data: any; market: any }) {
   return (
     <Card
       title="复盘总结"
-      desc="基于账户与市场数据自动生成"
+      desc="按账户净值、交易记录与大盘数据汇总"
       extra={<Tag color={r.beat ? 'red' : 'green'}>{r.beat ? '跑赢基准' : '跑输基准'}</Tag>}
     >
       <div className="review-headline">{r.headline}</div>
@@ -370,45 +369,175 @@ function ReviewCard({ data, market }: { data: any; market: any }) {
 
 function TrendChart({ series, height }: { series: any[]; height: number }) {
   const { colors } = useTheme()
+  const rows = Array.isArray(series) ? series : []
   const option = useMemo<any>(() => {
-    const nav = series.map((s) => +((s.nav - 1) * 100).toFixed(2))
-    const ma = (n: number) =>
-      series.map((_: any, i: number) => {
+    const dates = rows.map((s) => s.date)
+    const nav = rows.map((s) => {
+      const v = Number(s.nav)
+      return Number.isFinite(v) ? +((v - 1) * 100).toFixed(2) : null
+    })
+    const movingAvg = (n: number) => {
+      let sum = 0
+      return rows.map((s: any, i: number) => {
+        const v = Number(s.nav)
+        if (!Number.isFinite(v)) return null
+        sum += v
+        if (i >= n) sum -= Number(rows[i - n].nav)
         if (i < n - 1) return null
-        const slice = series.slice(i - n + 1, i + 1)
-        return +((slice.reduce((a: number, b: any) => a + b.nav, 0) / n - 1) * 100).toFixed(2)
+        return +((sum / n - 1) * 100).toFixed(2)
       })
+    }
+    const ma20 = movingAvg(20)
+    const ma60 = movingAvg(60)
+
+    const plotted = [...nav, ...ma20, ...ma60].filter((v): v is number => v !== null && Number.isFinite(v))
+    const dataLow = plotted.length ? Math.min(...plotted) : 0
+    const dataHigh = plotted.length ? Math.max(...plotted) : 0
+    let yMin: number
+    let yMax: number
+    if (dataHigh - dataLow < 0.05) {
+      // 单点或全平的曲线：给点留出空间，同时保留 0% 参考线。
+      if (Math.abs(dataLow) < 0.001 && Math.abs(dataHigh) < 0.001) {
+        yMin = -0.5
+        yMax = 0.5
+      } else {
+        const span = Math.max(0.5, Math.abs(dataHigh) * 0.25, Math.abs(dataLow) * 0.25)
+        yMin = dataLow >= 0 ? -0.05 : +(dataLow - span).toFixed(2)
+        yMax = dataHigh <= 0 ? 0.05 : +(dataHigh + span).toFixed(2)
+      }
+    } else {
+      const pad = Math.max((dataHigh - dataLow) * 0.18, 0.35)
+      const tiny = +(pad * 0.06).toFixed(2)
+      yMin = dataLow >= 0 ? -tiny : +(dataLow - pad).toFixed(2)
+      yMax = dataHigh <= 0 ? tiny : +(dataHigh + pad).toFixed(2)
+    }
+    const fewPoints = dates.length <= 2
+
+    const pct = (v: number | null) => (v === null ? '--' : `${v > 0 ? '+' : ''}${v.toFixed(2)}%`)
+
     return {
       animation: false,
-      grid: { left: 44, right: 16, top: 30, bottom: 28 },
-      legend: { top: 0, right: 8, itemWidth: 10, itemHeight: 2, textStyle: { color: colors.textSub, fontSize: 10 }, data: ['净值', 'MA20', 'MA60'] },
+      grid: { left: 44, right: 16, top: 32, bottom: 28 },
+      legend: {
+        top: 0,
+        right: 8,
+        itemWidth: 14,
+        itemHeight: 3,
+        icon: 'roundRect',
+        selectedMode: true,
+        inactiveColor: colors.axis,
+        textStyle: { color: colors.textSub, fontSize: 10.5 },
+        data: ['净值', 'MA20', 'MA60'],
+      },
       tooltip: {
         trigger: 'axis',
         backgroundColor: colors.tooltipBg,
         borderColor: colors.tooltipBorder,
         textStyle: { color: colors.tooltipText, fontSize: 11.5 },
-        valueFormatter: (v: any) => (v === null || v === undefined ? '--' : `${v > 0 ? '+' : ''}${v}%`),
+        axisPointer: { type: 'line', lineStyle: { color: colors.axis, opacity: 0.35 } },
+        formatter: (params: any) => {
+          const list = Array.isArray(params) ? params : [params]
+          const pick = (name: string) => {
+            const p = list.find((x: any) => x.seriesName === name)
+            if (!p) return null
+            const n = Number(p.value)
+            return Number.isFinite(n) ? n : null
+          }
+          const base = `<div style="font-size:10px;color:${colors.axis};margin-bottom:4px">${list[0]?.axisValue ?? ''}</div>`
+          const navLine = `<div style="display:flex;gap:18px;justify-content:space-between"><span>相对净值</span><b style="color:${colors.accent}">${pct(pick('净值'))}</b></div>`
+          const lines = [base, navLine]
+          if (rows.length >= 20) {
+            lines.push(`<div style="display:flex;gap:18px;justify-content:space-between"><span>MA20</span><b style="color:#2EC4B6">${pct(pick('MA20'))}</b></div>`)
+          }
+          if (rows.length >= 60) {
+            lines.push(`<div style="display:flex;gap:18px;justify-content:space-between"><span>MA60</span><b style="color:#B08CFF">${pct(pick('MA60'))}</b></div>`)
+          }
+          return lines.join('')
+        },
       },
       xAxis: {
         type: 'category',
-        data: series.map((s) => s.date),
+        data: dates,
+        boundaryGap: fewPoints,
         axisLine: { lineStyle: { color: colors.grid } },
         axisLabel: { color: colors.axis, fontSize: 9.5, hideOverlap: true },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'value',
+        min: yMin,
+        max: yMax,
         axisLabel: { color: colors.axis, fontSize: 10, formatter: '{value}%' },
         splitLine: { lineStyle: { color: colors.grid, type: 'dashed' } },
       },
       series: [
-        { name: '净值', type: 'line', data: nav, symbol: 'none', lineStyle: { width: 2, color: colors.accent }, z: 3 },
-        { name: 'MA20', type: 'line', data: ma(20), symbol: 'none', smooth: true, lineStyle: { width: 1.2, color: colors.amber }, z: 2 },
-        { name: 'MA60', type: 'line', data: ma(60), symbol: 'none', smooth: true, lineStyle: { width: 1.2, color: colors.purple, type: 'dashed' }, z: 2 },
+        {
+          name: '净值',
+          type: 'line',
+          data: nav,
+          symbol: fewPoints ? 'circle' : 'none',
+          symbolSize: 5,
+          showSymbol: fewPoints,
+          itemStyle: { color: colors.accent, borderColor: colors.card, borderWidth: 1 },
+          lineStyle: { width: 2.2, color: colors.accent },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: colors.accent + '26' },
+                { offset: 1, color: colors.accent + '00' },
+              ],
+            },
+          },
+          markLine: {
+            silent: true,
+            symbol: 'none',
+            lineStyle: { color: colors.axis, width: 1, type: 'dashed', opacity: 0.55 },
+            label: { show: true, position: 'insideEndTop', formatter: '0%', color: colors.axis, fontSize: 9 },
+            data: [{ yAxis: 0 }],
+          },
+          z: 3,
+        },
+        {
+          name: 'MA20',
+          type: 'line',
+          data: ma20,
+          symbol: 'none',
+          smooth: true,
+          connectNulls: false,
+          itemStyle: { color: '#2EC4B6' },
+          lineStyle: { width: 1.4, color: '#2EC4B6' },
+          z: 2,
+        },
+        {
+          name: 'MA60',
+          type: 'line',
+          data: ma60,
+          symbol: 'none',
+          smooth: true,
+          connectNulls: false,
+          itemStyle: { color: '#B08CFF' },
+          lineStyle: { width: 1.2, color: '#B08CFF', type: 'dashed' },
+          z: 2,
+        },
       ],
     }
-  }, [series, colors])
-  return <EChart option={option} height={height} />
+  }, [rows, colors])
+  if (!rows.length) {
+    return <ChartEmpty height={height} text="暂无净值数据，记一笔交易后开始计算" color={colors.axis} border={colors.grid} />
+  }
+  return (
+    <div>
+      <EChart option={option} height={height} />
+      {rows.length === 1 && (
+        <ChartNote text="只有 1 个交易日的数据，曲线会在第二个交易日后展开；MA20 / MA60 需要至少 20 / 60 个交易日才会出现。" color={colors.textSub} />
+      )}
+    </div>
+  )
 }
 
 function MarketVerdictCard({ market }: { market: any }) {
@@ -534,30 +663,55 @@ function shortMoney(v?: number | null) {
 
 function PositionChart({ series, height }: { series: any[]; height: number }) {
   const { colors } = useTheme()
+  const rows = Array.isArray(series) ? series : []
   const option = useMemo<any>(() => {
-    const dates = series.map((s) => s.date)
-    const pos = series.map((s) => (s.total ? +((s.mv / s.total) * 100).toFixed(2) : 0))
-    const cash = series.map((s) => (s.total ? +((s.cash / s.total) * 100).toFixed(2) : 0))
+    const dates = rows.map((s) => s.date)
+    const pos = rows.map((s) => (s.total ? +((s.mv / s.total) * 100).toFixed(2) : 0))
+    const cash = rows.map((s) => (s.total ? +((s.cash / s.total) * 100).toFixed(2) : 0))
+    const fewPoints = dates.length <= 2
     return {
       animation: false,
-      grid: { left: 44, right: 16, top: 30, bottom: 28 },
-      legend: { top: 0, right: 8, itemWidth: 10, itemHeight: 2, textStyle: { color: colors.textSub, fontSize: 10 }, data: ['持仓', '现金'] },
+      grid: { left: 44, right: 16, top: 32, bottom: 28 },
+      legend: {
+        top: 0,
+        right: 8,
+        itemWidth: 14,
+        itemHeight: 3,
+        icon: 'roundRect',
+        selectedMode: true,
+        inactiveColor: colors.axis,
+        textStyle: { color: colors.textSub, fontSize: 10.5 },
+        data: ['持仓', '现金'],
+      },
       tooltip: {
         trigger: 'axis',
         backgroundColor: colors.tooltipBg,
         borderColor: colors.tooltipBorder,
         textStyle: { color: colors.tooltipText, fontSize: 11.5 },
-        valueFormatter: (v: any) => `${v}%`,
+        axisPointer: { type: 'line', lineStyle: { color: colors.axis, opacity: 0.35 } },
+        formatter: (params: any) => {
+          const list = Array.isArray(params) ? params : [params]
+          const val = (name: string) => {
+            const p = list.find((x: any) => x.seriesName === name)
+            const n = p ? Number(p.value) : NaN
+            return Number.isFinite(n) ? `${n.toFixed(2)}%` : '--'
+          }
+          return `<div style="font-size:10px;color:${colors.axis};margin-bottom:4px">${list[0]?.axisValue ?? ''}</div>
+            <div style="display:flex;gap:18px;justify-content:space-between"><span>持仓</span><b style="color:${colors.accent}">${val('持仓')}</b></div>
+            <div style="display:flex;gap:18px;justify-content:space-between"><span>现金</span><b style="color:${colors.amber}">${val('现金')}</b></div>`
+        },
       },
       xAxis: {
         type: 'category',
         data: dates,
+        boundaryGap: fewPoints,
         axisLine: { lineStyle: { color: colors.grid } },
         axisLabel: { color: colors.axis, fontSize: 9.5, hideOverlap: true },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'value',
+        min: 0,
         max: 100,
         axisLabel: { color: colors.axis, fontSize: 10, formatter: '{value}%' },
         splitLine: { lineStyle: { color: colors.grid, type: 'dashed' } },
@@ -567,43 +721,87 @@ function PositionChart({ series, height }: { series: any[]; height: number }) {
           name: '持仓',
           type: 'line',
           data: pos,
-          symbol: 'none',
-          smooth: 0.1,
-          lineStyle: { width: 1.6, color: colors.accent },
-          areaStyle: { color: colors.accent + '2A' },
+          symbol: fewPoints ? 'circle' : 'none',
+          symbolSize: 5,
+          showSymbol: fewPoints,
+          smooth: fewPoints ? false : 0.1,
+          itemStyle: { color: colors.accent, borderColor: colors.card, borderWidth: 1 },
+          lineStyle: { width: 2.2, color: colors.accent },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: colors.accent + '33' },
+                { offset: 1, color: colors.accent + '00' },
+              ],
+            },
+          },
+          z: 3,
         },
         {
           name: '现金',
           type: 'line',
           data: cash,
-          symbol: 'none',
-          smooth: 0.1,
-          lineStyle: { width: 1.3, color: colors.amber, type: 'dashed' },
+          symbol: fewPoints ? 'circle' : 'none',
+          symbolSize: 4,
+          showSymbol: fewPoints,
+          smooth: fewPoints ? false : 0.1,
+          itemStyle: { color: colors.amber },
+          lineStyle: { width: 1.4, color: colors.amber, type: 'dashed' },
+          z: 2,
         },
       ],
     }
-  }, [series, colors])
-  return <EChart option={option} height={height} />
+  }, [rows, colors])
+  if (!rows.length) {
+    return <ChartEmpty height={height} text="暂无仓位数据，记一笔交易后开始计算" color={colors.axis} border={colors.grid} />
+  }
+  return (
+    <div>
+      <EChart option={option} height={height} />
+      {rows.length === 1 && (
+        <ChartNote text="只有 1 个交易日的数据，仓位曲线会在第二个交易日后展开。" color={colors.textSub} />
+      )}
+    </div>
+  )
 }
 
 function DrawdownChart({ drawdown, height }: { drawdown: any[]; height: number }) {
   const { colors } = useTheme()
+  const rows = Array.isArray(drawdown) ? drawdown : []
   const option = useMemo<any>(() => {
-    const dates = drawdown.map((d) => d.date)
-    const vals = drawdown.map((d) => d.dd)
+    const dates = rows.map((d) => d.date)
+    const vals = rows.map((d) => {
+      const v = Number(d.dd)
+      return Number.isFinite(v) ? v : 0
+    })
+    const minVal = vals.length ? Math.min(...vals) : 0
+    const fewPoints = dates.length <= 2
+    const yMin = minVal < 0 ? +(minVal * 1.18).toFixed(2) : -1
     return {
       animation: false,
-      grid: { left: 44, right: 14, top: 20, bottom: 26 },
+      grid: { left: 44, right: 14, top: 24, bottom: 26 },
       tooltip: {
         trigger: 'axis',
         backgroundColor: colors.tooltipBg,
         borderColor: colors.tooltipBorder,
         textStyle: { color: colors.tooltipText, fontSize: 11.5 },
-        valueFormatter: (v: any) => `${v}%`,
+        axisPointer: { type: 'line', lineStyle: { color: colors.axis, opacity: 0.35 } },
+        formatter: (params: any) => {
+          const p = Array.isArray(params) ? params[0] : params
+          const n = Number(p?.value)
+          return `<div style="font-size:10px;color:${colors.axis};margin-bottom:4px">${p?.axisValue ?? ''}</div>
+            <div style="display:flex;gap:18px;justify-content:space-between"><span>回撤</span><b style="color:${colors.down}">${Number.isFinite(n) ? `${n.toFixed(2)}%` : '--'}</b></div>`
+        },
       },
       xAxis: {
         type: 'category',
         data: dates,
+        boundaryGap: fewPoints,
         axisLine: { lineStyle: { color: colors.grid } },
         axisLabel: { color: colors.axis, fontSize: 9.5, hideOverlap: true },
         axisTick: { show: false },
@@ -611,36 +809,95 @@ function DrawdownChart({ drawdown, height }: { drawdown: any[]; height: number }
       yAxis: {
         type: 'value',
         max: 0,
+        min: yMin,
         axisLabel: { color: colors.axis, fontSize: 10, formatter: '{value}%' },
         splitLine: { lineStyle: { color: colors.grid, type: 'dashed' } },
       },
       series: [
         {
+          name: '回撤',
           type: 'line',
           data: vals,
-          symbol: 'none',
-          smooth: 0.15,
-          lineStyle: { color: colors.down, width: 1.5 },
+          symbol: fewPoints ? 'circle' : 'none',
+          symbolSize: 5,
+          showSymbol: fewPoints,
+          smooth: fewPoints ? false : 0.15,
+          itemStyle: { color: colors.down, borderColor: colors.card, borderWidth: 1 },
+          lineStyle: { color: colors.down, width: 1.8 },
           areaStyle: {
             color: {
               type: 'linear',
               x: 0, y: 0, x2: 0, y2: 1,
               colorStops: [
                 { offset: 0, color: colors.down + '0D' },
-                { offset: 1, color: colors.down + '59' },
+                { offset: 1, color: colors.down + '5C' },
               ],
             },
           },
-          markLine: {
-            silent: true,
-            symbol: 'none',
-            lineStyle: { color: colors.up + '99', type: 'dashed' },
-            label: { color: colors.up, fontSize: 10, formatter: '最大回撤' },
-            data: [{ yAxis: Math.min(...vals) }],
-          },
+          markLine: vals.length
+            ? {
+                silent: true,
+                symbol: 'none',
+                lineStyle: { color: colors.up + 'B3', type: 'dashed', width: 1 },
+                label: {
+                  show: true,
+                  position: 'insideEndTop',
+                  color: colors.up,
+                  fontSize: 10,
+                  formatter: `最大回撤 ${minVal.toFixed(2)}%`,
+                },
+                data: [{ yAxis: minVal }],
+              }
+            : undefined,
         },
       ],
     }
-  }, [drawdown, colors])
-  return <EChart option={option} height={height} />
+  }, [rows, colors])
+  if (!rows.length) {
+    return <ChartEmpty height={height} text="暂无回撤数据，记一笔交易后开始计算" color={colors.axis} border={colors.grid} />
+  }
+  return (
+    <div>
+      <EChart option={option} height={height} />
+      {rows.length === 1 && (
+        <ChartNote text="只有 1 个交易日的数据，回撤曲线会在第二个交易日后展开。" color={colors.textSub} />
+      )}
+    </div>
+  )
+}
+
+function ChartEmpty({
+  height,
+  text,
+  color,
+  border,
+}: {
+  height: number
+  text: string
+  color: string
+  border: string
+}) {
+  return (
+    <div
+      style={{
+        height,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        border: `1px dashed ${border}`,
+        borderRadius: 10,
+        color,
+        fontSize: 12,
+      }}
+    >
+      <span style={{ fontSize: 22, opacity: 0.55 }}>◌</span>
+      <span>{text}</span>
+    </div>
+  )
+}
+
+function ChartNote({ text, color }: { text: string; color: string }) {
+  return <div style={{ marginTop: 6, fontSize: 11.5, color, lineHeight: 1.6 }}>{text}</div>
 }

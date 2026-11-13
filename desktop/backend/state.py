@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import math
+import threading
 import time
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
-from . import clock, db, market
+from . import clock, db, market, td
 
 INDEX_SECIDS = {
     "000001": "1.000001",
@@ -114,12 +116,26 @@ def market_state() -> dict:
         return cached
 
     # ---- index trend
-    idx = market.indices()
+    # Quote and history calls hit different endpoints; run them together so a
+    # blocked kline host does not make the whole page wait for the quote host.
+    def _rows_for(item):
+        code, sec = item
+        try:
+            return code, market.klines(code, limit=160, adjust="", secid_override=sec)
+        except Exception:
+            return code, []
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        idx_future = ex.submit(market.indices)
+        row_futures = [ex.submit(_rows_for, item) for item in INDEX_SECIDS.items()]
+        rows_by_code = dict(f.result() for f in row_futures)
+        idx = idx_future.result()
+
     by_code = {i["code"]: i for i in idx}
     details = []
     closes_by_code: dict[str, list[float]] = {}
-    for code, sec in INDEX_SECIDS.items():
-        rows = market.klines(code, limit=160, adjust="", secid_override=sec)
+    for code, _sec in INDEX_SECIDS.items():
+        rows = rows_by_code.get(code) or []
         closes = [r["close"] for r in rows]
         closes_by_code[code] = closes
         q = by_code.get(code, {})
@@ -127,7 +143,11 @@ def market_state() -> dict:
         ma20, ma60 = _ma(closes, 20), _ma(closes, 60)
         price = q.get("price") or (closes[-1] if closes else None)
         dif, dea = _macd(closes)
-        td_buy, td_sell = _td(closes)
+        td_now = td.td_sequence(closes,
+                                [r.get("high") for r in rows] if rows else None,
+                                [r.get("low") for r in rows] if rows else None)
+        td_buy = td_now.get("buy", {}).get("count", 0) if td_now.get("available") else 0
+        td_sell = td_now.get("sell", {}).get("count", 0) if td_now.get("available") else 0
         rsi_now = _rsi(closes)
         bottom_dull = False
         if len(rows) >= 60 and rsi_now is not None:
@@ -162,6 +182,7 @@ def market_state() -> dict:
             "macd_dea": dea,
             "td_buy": td_buy,
             "td_sell": td_sell,
+            "td": td_now,
             "bottom_dull": bottom_dull,
             "pct7": round(_pct(closes, 7), 2) if _pct(closes, 7) is not None else None,
             "pct30": round(_pct(closes, 30), 2) if _pct(closes, 30) is not None else None,
@@ -334,7 +355,24 @@ def _ths_board_rows(name: str) -> list[dict]:
         return []
 
 
+_BOARD_LOCKS: dict[str, threading.Lock] = {}
+
+
 def _board_rows(kind: str = "industry") -> list[dict]:
+    # Single-flight: the daily brief, hot board, industry focus and industry
+    # trends all ask for the same list at the same time on first paint.  One
+    # thread fetches; the rest wait and read the freshly cached copy.
+    lock = _BOARD_LOCKS.setdefault(kind, threading.Lock())
+    with lock:
+        return _board_rows_inner(kind)
+
+
+def _board_rows_inner(kind: str = "industry") -> list[dict]:
+    # Cache the raw list for 30 s so one page does not fetch it five times.
+    cache_key = f"boards:rows:v2:{kind}"
+    cached = db.cache_get(cache_key, 30)
+    if cached:
+        return cached
     fs = "m:90+t:2" if kind == "industry" else "m:90+t:3"
     url = (
         f"{market.EM_LIST}?pn=1&pz=120&po=1&np=1&fltt=2&invt=2&fid=f3&fs={fs}"
@@ -373,6 +411,8 @@ def _board_rows(kind: str = "industry") -> list[dict]:
                     "leader": r.get("leader"), "leader_code": None,
                     "leader_pct": r.get("leader_pct"), "kind": kind,
                 })
+    if out:
+        db.cache_set(cache_key, out)
     return out
 
 
@@ -511,41 +551,109 @@ def limit_pool(direction: str = "up", limit: int = 30) -> list[dict]:
     } for r in pool[:limit]]
 
 
+def _hot_timing(msg: str) -> None:
+    import os
+    if os.environ.get("STOCKDESK_DEBUG_TIMING") == "1":
+        print(f"[hot] {msg}", file=__import__("sys").stderr, flush=True)
+
+
 def hot_board(limit: int = 10) -> dict:
+    """Main-force flow board.
+
+    Eastmoney spot rows already carry f62 (main net inflow).  Sina's money-flow
+    snapshot fills the gaps when Eastmoney is rate-limited.  The two sources are
+    merged by code instead of overwriting each other, so a partial Sina response
+    no longer blanks the whole card — the previous behaviour looked like
+    "主力追踪没有数据" even though Eastmoney had returned f62.
+    """
+    key = f"market:hot:v2:{limit}"
+    cached = db.cache_get(key, 60)
+    if cached:
+        return cached
+    t0 = time.time()
     spot = db.cache_get("spot:v3", 600)
     if not spot:
         try:
             spot = market.fetch_spot(ttl=600)
         except Exception:
             spot = None
+    _hot_timing(f"spot {time.time() - t0:.1f}s")
     rows = [
-        r for r in (spot or {}).get("rows", [])
-        if r.get("price") and (r.get("amount") or 0) > 0
+        dict(r) for r in (spot or {}).get("rows", [])
+        if r.get("code") and r.get("price") and (r.get("amount") or 0) > 0
         and "退" not in (r.get("name") or "") and "ST" not in (r.get("name") or "").upper()
     ]
+    t1 = time.time()
     flow = market._fund_flow()
+    _hot_timing(f"fund_flow {time.time() - t1:.1f}s rows={len(flow)}")
     for r in rows:
-        f = flow.get(r.get("code"))
-        if f:
-            r.update(f)
+        f = flow.get(r.get("code")) or {}
+        if f.get("main_inflow") is not None:
+            r["main_inflow"] = f["main_inflow"]
+        if f.get("inflow") is not None:
+            r["inflow"] = f["inflow"]
+        if f.get("outflow") is not None:
+            r["outflow"] = f["outflow"]
+        amount = r.get("amount") or 0
+        if r.get("main_inflow") is not None and amount > 0:
+            r["main_pct"] = round(r["main_inflow"] / amount * 100, 2)
 
     def slim(r):
         return {
             "code": r.get("code"), "name": r.get("name"), "price": r.get("price"),
             "pct": r.get("pct"), "amount": r.get("amount"), "mcap": r.get("mcap"),
-            "inflow": r.get("main_inflow"), "industry": r.get("industry"),
-            "speed": r.get("speed"), "volume_ratio": r.get("volume_ratio"),
+            "inflow": r.get("main_inflow"), "main_pct": r.get("main_pct"),
+            "industry": r.get("industry"), "speed": r.get("speed"),
+            "volume_ratio": r.get("volume_ratio"),
         }
+
+    # Only genuinely negative rows may appear in the outflow list: sorting with
+    # a large sentinel used to pull in stocks whose flow was null.
+    inflow_rows = [r for r in rows if (r.get("main_inflow") or 0) > 0]
+    outflow_rows = [r for r in rows if (r.get("main_inflow") or 0) < 0]
+    inflow_rows.sort(key=lambda r: r.get("main_inflow") or 0, reverse=True)
+    outflow_rows.sort(key=lambda r: r.get("main_inflow") or 0)
 
     gainers = [slim(r) for r in sorted(rows, key=lambda r: r.get("pct") or -999, reverse=True)[:limit]]
     losers = [slim(r) for r in sorted(rows, key=lambda r: r.get("pct") or 999)[:limit]]
-    inflow = [slim(r) for r in sorted(rows, key=lambda r: r.get("main_inflow") or -1e18, reverse=True)[:limit]]
-    outflow = [slim(r) for r in sorted(rows, key=lambda r: r.get("main_inflow") or 1e18)[:limit]]
+    inflow = [slim(r) for r in inflow_rows[:limit]]
+    outflow = [slim(r) for r in outflow_rows[:limit]]
     speeders = [slim(r) for r in sorted(rows, key=lambda r: r.get("speed") or -999, reverse=True)[:limit]]
 
+    t2 = time.time()
     industries = boards("industry", "inflow", 100)
+    _hot_timing(f"industry_boards {time.time() - t2:.1f}s")
+    # When the Eastmoney board endpoint is blocked we still have stock-level
+    # flow plus industry labels: aggregate them so the right-hand column is
+    # never empty.
+    if not industries or all(x.get("inflow") is None for x in industries):
+        groups: dict[str, dict] = {}
+        for r in rows:
+            name = r.get("industry") or r.get("market") or "其他"
+            g = groups.setdefault(name, {"name": name, "code": "LOCAL-" + name, "pct": 0.0,
+                                         "inflow": 0.0, "up": 0, "down": 0, "count": 0, "_pct_sum": 0.0})
+            g["count"] += 1
+            g["_pct_sum"] += r.get("pct") or 0
+            g["inflow"] += r.get("main_inflow") or 0
+            if (r.get("pct") or 0) > 0:
+                g["up"] += 1
+            elif (r.get("pct") or 0) < 0:
+                g["down"] += 1
+        industries = []
+        for g in groups.values():
+            g["pct"] = round(g.pop("_pct_sum") / max(g["count"], 1), 2)
+            g["inflow"] = round(g["inflow"], 2)
+            industries.append(g)
+        industries.sort(key=lambda x: x.get("inflow") or 0, reverse=True)
+
+    t3 = time.time()
     concepts = boards("concept", "inflow", 60)
-    return {
+    _hot_timing(f"concept_boards {time.time() - t3:.1f}s")
+    # Sum the whole market, not the top lists, so the three numbers on the
+    # card add up (inflow + outflow = net) and users can trust the total.
+    total_in = sum(r.get("main_inflow") or 0 for r in inflow_rows)
+    total_out = sum(r.get("main_inflow") or 0 for r in outflow_rows)
+    result = {
         "gainers": gainers,
         "losers": losers,
         "inflow": inflow,
@@ -554,8 +662,13 @@ def hot_board(limit: int = 10) -> dict:
         "industries_in": industries[:8],
         "industries_out": industries[-5:][::-1],
         "concepts_in": concepts[:6],
+        "totals": {"inflow": total_in, "outflow": total_out, "net": total_in + total_out},
+        "source": (spot or {}).get("source"),
         "updated": time.time(),
     }
+    db.cache_set(key, result)
+    _hot_timing(f"total {time.time() - t0:.1f}s")
+    return result
 
 
 def industry_trends(limit: int = 8) -> list[dict]:
@@ -608,29 +721,96 @@ def industry_trends(limit: int = 8) -> list[dict]:
     return out
 
 
-def market_news(limit: int = 12) -> list[dict]:
-    cached = db.cache_get(f"market:news:{limit}", 120)
+INDUSTRY_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "半导体": ("半导体", "芯片", "晶圆", "光刻", "存储", "封测"),
+    "通信设备": ("通信", "光模块", "5G", "6G", "基站", "算力网络"),
+    "人工智能": ("人工智能", "AI", "大模型", "智能体", "算力"),
+    "软件服务": ("软件", "信创", "操作系统", "数据库", "SaaS"),
+    "消费电子": ("消费电子", "手机", "苹果链", "折叠屏", "AR", "VR"),
+    "新能源": ("光伏", "风电", "储能", "锂电", "电池", "新能源"),
+    "汽车": ("汽车", "整车", "零部件", "智能驾驶", "车企"),
+    "医药": ("医药", "创新药", "医疗器械", "CXO", "疫苗", "中药"),
+    "白酒": ("白酒", "茅台", "五粮液", "酒企"),
+    "食品饮料": ("食品", "饮料", "乳业", "调味品"),
+    "银行": ("银行", "存款", "信贷", "息差"),
+    "保险": ("保险", "保费", "险企"),
+    "证券": ("券商", "证券", "两融", "IPO"),
+    "房地产": ("房地产", "地产", "楼市", "房企", "土拍"),
+    "基建": ("基建", "专项债", "工程", "建筑"),
+    "有色金属": ("有色", "铜", "铝", "锂", "稀土", "黄金"),
+    "煤炭": ("煤炭", "动力煤", "焦煤"),
+    "石油": ("石油", "原油", "油价", "天然气"),
+    "电力": ("电力", "电网", "电价", "核电", "水电"),
+    "军工": ("军工", "国防", "航天", "航空", "导弹"),
+    "传媒": ("传媒", "影视", "游戏", "广告", "出版"),
+    "旅游": ("旅游", "酒店", "景区", "出行", "免税"),
+    "零售": ("零售", "电商", "商超", "消费"),
+    "家电": ("家电", "空调", "冰箱", "白电"),
+    "农业": ("农业", "养殖", "猪价", "种业", "饲料"),
+    "化工": ("化工", "化纤", "农药", "氟化工"),
+    "钢铁": ("钢铁", "钢材", "铁矿"),
+    "港口航运": ("港口", "航运", "集运", "运价"),
+    "机械设备": ("机械", "工程机械", "机器人", "工业母机"),
+}
+
+
+def _news_tags(text: str) -> list[str]:
+    hits = [name for name, words in INDUSTRY_KEYWORDS.items() if any(w in text for w in words)]
+    return hits[:3]
+
+
+def _news_url(x: dict) -> str:
+    url = (x.get("url_w") or x.get("url_unique") or x.get("url_m") or "").strip()
+    if url.startswith("http://"):
+        url = "https://" + url[len("http://"):]
+    if not url:
+        title = (x.get("title") or "").strip()
+        url = "https://so.eastmoney.com/news/s?keyword=" + urllib.parse.quote(title) if title else "https://finance.eastmoney.com/"
+    return url
+
+
+def market_news(limit: int = 20) -> list[dict]:
+    cached = db.cache_get(f"market:news:v2:{limit}", 120)
     if cached:
         return cached
     import json
     import urllib.request
-    url = "https://newsapi.eastmoney.com/kuaixun/v1/getlist_102_ajaxResult_50_1_.html"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": market.UA, "Referer": "https://finance.eastmoney.com/"})
-        text = urllib.request.urlopen(req, timeout=10).read().decode("utf-8", "ignore")
-        payload = json.loads(text.split("=", 1)[1].strip().rstrip(";"))
-        items = payload.get("LivesList") or []
-    except Exception:
-        items = []
+
+    items: list[dict] = []
+    for channel, kind in (("102", "快讯"), ("101", "要闻")):
+        url = f"https://newsapi.eastmoney.com/kuaixun/v1/getlist_{channel}_ajaxResult_50_1_.html"
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": market.UA, "Referer": "https://finance.eastmoney.com/"})
+            text = urllib.request.urlopen(req, timeout=10).read().decode("utf-8", "ignore")
+            payload = json.loads(text.split("=", 1)[1].strip().rstrip(";"))
+            for x in payload.get("LivesList") or []:
+                x = dict(x)
+                x["_kind"] = kind
+                items.append(x)
+        except Exception:
+            continue
+
+    seen: set[str] = set()
     out = []
-    for x in items[:limit]:
+    for x in items:
+        title = (x.get("title") or "").strip()
+        if not title or title in seen:
+            continue
+        seen.add(title)
+        summary = (x.get("digest") or "").strip()
+        text = f"{title}{summary}"
         out.append({
-            "title": x.get("title"),
-            "time": x.get("showtime"),
-            "summary": x.get("digest"),
-            "url": x.get("url_w") or x.get("url_unique"),
+            "title": title,
+            "time": x.get("showtime") or "",
+            "summary": summary,
+            "url": _news_url(x),
+            "kind": x.get("_kind") or "快讯",
+            "industries": _news_tags(text),
+            "source": "东方财富",
         })
-    db.cache_set(f"market:news:{limit}", out)
+    out.sort(key=lambda n: n.get("time") or "", reverse=True)
+    out = out[:max(1, limit)]
+    db.cache_set(f"market:news:v2:{limit}", out)
     return out
 
 GLOBAL_INDEXES = [

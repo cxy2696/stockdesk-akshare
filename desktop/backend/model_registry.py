@@ -1,26 +1,43 @@
 """Versioned model registry.
 
 Keeping parameters and versions here makes model upgrades reviewable and
-testable without hunting through HMM/percolation/KDJ implementations.
+testable without hunting through HMM/percolation/KDJ/TD implementations.
 """
 from __future__ import annotations
 
 import time
 
-MODEL_VERSION = "2.0.0"
+MODEL_VERSION = "2.1.0"
 
 MODELS = {
     "hmm": {
-        "version": "1.1.0",
+        "version": "2.0.0",
         "name": "Gaussian HMM market regime",
-        "params": {"states": 3, "iterations": 60, "lookback": 420, "min_samples": 60},
-        "description": "Three-state Gaussian HMM on daily log returns of five A-share indices.",
+        "params": {"states": 3, "iterations": 80, "lookback": 420, "min_samples": 60, "restarts": 3},
+        "description": (
+            "Three-state Gaussian HMM on daily log returns of five A-share indices. "
+            "Multi-start Baum-Welch, ordered weak→range→strong, with posterior "
+            "confidence, regime age and per-state risk statistics."
+        ),
     },
     "percolation": {
-        "version": "1.1.0",
+        "version": "2.0.0",
         "name": "Breadth percolation",
-        "params": {"threshold": 0.592746, "neighbours": 4, "min_samples": 100},
-        "description": "Maps advancing stocks to a 2-D lattice and measures the largest four-neighbour cluster.",
+        "params": {"threshold": 0.592746, "neighbours": 4, "min_samples": 100, "layout": "stable-hash"},
+        "description": (
+            "Maps advancing stocks to a 2-D lattice in stable hashed order and measures "
+            "the largest four-neighbour cluster, its spanning status, susceptibility "
+            "and a random-layout baseline."
+        ),
+    },
+    "td": {
+        "version": "1.0.0",
+        "name": "TD Sequential (九转)",
+        "params": {"setup": 9, "countdown": 13, "lookback": 4, "bars": 420},
+        "description": (
+            "DeMark TD Sequential setup and countdown on index and stock daily bars, "
+            "with a separate plain-language reading. Exhaustion signal, not a forecast."
+        ),
     },
     "kdj": {
         "version": "1.2.0",

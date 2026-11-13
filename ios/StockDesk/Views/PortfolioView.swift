@@ -22,6 +22,10 @@ struct PortfolioView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     summaryCard
+                    HStack(spacing: 8) {
+                        NavigationLink { AssetAnalysisView() } label: { portfolioShortcut("资产分析", "chart.pie.fill", "配置、集中度、月度收益") }
+                        NavigationLink { AdviceCenterView() } label: { portfolioShortcut("投资建议", "target", "仓位、行业、今日标的") }
+                    }
                     Picker("", selection: $tab) {
                         Text("持仓").tag(0)
                         Text("交易流水").tag(1)
@@ -34,7 +38,7 @@ struct PortfolioView: View {
                 .padding(.bottom, 96)
             }
             .background(Theme.bg)
-            .navigationTitle("持仓账簿")
+            .navigationTitle("持仓管理")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -87,6 +91,23 @@ struct PortfolioView: View {
                     Text("将删除 \(c) 的全部买卖记录，该持仓会从账簿中移除。此操作不可撤销。")
                 }
             }
+    }
+
+    private func portfolioShortcut(_ title: String, _ icon: String, _ sub: String) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon).font(.system(size: 12)).foregroundStyle(Theme.accent)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.system(size: 11.5, weight: .semibold)).foregroundStyle(Theme.text)
+                Text(sub).font(.system(size: 8.5)).foregroundStyle(Theme.textDim).lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right").font(.system(size: 8)).foregroundStyle(Theme.textDim)
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity)
+        .background(Theme.cardSoft)
+        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.borderSoft, lineWidth: 1))
     }
 
     private var summaryCard: some View {

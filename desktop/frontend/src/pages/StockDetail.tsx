@@ -282,6 +282,61 @@ export default function StockDetail() {
         </div>
       </div>
 
+      <div style={{ marginTop: 14 }}>
+        <Card
+          title="九转与行业关注"
+          desc="TD 结构看在哪儿累，行业广度看在往哪儿走"
+          extra={<span className="muted small">九转是衰竭提示，不是买卖指令</span>}
+        >
+          <div className="grid-2" style={{ alignItems: 'start' }}>
+            <div>
+              <div className="row-between">
+                <b>九转序列</b>
+                <span className={`chip ${q.td?.bias === '偏多' ? 'up' : q.td?.bias === '偏空' ? 'down' : ''}`}>{q.td?.label ?? '数据不足'}</span>
+              </div>
+              <div className="td-meter" style={{ marginTop: 10 }}>
+                <span>买入 {q.td?.buy?.count ?? 0}/9</span>
+                <div className="td-track"><i style={{ width: `${((q.td?.buy?.count ?? 0) / 9) * 100}%`, background: 'var(--up)' }} /></div>
+              </div>
+              <div className="td-meter">
+                <span>卖出 {q.td?.sell?.count ?? 0}/9</span>
+                <div className="td-track"><i style={{ width: `${((q.td?.sell?.count ?? 0) / 9) * 100}%`, background: 'var(--down)' }} /></div>
+              </div>
+              <div className="muted small" style={{ marginTop: 8, lineHeight: 1.75 }}>{q.td?.read ?? '历史数据不足，暂不计算九转结构。'}</div>
+              {q.td?.levels && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                  <span className="chip">近 20 日低 {fmt.price(q.td.levels.recent_low)}</span>
+                  <span className="chip">近 20 日高 {fmt.price(q.td.levels.recent_high)}</span>
+                  {q.td?.countdown?.count > 0 && (
+                    <span className="chip">{q.td.countdown.direction === 'buy' ? '买入' : '卖出'}倒计时 {q.td.countdown.count}/13</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="row-between">
+                <b>行业关注</b>
+                <span className="muted small">{q.industry_context?.name || q.industry || prof.industry || '--'}</span>
+              </div>
+              {q.industry_context?.status && (
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }} className="small">
+                  <span>广度 <b className="up">{Math.round((q.industry_context.ratio ?? 0) * 100)}%</b></span>
+                  <span>最大簇 <b>{Math.round((q.industry_context.giant_occupied ?? 0) * 100)}%</b></span>
+                  <span>资金 <b className={trendClass(q.industry_context.flow)}>{q.industry_context.flow == null ? '--' : fmt.big(q.industry_context.flow)}</b></span>
+                  <span className={`chip ${q.industry_context.status?.includes('超') ? 'up' : q.industry_context.status?.includes('临界') ? 'amber' : 'down'}`}>{q.industry_context.status}</span>
+                </div>
+              )}
+              <div className="muted small" style={{ marginTop: 8, lineHeight: 1.75 }}>{q.industry_context?.focus || '行业广度数据会在打开量化模型页后缓存到这里；先参考上方行业与概念标签。'}</div>
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 8 }}>
+                {(q.industry_context?.watch ?? []).slice(0, 4).map((name: string) => (
+                  <span key={name} className="chip">{name}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <div className="grid-2-even" style={{ marginTop: 14 }}>
         <Card
           title="筹码分布"

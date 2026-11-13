@@ -22,11 +22,20 @@ struct IndexHMM: Identifiable {
     var id: String { name }
 }
 
+struct IndexTD: Identifiable {
+    var name: String
+    var buy: Int
+    var sell: Int
+    var label: String
+    var id: String { name }
+}
+
 struct ModelsView: View {
     @EnvironmentObject private var store: AppStore
     @State private var hmms: [IndexHMM] = []
     @State private var sel = 1
     @State private var perc: PercolationSnapshot?
+    @State private var tds: [IndexTD] = []
     @State private var loading = true
     @State private var lastUpdated = ""
 
@@ -98,9 +107,9 @@ struct ModelsView: View {
         ScrollView {
             VStack(spacing: 12) {
                 HStack {
-                    Text("隐马尔可夫识别市场状态；渗流模型衡量上涨广度是否形成连通扩散。模型只描述结构，不预测点位。")
+                    Text("HMM 定仓位，渗流定行业，九转定买卖点。三个模型各管一段，都不预测点位。")
                     Spacer()
-                    Text("v2.0.0 \(lastUpdated.isEmpty ? "" : "· " + lastUpdated)")
+                    Text("v2.1.0 \(lastUpdated.isEmpty ? "" : "· " + lastUpdated)")
                         .font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
                 }
                     .font(.system(size: 9.5)).foregroundStyle(Theme.textDim).lineSpacing(2)
@@ -246,6 +255,30 @@ struct ModelsView: View {
                     } else { ProgressView().frame(maxWidth: .infinity) }
                 }
 
+                Card(title: "九转模型分析", subtitle: "TD Sequential · 建仓 9 根 / 倒计时 13 根") {
+                    if tds.isEmpty {
+                        Text("九转结构计算中…").font(.system(size: 10)).foregroundStyle(Theme.textDim)
+                    } else {
+                        let buys = tds.filter { $0.buy >= 7 }.count
+                        let sells = tds.filter { $0.sell >= 7 }.count
+                        Text("当前 \(buys) 个指数出现买入结构、\(sells) 个出现卖出结构。9 转说明这一段动能累了，不是反转保证；要等放量收阳或跌破 5 日线来确认。")
+                            .font(.system(size: 9.5)).foregroundStyle(Theme.textSub).lineSpacing(2)
+                        ForEach(tds) { t in
+                            HStack(spacing: 8) {
+                                Text(t.name).font(.system(size: 10)).frame(width: 52, alignment: .leading)
+                                Text("买 \(t.buy)/9").font(.system(size: 9, design: .monospaced)).foregroundStyle(t.buy > 0 ? Theme.up : Theme.textDim)
+                                Text("卖 \(t.sell)/9").font(.system(size: 9, design: .monospaced)).foregroundStyle(t.sell > 0 ? Theme.down : Theme.textDim)
+                                Spacer()
+                                Text(t.label).font(.system(size: 9)).foregroundStyle(t.buy >= 9 ? Theme.up : (t.sell >= 9 ? Theme.down : Theme.textDim))
+                            }
+                            .padding(.vertical, 3)
+                            SoftDivider()
+                        }
+                        Text("怎么用：买结构完成先观察，不抢下跌中的刀；卖结构完成且跌破 5 日线，先减一半。倒计时 13 比 9 更严格，出现时更需要成交量配合。")
+                            .font(.system(size: 9)).foregroundStyle(Theme.textDim).lineSpacing(1.8).padding(.top, 3)
+                    }
+                }
+
                 Card(title: "细分行业渗流", subtitle: "按行业分组 · 上涨占比与最大簇 · Top 20") {
                     if let p = perc {
                         if p.industries.isEmpty {
@@ -339,14 +372,21 @@ struct ModelsView: View {
         lastUpdated = Date().formatted(.dateTime.hour().minute().second())
         let defs: [(String, String, String)] = [("上证", "000001", "1.000001"), ("沪深300", "000300", "1.000300"), ("创业板", "399006", "0.399006"), ("深证", "399001", "0.399001"), ("科创50", "000688", "1.000688")]
         var built: [IndexHMM] = []
+        var builtTD: [IndexTD] = []
         for (name, code, sec) in defs {
             let kl = (try? await MarketService.shared.klines(code, limit: 420, adjust: "", secidOverride: sec)) ?? []
             let closes = kl.map(\.close)
             guard closes.count > 61 else { continue }
             let rets = (1..<closes.count).map { (log(closes[$0] / closes[$0 - 1])) * 100 }
             if let h = QuantModels.hmm(rets) { built.append(IndexHMM(name: name, snapshot: h)) }
+            let td = PatternEngine.td(closes)
+            let b = min(td.buy.last ?? 0, 9)
+            let sk = min(td.sell.last ?? 0, 9)
+            let label = b >= 9 ? "买入九转 9/9" : (sk >= 9 ? "卖出九转 9/9" : (b >= 7 ? "下跌结构 \(b)/9" : (sk >= 7 ? "上涨结构 \(sk)/9" : "无有效结构")))
+            builtTD.append(IndexTD(name: name, buy: b, sell: sk, label: label))
         }
         hmms = built
+        tds = builtTD
         let rows: [Quote]
         if store.spotRows.count > 100 { rows = store.spotRows }
         else { rows = (try? await MarketService.shared.spot(ttl: 300).rows) ?? [] }

@@ -12,12 +12,12 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "desktop"))
 
-from backend import kdj, model_registry  # noqa: E402
+from backend import kdj, model_registry, td  # noqa: E402
 from backend.models import _hmm, _percolation  # noqa: E402
 
 meta = model_registry.meta()
 assert meta["registry_version"]
-assert {"hmm", "percolation", "kdj"} <= set(meta["models"])
+assert {"hmm", "percolation", "kdj", "td"} <= set(meta["models"])
 assert meta["models"]["kdj"]["params"]["upper"] == 118
 assert meta["models"]["kdj"]["params"]["lower"] == -14
 assert 0 < meta["models"]["percolation"]["params"]["threshold"] < 1
@@ -39,6 +39,12 @@ p = _percolation(rows)
 assert p and p["total"] == 220
 assert 0 <= p["giant_occupied"] <= 1
 assert p["threshold"] == meta["models"]["percolation"]["params"]["threshold"]
+
+# Nine consecutive lower closes must produce a completed buy setup.
+td_closes = [10 - 0.1 * i for i in range(24)]
+td_now = td.td_sequence(td_closes, [c + 0.2 for c in td_closes], [c - 0.2 for c in td_closes])
+assert td_now["available"] and td_now["buy"]["count"] == 9
+assert td_now["bias"] == "偏多" and td_now["signal"] in ("buy_9", "buy_13")
 
 bars = []
 for i in range(180):
