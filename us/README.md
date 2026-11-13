@@ -28,7 +28,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-然后打开 <http://127.0.0.1:8770>。
+然后打开 <http://127.0.0.1:8770>（如端口被占用会自动顺延，以终端打印的地址为准）。
 
 行情来自东方财富公开接口，只用于研究，不构成投资建议。
 
@@ -56,6 +56,6 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Open <http://127.0.0.1:8770>.
+Open <http://127.0.0.1:8770> (if the port is busy, the launcher picks the next one and prints the URL).
 
 Quotes come from Eastmoney's public endpoints. They are for research only, not investment advice.

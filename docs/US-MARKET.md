@@ -16,7 +16,7 @@ pip install -r requirements.txt
 python run.py --port 8770
 ```
 
-打开 <http://127.0.0.1:8770>。
+打开 <http://127.0.0.1:8770>（如端口被占用会自动顺延，以终端打印的地址为准）。
 
 ### 能做什么
 
@@ -57,7 +57,7 @@ pip install -r requirements.txt
 python run.py --port 8770
 ```
 
-Open <http://127.0.0.1:8770>.
+Open <http://127.0.0.1:8770> (if the port is busy, the launcher picks the next one and prints the URL).
 
 ### What it does
 
