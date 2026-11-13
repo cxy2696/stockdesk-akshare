@@ -80,6 +80,25 @@
 
 ## English
 
+### 1.11.0
+
+- **Navigation**: the HUB centre now opens Portfolio directly; the former Industry News entry is Index Analysis; the sidebar gains a full Guide. Asset Analysis and Advice moved into Portfolio.
+- **Daily Plan rebuilt**: market snapshot, model conclusion, main-force flow, index analysis, TD (nine-turn), industry focus, industry headlines, position advice and candidates on one page. Industry and market headlines are merged into one filterable list; every item opens the full Eastmoney article.
+- **Main-force flow fixed**: split into stock inflow / stock outflow / industry inflow, correct red-up/green-down colours, no null rows leaking into outflow, no duplicate concurrent fetches; adds a flow-leader net figure and data source.
+- **Portfolio**: four views — overview, asset analysis, advice, trades. Asset analysis includes allocation, concentration, monthly returns and trading habits; advice includes position sizing, market temperature, watchlist for the next two weeks and today's candidates. Old routes redirect.
+- **Index Analysis**: former Industry News slot and page now hold A-share and global index analysis with trend, moving averages, RSI, MACD, support/resistance and conclusions.
+- **TD Sequential**: new `backend/td.py` and `/api/market/td/{code}`; 9-bar setup and 13-bar countdown across five indices, portfolio holdings and critical-industry leaders, with plain-language readings. The stock detail page gains TD and industry-focus cards.
+- **HMM 2.0**: multi-start Baum-Welch, confidence/entropy, regime age, flip risk and per-state return/volatility/Sharpe/win-rate statistics.
+- **Percolation 2.0**: stable-hash lattice, spanning check, susceptibility, random-layout baseline and p-value, block-aggregated 50×50 map, industry/market grouping.
+- **Model registry 2.1.0**: HMM 2.0.0, percolation 2.0.0, TD 1.0.0; the offline selftest now covers TD.
+- **Review charts**: distinct colours for NAV/MA20/MA60 and account/CSI 300; single-day accounts show a point plus an explanation instead of a blank chart.
+- **Regions**: all 34 province-level divisions are switchable with search, previous/next and map linkage; the overview lists industries and leaders.
+- **Heatmap**: click-to-drill with breadcrumb, stock click-through, search, up/down filters, reset and hover emphasis; tiny tiles are hidden so the overview is readable.
+- **Performance/resilience**: short Eastmoney circuit breaker, Sina daily fallback, single-flight locks for the full snapshot / boards / fund flow, and stale-while-revalidate for the daily brief.
+- **iOS 3.8.0**: HUB centre opens Portfolio, Index Analysis entry, three-column main-force flow, model conclusion and TD cards, portfolio shortcuts.
+- **Docs**: README, guide, models, architecture, site and screenshots updated to 1.11.0 / 3.8.0; new nine-chapter in-app Guide.
+- Versions: macOS/Windows **1.11.0** (source), iOS **3.8.0 (31)**, US **1.0.2**.
+
 ### 1.10.3
 
 - **Asset hub menu**: clicking the central hub now opens Portfolio, Asset Analysis, Advice and Index Analysis directly; these entries no longer live under Regions.

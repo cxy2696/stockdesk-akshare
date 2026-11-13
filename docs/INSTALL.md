@@ -4,6 +4,8 @@
 
 > 第一次使用建议先看 [使用教程与流程](GUIDE.md)。 / First time here? Start with the [Guide & Workflow](GUIDE.md).
 
+> 源码版本 **1.11.0**；文中安装包示例为最近一次构建 1.10.3（iOS 3.7.3）。构建时把 `VERSION` 改成目标版本即可。
+
 ## 下载安装 / Download & install
 
 | 平台 | 推荐文件 | 安装 |
