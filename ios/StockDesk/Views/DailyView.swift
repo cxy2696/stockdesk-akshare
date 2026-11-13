@@ -30,6 +30,7 @@ struct DailyView: View {
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 96)
+            .readableWidth()
         }
         .background(Theme.bg)
         .navigationTitle("每日策略")

@@ -7,7 +7,7 @@
 [![JavaScript](https://img.shields.io/badge/JavaScript-ECharts-F7DF1E?logo=javascript&logoColor=black)](us/static)
 
 **个人股票投资台 / Personal equity investment desk**  
-Mac · Windows · iOS · US Equities
+Mac · Windows · iPhone · iPad · US Equities
 
 [项目主页](https://cxy2696.github.io/stockdesk-akshare/) · [使用指南](docs/GUIDE.md) · [安装构建](docs/INSTALL.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases/tag/v1.10.3) · [容器](docs/PACKAGES.md) · [English](#english)
 
@@ -62,6 +62,7 @@ A local-first, single-user equity desk: portfolio, quotes, review, backtests, HM
 | KDJ 预警 | 半导体/通信设备 + 9 个 A 股指数，5m/30m K/D/J、RSV、MA5/20、量比、中枢 |
 | 地域与要闻 | 中国上市公司地图、省份龙头、行业新闻与关键标的 |
 | 分享与缩放 | 子页面长图分享；100% / 120% / 150% 文字缩放，自动换行 |
+| iOS / iPad | SwiftUI 原生 App；HUB 资产菜单、KDJ、板块、横竖屏；iPad 自动放大 HUB、四列 KPI、双列 KDJ 图表 |
 
 English modules: HUD, Daily Plan, Portfolio & Review, Watchlist/Stock Detail, Sectors, Backtest, Quant Models, KDJ Alerts, Regions/Industry News, Sharing & Scaling.
 
@@ -99,6 +100,7 @@ pip install -r requirements.txt && python run.py
 
 - A 股/指数：东方财富公开行情接口；美股：东方财富美股公开接口；HTTP 直连，`akshare` 用于部分分钟线/板块回退。
 - 缩放只改文字：按钮/卡片自动增高，表格自动换行；地图和图表不拉伸；120%/150% 隐藏 ticker；iOS 150% 单列 HUB。
+- 桌面端 1700px 以上自动放大 HUB；iPad 自动放大 HUB、四列 KPI、双列 KDJ 图表和地图高度。
 - 所有行情仅用于研究，不构成投资建议。
 
 ## 项目结构 / Layout

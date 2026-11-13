@@ -129,11 +129,15 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:latest
 
 设置含初始资产、名称/UID、HUD/亮色/深色、100%/120%/150%、中文/English、缓存清理、数据目录；iOS 还有屏幕方向。缩放只放大文字，地图/图表不拉伸。子页面右下角分享按钮生成长图，HUB 首页不显示分享。
 
-### 5. iOS 版
+### 5. iOS / iPad 版
+
+![iPad 资产中枢菜单](assets/ipad-hub.png)
 
 ![iPhone HUB](assets/ios-hub.png)
 
-完全独立的 SwiftUI App：HUB 3+5 模块、搜索/自选/笔记/异常提醒、100%/120%/150%、横竖屏、本地 `stockdesk.json`。150% 自动单列 HUB。
+![iPad 每日策略](assets/ipad-daily.png)
+
+完全独立的 SwiftUI App，支持 iPhone 与 iPad：HUB 3+5 模块、搜索/自选/笔记/异常提醒、100%/120%/150%、横竖屏、本地 `stockdesk.json`。iPad 会自动放大 HUB、四列 KPI、双列 KDJ 图表和地图；150% 自动单列 HUB。
 
 ![iPhone KDJ](assets/ios-kdj.png)
 

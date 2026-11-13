@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HubMapView: View {
+    @Environment(\.horizontalSizeClass) private var hSize
     @State private var dist = CompanyDistribution()
     @State private var selected: ProvinceDistribution?
     @State private var prefs: [ProvincePreference] = []
@@ -23,7 +24,7 @@ struct HubMapView: View {
 
                 Card(title: "地域分布地图", subtitle: "双指缩放 / 拖动 · 颜色越亮公司越多") {
                     ChinaMapView(provinces: dist.provinces, selected: $selected)
-                        .frame(height: 300)
+                        .frame(height: hSize == .regular ? 480 : 300)
                 }
 
                 if let s = selected {
@@ -68,6 +69,7 @@ struct HubMapView: View {
 
             }
             .padding(14)
+            .readableWidth()
         }
         .background(Theme.bg)
         .navigationTitle("地域")

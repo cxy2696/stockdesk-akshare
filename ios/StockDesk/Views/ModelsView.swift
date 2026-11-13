@@ -321,6 +321,7 @@ struct ModelsView: View {
                 }
             }
             .padding(14)
+            .readableWidth()
         }
         .background(Theme.bg)
         .navigationTitle("量化模型")

@@ -127,6 +127,8 @@ struct SettingsView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .frame(maxWidth: 900)
+        .frame(maxWidth: .infinity)
         .background(Theme.bg)
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.inline)

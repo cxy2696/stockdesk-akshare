@@ -199,3 +199,11 @@ func shortMoney(_ v: Double?) -> String {
     if abs >= 1e4 { return String(format: "%.2f万", v / 1e4) }
     return String(format: "%.0f", v)
 }
+
+extension View {
+    /// Keep long forms/tables readable on iPad while still filling the
+    /// available width on iPhone and in landscape.
+    func readableWidth(_ maxWidth: CGFloat = 1100) -> some View {
+        frame(maxWidth: maxWidth).frame(maxWidth: .infinity)
+    }
+}

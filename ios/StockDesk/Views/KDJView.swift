@@ -167,6 +167,7 @@ private final class KDJStore: ObservableObject {
 
 struct KDJView: View {
     @StateObject private var store = KDJStore()
+    @Environment(\.horizontalSizeClass) private var hSize
 
     private var target: KTarget { targets.first { $0.id == store.selected } ?? targets[0] }
 
@@ -222,8 +223,15 @@ struct KDJView: View {
                     }
                 }
 
-                periodCard("5 分钟", store.p5[target.id] ?? KPeriod(), period: "5m")
-                periodCard("30 分钟", store.p30[target.id] ?? KPeriod(), period: "30m")
+                if hSize == .regular {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                        periodCard("5 分钟", store.p5[target.id] ?? KPeriod(), period: "5m")
+                        periodCard("30 分钟", store.p30[target.id] ?? KPeriod(), period: "30m")
+                    }
+                } else {
+                    periodCard("5 分钟", store.p5[target.id] ?? KPeriod(), period: "5m")
+                    periodCard("30 分钟", store.p30[target.id] ?? KPeriod(), period: "30m")
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("参考操作建议 · 非交易指令")
@@ -238,6 +246,7 @@ struct KDJView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .padding(14)
+            .readableWidth()
         }
         .background(Theme.bg)
         .navigationTitle("KDJ 预警")
@@ -291,7 +300,7 @@ struct KDJView: View {
                 }
                 .chartXAxis(.hidden)
                 .chartYAxis { AxisMarks(position: .leading) { _ in AxisValueLabel().font(.system(size: 7)) } }
-                .frame(height: 130)
+                .frame(height: hSize == .regular ? 200 : 130)
 
                 Chart {
                     RuleMark(y: .value("upper", 118)).foregroundStyle(.red.opacity(0.4)).lineStyle(StrokeStyle(dash: [3]))
@@ -305,7 +314,7 @@ struct KDJView: View {
                 .chartYScale(domain: -40...140)
                 .chartXAxis(.hidden)
                 .chartYAxis { AxisMarks(position: .leading) { _ in AxisValueLabel().font(.system(size: 6)) } }
-                .frame(height: 82)
+                .frame(height: hSize == .regular ? 120 : 82)
             }
             if let m = p.metrics {
                 HStack(spacing: 7) {

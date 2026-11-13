@@ -2757,3 +2757,28 @@ html, body { overflow-x: hidden; }
 @media (max-width: 680px) {
   .hud-hub-actions { grid-template-columns: 1fr; }
 }
+
+/* Large desktop / 2K screens: use the extra width instead of leaving the HUB
+   stranded in a narrow centre column. */
+@media (min-width: 1700px) and (min-height: 900px) {
+  .hud-console-grid {
+    max-width: 1600px;
+    grid-template-columns: 340px 800px 380px;
+    gap: 24px;
+  }
+  .hud-disc { width: min(760px, 72vh); }
+  .hud-left-stack { width: 340px; padding-top: 26px; }
+  .hud-left-stack .hud-silver {
+    width: 280px;
+    height: 74px;
+    font-size: calc(15px * var(--fs, 1));
+    padding-left: 26px;
+  }
+  .hud-right-grid { padding-top: 58px; gap: 14px; }
+  .hud-right-grid .hud-silver.small {
+    height: 64px;
+    font-size: calc(12.5px * var(--fs, 1));
+    padding: 0 14px;
+  }
+  .hud-profile { width: 280px; }
+}

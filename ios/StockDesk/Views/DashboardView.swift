@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     var embedded = false
     @EnvironmentObject private var store: AppStore
+    @Environment(\.horizontalSizeClass) private var hSize
     @State private var showSearch = false
     @State private var ranking: [Quote] = []
     @State private var inflows: [Quote] = []
@@ -28,6 +29,7 @@ struct DashboardView: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.bottom, 96)
+                .readableWidth()
             }
             .background(Theme.bg)
             .refreshable { await store.refreshAll(); await loadRankings() }
@@ -99,7 +101,8 @@ struct DashboardView: View {
     }
 
     private var kpis: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+        let cols = hSize == .regular ? 4 : 2
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: cols), spacing: 10) {
             KpiTile(title: "浮动盈亏", value: s.floatPnl.signed(), color: Theme.trendColor(s.floatPnl),
                     sub: "成本 ¥\(s.cost.fmt())")
             KpiTile(title: "已实现盈亏", value: s.realized.signed(), color: Theme.trendColor(s.realized),

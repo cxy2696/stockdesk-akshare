@@ -12,9 +12,12 @@ struct InvestHudHeader: View {
     @State private var showSearch = false
     @AppStorage("stockdesk.lang") private var lang = "zh"
     @AppStorage("stockdesk.uiScale") private var uiScale = 1.0
+    @Environment(\.horizontalSizeClass) private var hSize
     @State private var showHub = false
     @AppStorage("stockdesk.admin.name") private var adminName = "StockDesk"
     @AppStorage("stockdesk.admin.uid") private var adminUid = "LOCAL-0001"
+
+    private var isPad: Bool { hSize == .regular }
 
     private let left: [(String, String, String)] = [
         ("每日策略", "calendar", "daily"),
@@ -53,14 +56,15 @@ struct InvestHudHeader: View {
             .padding(.horizontal, 6)
 
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .center, spacing: 8) {
-                    VStack(spacing: 7) { ForEach(left.indices, id: \.self) { item(left[$0]) } }
-                        .frame(width: 98)
-                    hudMap.frame(width: 270, height: 270)
-                    VStack(spacing: 7) { ForEach(right.indices, id: \.self) { item(right[$0]) } }
-                        .frame(width: 98)
+                HStack(alignment: .center, spacing: isPad ? 14 : 8) {
+                    VStack(spacing: isPad ? 10 : 7) { ForEach(left.indices, id: \.self) { item(left[$0]) } }
+                        .frame(width: isPad ? 136 : 98)
+                    hudMap.frame(width: isPad ? 430 : 270, height: isPad ? 430 : 270)
+                    VStack(spacing: isPad ? 10 : 7) { ForEach(right.indices, id: \.self) { item(right[$0]) } }
+                        .frame(width: isPad ? 136 : 98)
                 }
                 .frame(minWidth: 700)
+                .frame(maxWidth: isPad ? 980 : .infinity)
                 VStack(spacing: 10) {
                     hudMap.frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit)
                     if uiScale >= 1.4 {
@@ -95,6 +99,10 @@ struct InvestHudHeader: View {
         } message: {
             Text((lang == "en" ? "Total assets ¥" : "总资产 ¥") + store.summary.total.fmt() + (lang == "en" ? " · Exposure " : " · 仓位 ") + (store.summary.total > 0 ? store.summary.marketValue / store.summary.total * 100 : 0).pct(0))
         }
+        .onAppear {
+            // Screenshot/QA hook: `-showHub` opens the asset-hub dialog.
+            if ProcessInfo.processInfo.arguments.contains("-showHub") { showHub = true }
+        }
     }
 
     private func icon(_ name: String, _ route: String?) -> some View {
@@ -124,12 +132,12 @@ struct InvestHudHeader: View {
                   "策略回测": "Backtest", "地域": "Regions", "行业要闻": "Industry News",
                   "量化模型": "Quant Models", "KDJ预警": "KDJ Alerts"][data.0] ?? data.0
         return HStack(spacing: 7) {
-            Image(systemName: data.1).font(.system(size: 12)).foregroundStyle(.black).frame(width: 16)
-            Text(lang == "en" ? en : data.0).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(.black).lineLimit(1)
+            Image(systemName: data.1).font(.system(size: isPad ? 14 : 12)).foregroundStyle(.black).frame(width: isPad ? 18 : 16)
+            Text(lang == "en" ? en : data.0).font(.system(size: isPad ? 13 : 10.5, weight: .semibold)).foregroundStyle(.black).lineLimit(1)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, isPad ? 12 : 10)
+        .padding(.vertical, isPad ? 10 : 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(silver)
         .clipShape(HudParallelogram())
@@ -297,6 +305,7 @@ struct MoreView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 90)
+                .readableWidth()
             }
             .background(Theme.bg)
             .task {
