@@ -22,7 +22,7 @@ Mac · Windows · iPhone · iPad · US Equities
 | macOS 12+ Apple Silicon | `StockDesk-macOS-1.10.3.dmg` / `.zip` | 1.10.3 | 打开 DMG，双击 `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe` | 1.10.3 | 双击；需要 WebView2 |
 | iPhone / iPad iOS 17+ | `StockDesk-iOS-3.7.3-unsigned.ipa` | 3.7.3 | 用 Sideloadly / AltStore / Xcode 重签 |
-| 浏览器 / NAS | GHCR 容器 | 1.11.0 源码 | 见 [PACKAGES](docs/PACKAGES.md) |
+| 浏览器 / NAS | GHCR 容器 | latest（1.10.3 构建） | 见 [PACKAGES](docs/PACKAGES.md) |
 | 源码 | `main` 分支 | **1.11.0** | 见下方快速开始 |
 
 - 安装包在 [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
