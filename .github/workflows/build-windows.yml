@@ -77,4 +77,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload v1.10.3 desktop/dist/StockDesk.exe --clobber
+        run: |
+          $version = (Select-String -Path desktop/backend/config.py -Pattern 'APP_VERSION = "([^"]+)"').Matches[0].Groups[1].Value
+          Write-Host "Publishing StockDesk.exe to v$version"
+          gh release upload "v$version" desktop/dist/StockDesk.exe --clobber

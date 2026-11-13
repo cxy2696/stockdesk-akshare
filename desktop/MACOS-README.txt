@@ -1,7 +1,8 @@
-StockDesk 1.10.2 · macOS 安装说明
+StockDesk 1.11.0 · macOS 安装说明
 
 推荐安装方式
 1. 双击同目录的「Install-StockDesk.command」。
+   安装后中央「资产中枢」直接进入持仓管理，右侧入口为策略回测 / 地域 / 指数分析 / 量化模型 / KDJ预警。
 2. 如果 macOS 提示「无法打开，因为无法验证开发者」，右键该文件 → 打开。
 3. 脚本会把 StockDesk.app 复制到 Applications，并清除下载隔离标记，然后自动启动。
 
