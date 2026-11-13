@@ -105,6 +105,9 @@ struct AdviceCenterView: View {
                         }
                     }
                     Card(title: "要闻与风险", subtitle: "影响市场的主要信息") {
+                        if s.news.isEmpty {
+                            Text("暂无要闻，下拉刷新重试。").font(.system(size: 11)).foregroundStyle(Theme.textDim)
+                        }
                         ForEach(s.news.prefix(6)) { n in
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(n.title).font(.system(size: 11)).foregroundStyle(Theme.text)
@@ -114,7 +117,9 @@ struct AdviceCenterView: View {
                         }
                     }
                     Card(title: "标的推荐", subtitle: "形态 + 量价 + 资金") {
-                        if picks.isEmpty { ProgressView() }
+                        if picks.isEmpty {
+                            Text("暂无符合条件的标的，下拉刷新重试。").font(.system(size: 11)).foregroundStyle(Theme.textDim)
+                        }
                         ForEach(picks.prefix(8)) { h in pickRow(h) }
                     }
                 } else { ProgressView().padding(.top, 80) }
@@ -124,13 +129,16 @@ struct AdviceCenterView: View {
         .background(Theme.bg)
         .navigationTitle("投资建议")
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            var s = await MarketService.shared.marketState()
-            s.news = await MarketService.shared.marketNews()
-            state = s
-            let candidates = store.spotRows.isEmpty ? s.gainers : Array(store.spotRows.prefix(200))
-            picks = await PatternEngine.picks(candidates: candidates, top: 10)
-        }
+        .task { await load() }
+        .refreshable { await load() }
+    }
+
+    private func load() async {
+        var s = await MarketService.shared.marketState()
+        s.news = await MarketService.shared.marketNews()
+        state = s
+        let candidates = store.spotRows.isEmpty ? s.gainers : Array(store.spotRows.prefix(200))
+        picks = await PatternEngine.picks(candidates: candidates, top: 10)
     }
 
     private func pickRow(_ h: PatternHit) -> some View {

@@ -81,6 +81,9 @@ struct IndustryNewsView: View {
             VStack(spacing: 12) {
                 if let s = state {
                     Card(title: "行业情况分析", subtitle: "资金流入前列 · 5/20/60 日趋势") {
+                        if s.industryTrends.isEmpty {
+                            Text("暂无行业数据，下拉刷新重试。").font(.system(size: 11)).foregroundStyle(Theme.textDim)
+                        }
                         ForEach(s.industryTrends.prefix(7)) { b in
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack {
@@ -103,6 +106,9 @@ struct IndustryNewsView: View {
                             .font(.system(size: 9.5)).foregroundStyle(Theme.textDim).lineSpacing(2)
                     }
                     Card(title: "行业要闻", subtitle: "消息面与行业相关快讯") {
+                        if s.news.isEmpty {
+                            Text("暂无要闻，下拉刷新重试。").font(.system(size: 11)).foregroundStyle(Theme.textDim)
+                        }
                         ForEach(s.news.prefix(10)) { n in
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(n.title).font(.system(size: 11)).foregroundStyle(Theme.text)
@@ -112,6 +118,9 @@ struct IndustryNewsView: View {
                         }
                     }
                     Card(title: "投资趋势", subtitle: "关注方向与风险") {
+                        if s.industryTrends.isEmpty {
+                            Text("暂无趋势数据，下拉刷新重试。").font(.system(size: 11)).foregroundStyle(Theme.textDim)
+                        }
                         ForEach(s.industryTrends.prefix(5)) { b in
                             HStack {
                                 Text(b.name).font(.system(size: 11)).foregroundStyle(Theme.text)
@@ -128,10 +137,13 @@ struct IndustryNewsView: View {
         .background(Theme.bg)
         .navigationTitle("行业要闻")
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            var s = await MarketService.shared.marketState()
-            s.news = await MarketService.shared.marketNews()
-            state = s
-        }
+        .task { await load() }
+        .refreshable { await load() }
+    }
+
+    private func load() async {
+        var s = await MarketService.shared.marketState()
+        s.news = await MarketService.shared.marketNews()
+        state = s
     }
 }
