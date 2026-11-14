@@ -1420,7 +1420,7 @@ export default function Models() {
       <div style={{ marginTop: 14 }}>
         <Card
           title={<SectionTitle title="个股仓位建议" desc={`按结论目标仓位 ${position} 折算 · 单票上限 15% · 股数按 100 股取整`} />}
-          extra={<span className="muted" style={{ fontSize: 10.5 }}>当前总仓位 {num(summary?.position_pct, 1)}%</span>}
+          extra={<span className="muted" style={{ fontSize: 10.5 }}>当前总仓位 {summary?.position_pct != null ? `${num(summary.position_pct, 1)}%` : '--'}</span>}
         >
           {portLoading ? (
             <LoadingBody text="正在读取持仓与目标仓位…" rows={4} />
@@ -1431,7 +1431,7 @@ export default function Models() {
           ) : (
             <>
               <div className="grid-3" style={{ marginBottom: 10 }}>
-                <Metric label="当前总仓位" value={`${num(summary.position_pct, 1)}%`} sub={`总资产 ${fmt.big(summary.total)}`} />
+                <Metric label="当前总仓位" value={summary.position_pct != null ? `${num(summary.position_pct, 1)}%` : '--'} sub={`总资产 ${fmt.big(summary.total)}`} />
                 <Metric label="模型目标仓位" value={position} sub={`折算中值 ${targetPct}%`} color={stanceColor} />
                 <Metric
                   label="可用现金"
