@@ -15,7 +15,7 @@ SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切
 
 | 每日策略（多周期/行业） | 板块跟踪 | 投资 HUD |
 | --- | --- | --- |
-| ![每日](docs/ios-daily.png) | ![板块](docs/ios-market.png) | ![投资](docs/ios-invest.png) |
+| ![每日](docs/ios-daily.png) | ![板块](docs/ios-market.png) | ![持仓](docs/ios-invest.png) |
 
 | 指数分析 | 投资 HUD 横屏 | 设置（主题 / 横屏） |
 | --- | --- | --- |
@@ -96,7 +96,7 @@ xcrun simctl launch booted com.stockdesk.app
 - **顶栏交互**：放大镜搜索股票名称/代码、星号自选、信封笔记、铃铛异常提醒
 - **资产中枢**：中央圆盘点击直接进持仓管理，不再弹「资产分析 / 投资建议 / 指数分析」菜单；名称与 UID 在设置里改
 - **HUB 右侧**：策略回测、地域、指数分析、量化模型、KDJ 预警；`industry-news` 旧路由也解析到指数分析
-- **量化模型**：5 个 A 股核心指数 HMM 切换；个股仓位/买卖建议；行业临界、关键标的、细分行业渗流、随机重排稳健性；新增九转模型卡片，版本显示 v2.1.0
+- **量化模型**：5 个 A 股核心指数 HMM 切换；个股仓位/买卖建议；行业临界、关键标的、细分行业渗流、随机重排稳健性；九转模型卡片与综合评分卡（HMM 42% / 渗流 38% / 九转 20%），版本显示 v2.2.0
 - **指数分析**：A 股宽基与海外指数的多周期、均线、RSI、MACD、支撑压力与偏多/偏空评分
 - **九转怎么看**：建仓结构 9 根（收盘价对比 4 日前）、倒计时 13 根（对比 2 日前高/低）；9/9 只说明这一段动能衰竭，不是反转保证。买结构完成后等放量收阳或收复 5 日线再试仓，卖结构完成且跌破 5 日线先减一半；7/9 只观察
 - **KDJ 预警**：半导体 / 通信设备 + 9 个 A 股指数，5m / 30m 的 K/D/J、RSV、MA5/20、量比与近似中枢；板块分钟数据不可达时自动使用并标注 ETF 代理，不再停在「暂无行情」
@@ -170,7 +170,7 @@ StockDesk for iOS is a fully standalone SwiftUI app, now at **3.9.0 (32)**. It d
 - 100% / 120% / 150% font scaling; 150% uses a single-column HUB
 - Built-in Chinese / English switch in Settings
 - Full-page image sharing via the system share sheet (WeChat, Notes, Files)
-- HMM, percolation and TD models with per-stock position guidance (model registry v2.1.0)
+- HMM, percolation and TD models with per-stock position guidance and a transparent composite score (model registry v2.2.0)
 - KDJ extreme-zone panel for two sectors and nine A-share indices, with 5m / 30m K/D/J, RSV, MA5/20, volume ratio and an approximate central zone; a labelled ETF proxy keeps sector cards live when board-minute data is unavailable
 - Local-only storage; no login and no uploads
 

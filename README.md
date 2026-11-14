@@ -11,7 +11,9 @@ Mac · Windows · iPhone · iPad · US Equities
 
 [项目主页](https://cxy2696.github.io/stockdesk-akshare/) · [使用指南](docs/GUIDE.md) · [安装构建](docs/INSTALL.md) · [模型说明](docs/MODELS.md) · [Ollama 指南](docs/OLLAMA.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases) · [English](#english)
 
-![Mac HUB](screenshots/mac-hub.png)
+![Mac HUB 1.12](screenshots/mac-hub.png)
+
+> 截图来自 1.12.0：HUD 首页、每日策略里的本机 Ollama 辅助、模型页的综合评分与 2.2 字段。
 
 > **1.12.0 安装包**：macOS、Windows 与 iOS 已更新到 1.12.0 / 3.9.0。Ollama 辅助判断仅支持 macOS / Windows，默认关闭；没有本地 Ollama 时不会启用。
 
@@ -45,8 +47,11 @@ A local-first, single-user equity desk: portfolio, quotes, review, backtests, HM
 
 - **本地 Ollama 辅助判断（仅 macOS / Windows）**：设置里新增地址、模型、温度、超时、tokens 与连接测试；每日策略和量化模型页可让本机 Ollama 生成一段结构化第二意见。默认关闭，检测不到 Ollama 或没有模型时不会启用，也不会自动生成。
 - **模型 2.2.0**：HMM 增加过滤后状态、状态质量/区分度、风险分与建议暴露；渗流增加 12 次 bootstrap 区间、稳定性和广度趋势；九转增加质量/新鲜度/完成度；新增透明综合评分（HMM 42% / 渗流 38% / 九转 20%）。
+- **iOS 3.9.0**：量化模型页加综合评分卡（42% / 38% / 20%），数字格式化过滤 NaN/Infinity，空态更清楚；不集成 Ollama。
 - **数据展示修复**：桌面与 iOS 的数字格式化统一过滤 NaN/Infinity；每日策略补综合分、质量、过滤后状态、稳定性与趋势；模型页补综合评分卡、分项进度条和依据；空数据/失败状态不再白屏。
 - **文档**：新增 [Ollama 本地部署与配置指南](docs/OLLAMA.md)，模型、架构、安装和使用指南同步到 1.12.0 / 3.9.0。
+
+![Ollama 本地辅助判断](screenshots/mac-ollama.png)
 
 ## 1.11.0 更新 / What's new
 

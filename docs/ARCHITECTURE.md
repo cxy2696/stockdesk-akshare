@@ -70,7 +70,7 @@ HMM 的输入是五个 A 股指数的日对数收益，输出弱势 / 震荡 / �
 | 键 | TTL | 内容 |
 | --- | --- | --- |
 | `market:models:v8` | 600 秒 | HMM（过滤后/质量/风险）、渗流（bootstrap/趋势）、九转、行业关注、综合评分、模型注册表 |
-| `market:daily:v5` | 120 秒 | 每日策略整页响应（行情、模型摘要、要闻、资金流、趋势、仓位建议） |
+| `market:daily:v8` | 120 秒 | 每日策略整页响应（行情、模型摘要、要闻、资金流、趋势、仓位建议） |
 | `market:state` | 60 秒 | 市场状态、温度、指数 |
 | `spot:v3` | 180 / 600 秒 | 全市场快照（默认 3 分钟，模型与市场状态读 10 分钟） |
 | `fund:individual` | 60 秒 | 个股主力资金（新浪两端各 900 只） |
@@ -84,7 +84,7 @@ Ollama 建议缓存在 `ollama:advice:v1:<model>`，10 分钟；`cached_only=1` 
 - `market._spot_lock`：全市场快照单飞，多个页面同时首屏只下载一次。
 - `state._BOARD_LOCKS`：按 `kind` 分锁，行业和概念列表各自单飞。
 - `market._FUND_LOCK`：资金流单飞；拿不到时写一个短空值，避免每个页面都重新等超时。
-- 模型快照本身走 `db.cache_get`，每日策略再包一层 `market:daily:v5`，两层都命中时不再触发模型计算。
+- 模型快照本身走 `db.cache_get`，每日策略再包一层 `market:daily:v8`，两层都命中时不再触发模型计算。
 
 ### 容错
 
@@ -210,19 +210,19 @@ The percolation model places about 5,500 stocks on a 2-D lattice in `crc32(code)
 | Key | TTL | Contents |
 | --- | --- | --- |
 | `market:models:v8` | 600 s | HMM (filtered/quality/risk), percolation (bootstrap/trend), TD, industry focus, ensemble, registry meta |
-| `market:daily:v5` | 120 s | full Daily Plan payload |
+| `market:daily:v8` | 120 s | full Daily Plan payload |
 | `market:state` | 60 s | market state, temperature, indices |
 | `spot:v3` | 180 / 600 s | full-market snapshot (3 min by default, 10 min for models and market state) |
 | `fund:individual` | 60 s | stock-level main flow (two Sina tails, 900 rows each) |
 
-Model and daily-plan keys carry a version suffix (`:v5`), so a payload change only needs a bump — no migration code.
+Model and daily-plan keys carry a version suffix (`:v8`), so a payload change only needs a bump — no migration code.
 
 Concurrency:
 
 - `market._spot_lock` — one download of the full snapshot even when several pages start together.
 - `state._BOARD_LOCKS` — one lock per board kind (industry and concept fetch independently).
 - `market._FUND_LOCK` — one flow fetch; failures are cached briefly so every page does not wait out its own timeout.
-- The model snapshot is cached, and Daily Plan wraps it again in `market:daily:v5`, so a second page hit never recomputes.
+- The model snapshot is cached, and Daily Plan wraps it again in `market:daily:v8`, so a second page hit never recomputes.
 
 ### Failure handling
 

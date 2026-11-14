@@ -22,12 +22,12 @@ StockDesk 桌面端、iOS 和美股版各自用了更合适的语言和框架。
 
 | 语言 | 文件数 | 行数 |
 | --- | --- | --- |
-| Swift | 34 | 约 8,881 |
-| TypeScript / TSX | 39 | 约 6,136 |
-| Python | 21 | 约 4,641 |
-| CSS | 2 | 约 2,727 |
-| JavaScript | 3 | 约 320 |
-| HTML | 2 | 约 138 |
+| Swift | 35 | 约 10,029 |
+| TypeScript / TSX | 41 | 约 13,764 |
+| Python | 25 | 约 7,634 |
+| CSS | 1 | 约 3,765 |
+| JavaScript | 2 | 约 310 |
+| HTML | 1 | 约 110 |
 
 GitHub 侧边栏的 Languages 由 Linguist 自动索引；如果暂时没有显示，可以在仓库的 About 区域看到语言标签，或以本文件和 `README` 顶部的语言徽章为准。
 

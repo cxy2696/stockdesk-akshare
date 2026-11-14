@@ -324,7 +324,17 @@ pip install -r requirements.txt && python run.py --port 8770
 
 ![设置](assets/settings.png)
 
-设置含初始资产、名称 / UID、HUD / 亮色 / 深色、100% / 120% / 150%、中文 / English、缓存清理、数据目录；macOS / Windows 还有「Ollama 本地辅助」：默认关闭，填地址（本机 `http://127.0.0.1:11434`）和模型（如 `deepseek-r1:8b`），测试连接后保存，才可在每日策略/模型页生成辅助判断；详细步骤、局域网与隐私见 [Ollama 指南](OLLAMA.md)。iOS 不集成 Ollama，只有屏幕方向与原生功能。缩放只放大文字，地图和图表不拉伸。子页面右下角分享按钮生成长图，HUB 首页不显示分享。
+设置含初始资产、名称 / UID、HUD / 亮色 / 深色、100% / 120% / 150%、中文 / English、缓存清理、数据目录；iOS 还有屏幕方向。缩放只放大文字，地图和图表不拉伸。子页面右下角分享按钮生成长图，HUB 首页不显示分享。
+
+#### Ollama 本地辅助（仅 macOS / Windows）
+
+1. 先安装 Ollama，执行 `ollama pull deepseek-r1:8b`，确认 `ollama serve` 在跑。
+2. 设置 →「Ollama 本地辅助」：打开开关，地址填 `http://127.0.0.1:11434`，模型选 `deepseek-r1:8b`。
+3. 点「测试连接」，看到「已连接 · 模型可用」后保存。
+4. 回到每日策略或量化模型，点「生成判断」。首次约 20–60 秒，结果缓存 10 分钟；只读取缓存，不自动生成。
+5. 未启用、连不上、模型缺失都只提示，不影响其他页面。默认关闭；iOS 不集成。
+
+详细安装（含 Windows）、隐私边界与 FAQ：[Ollama 指南](OLLAMA.md)。
 
 ### 17. 常见问题
 

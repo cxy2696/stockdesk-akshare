@@ -34,7 +34,7 @@
 
 ### 量化模型
 
-![量化模型 HMM + 渗流](docs/preview-models.png)
+![量化模型 2.2 · 综合评分 + 本机 Ollama](docs/preview-models.png)
 
 | 明亮 HUB | 深色 HUB |
 | --- | --- |
@@ -261,11 +261,21 @@ cd frontend && npm install && npm run build && cd ..
 - 原「行业要闻」入口改为「指数分析」；`/index-analysis` 与 `/industry-news` 指向同一页
 
 ### 10. 量化模型
-- 注册表 2.1.0：HMM 2.0.0、渗流 2.0.0、九转 TD 1.0.0、KDJ 1.2.0
-- **HMM**：5 个核心指数的 3 状态模型，多起点 Baum-Welch，输出状态概率、置信度、熵、已持续天数、离开概率与每状态风险统计
-- **渗流**：全市场约 5,500 只股票按稳定哈希排进二维格点，4 邻接最大连通簇，阈值 0.592746；含 spanning、susceptibility、随机基线与 50×50 分块图
-- **九转**：建仓 9 根、倒计时 13 根，指数 / 持仓 / 临界行业龙头各一份
-- **组合结论**：HMM × 渗流 → 策略与总仓位；个股仓位建议跟随真实持仓
+- 注册表 **2.2.0**：HMM 2.1.0、渗流 2.1.0、九转 TD 1.1.0、KDJ 1.2.0
+- **HMM**：5 个核心指数的 3 状态模型，多起点 Baum-Welch，输出后验概率、过滤后（在线）状态、置信度/熵、状态质量与区分度、风险分、建议暴露、已持续天数、离开概率与每状态风险统计
+- **渗流**：全市场约 5,500 只股票按稳定哈希排进二维格点，4 邻接最大连通簇，阈值 0.592746；含 12 次 bootstrap 区间与稳定性、广度趋势、spanning、susceptibility、随机基线与 50×50 分块图
+- **九转**：建仓 9 根、倒计时 13 根，指数 / 持仓 / 临界行业龙头各一份；输出质量、新鲜度与完成度
+- **综合评分**：HMM 42% / 渗流 38% / 九转 20%，显示 0–100 分、分项进度条、一致度与依据；分项缺失按中性 50 分计入
+- **组合结论**：综合评分 → 策略与总仓位；个股仓位建议跟随真实持仓
+
+### 10.1 Ollama 本地辅助（仅 macOS / Windows）
+- 设置 →「Ollama 本地辅助」：开关、地址、模型、温度、超时、最大 tokens、测试连接与保存
+- **默认关闭**；未安装 Ollama、没有选中模型时不启用，也不会自动生成
+- 每日策略 / 量化模型页点「生成判断」后，把市场聚合、模型结论和持仓汇总发给本机 Ollama，返回倾向 / 参考仓位 / 依据 / 风险 / 动作；缓存 10 分钟
+- 只发聚合数据，不发交易备注与完整流水；iOS 不提供此功能
+- 安装、局域网与 FAQ：[Ollama 指南](../docs/OLLAMA.md)
+
+![Ollama 本地辅助设置](docs/preview-settings.png)
 
 ### 11. 地域
 - 覆盖 34 个省级行政区（23 省、5 自治区、4 直辖市、2 特别行政区）
@@ -372,7 +382,8 @@ The default surface is the **HUB**: a dark circular asset hub, three enlarged si
 - Daily Plan merges the 7×24 feed with industry news (click a headline for the full Eastmoney article), adds a model-conclusion strip and a TD card
 - Portfolio has four tabs: overview, asset analysis, advice, trades; `/asset-analysis` and `/advice-center` redirect
 - Index Analysis covers 12 A-share broad indices plus S&P 500, Nasdaq and Dow
-- Models registry 2.1.0: HMM 2.0.0, percolation 2.0.0, TD 1.0.0, KDJ 1.2.0
+- Models registry 2.2.0: HMM 2.1.0, percolation 2.1.0, TD 1.1.0, KDJ 1.2.0, plus a transparent composite score
+- Local Ollama second opinion on macOS/Windows (off by default; no generation when Ollama or the selected model is missing)
 - Regions cover 34 province-level divisions; the heatmap drills down by industry
 - Font scaling 100% / 120% / 150%: text only, with automatic wrapping and row growth
 - Built-in Chinese / English switch in the top bar and Settings

@@ -13,9 +13,11 @@
 3. 提交前运行：
    ```bash
    python -m compileall desktop/backend us
+   python scripts/model_selftest.py
    cd desktop/frontend && npm run build
+   cd ../../ios && find StockDesk -name "*.swift" -print0 | xargs -0 xcrun swiftc -parse
    ```
-4. UI 改动请附上一张截图，说明改了什么、在哪个主题/缩放下看过。
+4. UI 改动请附上一张当前版本（1.12.0 / iOS 3.9.0）的截图，说明改了什么、在哪个主题/缩放下看过；更新文档里的截图时同步改 Markdown 引用。
 5. 提交 Pull Request。
 
 ### 不要提交
@@ -43,7 +45,9 @@ Thanks for helping improve StockDesk. This project values software you can keep 
 3. Before committing, run:
    ```bash
    python -m compileall desktop/backend us
+   python scripts/model_selftest.py
    cd desktop/frontend && npm run build
+   cd ../../ios && find StockDesk -name "*.swift" -print0 | xargs -0 xcrun swiftc -parse
    ```
 4. For UI changes, include a screenshot and mention the theme/scale you checked.
 5. Open a pull request.

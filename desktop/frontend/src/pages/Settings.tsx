@@ -213,7 +213,7 @@ export default function SettingsPage() {
                 placeholder="http://127.0.0.1:11434"
               />
               <div className="muted small" style={{ marginTop: 6, lineHeight: 1.6 }}>
-                Mac / Windows 本机用 127.0.0.1；iPhone 真机填 Mac 的局域网地址，例如 192.168.1.20。
+                Mac / Windows 本机用 127.0.0.1；Ollama 在另一台机器时，填那台机器的局域网地址。iOS 不提供此功能。
               </div>
             </div>
             <div>

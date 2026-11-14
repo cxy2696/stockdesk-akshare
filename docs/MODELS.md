@@ -126,8 +126,8 @@ Registry version: **2.2.0**, in `desktop/backend/model_registry.py`.
 | Model | Version | Parameters | Output | Limits |
 | --- | --- | --- | --- | --- |
 | HMM | 2.1.0 | 3 states, 80 iterations, 420-day lookback, 3 starts | posteriors, filtered online state, confidence/entropy, state quality/separation, risk score, suggested exposure, duration, per-state stats | state changes lag price; states are fitted, not fundamental |
-| Percolation | 2.1.0 | threshold 0.592746, 4-neighbour, min 100 names, stable-hash layout | giant share, cluster count, spanning, susceptibility, random baseline, p-value, 50×50 grid, industry groups | lattice position is not an industry link; one-day snapshots wobble |
-| TD Sequential | 1.0.0 | setup 9, countdown 13, lookback 4 / 2, 420 bars | buy/sell counts, countdown, signal, bias, score, plain-language read | exhaustion signal, not a reversal guarantee |
+| Percolation | 2.1.0 | threshold 0.592746, 4-neighbour, min 100 names, stable-hash layout, 12-run bootstrap | giant share, bootstrap interval/stability, breadth trend, spanning, susceptibility, random baseline, p-value, 50×50 grid, industry groups | lattice position is not an industry link; one-day snapshots wobble |
+| TD Sequential | 1.1.0 | setup 9, countdown 13, lookback 4 / 2, 420 bars | buy/sell counts, countdown, signal, bias, score, quality, freshness, completion, plain-language read | exhaustion signal, not a reversal guarantee |
 | KDJ | 1.2.0 | KDJ(9,3,3), bands 118 / -14, 180 bars | K/D/J, RSV, MA5/20, volume ratio, central zone | extreme-zone flag only |
 
 The UI reads `/api/models/meta`, so a model upgrade does not require a page rewrite.
@@ -136,19 +136,30 @@ The UI reads `/api/models/meta`, so a model upgrade does not require a page rewr
 
 Daily log returns of the Shanghai Composite, CSI 300, ChiNext, Shenzhen Component and STAR 50, 420 bars, at least 60 samples. Three deterministic starts run Baum-Welch; the best log-likelihood wins. States are sorted by mean into weak → range → strong, so names mean the same thing across dates and indices.
 
-New in 2.0.0: posterior confidence, normalised entropy, regime age, average duration, next-day flip risk, per-state daily mean / annualised volatility / Sharpe / win rate, and a plain-language summary. The HMM sets total exposure; in practice, below 60% confidence treat the regime as ranging and do not resize on a single-day probability shift.
+New in 2.1.0: filtered online state (`filtered`), state quality/separation (`quality`, `state_separation`, `separation_label`), risk score and suggested exposure. New in 2.0.0: posterior confidence, normalised entropy, regime age, average duration, next-day flip risk, per-state daily mean / annualised volatility / Sharpe / win rate, and a plain-language summary. The HMM sets total exposure; below 60% confidence treat the regime as ranging. When separation is below 0.4 the states overlap and the label is only a weak reference.
 
-### Percolation 2.0.0
+### Percolation 2.1.0
 
 About 5,500 A-shares (suspended, delisted and ST names removed) are placed on a 2-D lattice in `crc32(code)` order. Listing order makes neighbouring sites correlated and inflates clusters; the stable hash keeps the result reproducible and spreads codes out. The largest four-neighbour cluster divided by advancing names is `giant_occupied`; 0.592746 is the 2-D square-site threshold.
 
-New in 2.0.0: `spanning` (does the giant touch all four edges), `susceptibility`, a random-layout baseline with a p-value over three shuffles, a 50×50 block grid that keeps every stock in the picture, and industry groups with breadth, giant share and leaders. When more than 60% of rows lack an industry field, grouping falls back to market and the response says so.
+New in 2.1.0: a 12-run bootstrap interval and stability score, plus `trend` / `history_delta` versus the previous snapshot. New in 2.0.0: `spanning` (does the giant touch all four edges), `susceptibility`, a random-layout baseline with a p-value over three shuffles, a 50×50 block grid that keeps every stock in the picture, and industry groups with breadth, giant share and leaders. When more than 60% of rows lack an industry field, grouping falls back to market and the response says so.
 
-### TD Sequential 1.0.0
+### TD Sequential 1.1.0
 
-Nine consecutive closes below the close four bars earlier form a buy setup; nine above form a sell setup. After a completed setup, up to thirteen bars that undercut the low two bars back (buy) or exceed the high two bars back (sell) complete the countdown. Signals are `buy_9` / `sell_9` / `buy_13` / `sell_13`, with `watch_*` and `countdown_*` while a structure is still forming; a completed setup stays live for 20 bars.
+Nine consecutive closes below the close four bars earlier form a buy setup; nine above form a sell setup. After a completed setup, up to thirteen bars that undercut the low two bars back (buy) or exceed the high two bars back (sell) complete the countdown. Signals are `buy_9` / `sell_9` / `buy_13` / `sell_13`, with `watch_*` and `countdown_*` while a structure is still forming; a completed setup stays live for 20 bars. 1.1.0 adds `quality`, `freshness`, `completion` and `signal_age`; an active countdown is fresh even when the original setup is old.
 
 Endpoint: `GET /api/market/td/{code}?limit=220`. The model snapshot also carries TD for the five indices, up to eight holdings and the leaders of industries closest to criticality. A 9/9 is exhaustion; wait for a volume-backed close or a reclaim of the 5-day line before acting.
+
+### Composite score (2.2.0)
+
+The Models page and Daily Plan show a transparent 0–100 composite:
+
+- HMM 42%: state base score plus confidence/quality, with a bonus when the filtered state agrees.
+- Percolation 38%: giant share plus bootstrap stability, adjusted by spanning and trend.
+- TD 20%: net buy/sell structures.
+- Agreement 0–3 counts how many components clear the bullish threshold; quality uses the weaker of HMM quality and percolation stability.
+
+It is a common yardstick, not a replacement for any model. Components, agreement and drivers are shown on the page.
 
 ### How they fit together
 
@@ -166,8 +177,8 @@ The combined stance lives in the Models page strategy mapping and the Daily Plan
 
 | Item | Cache / refresh |
 | --- | --- |
-| Model snapshot | `market:models:v5`, 10-minute backend cache; page polls every 5 minutes |
-| Daily plan | `market:daily:v5`, 2-minute backend cache; page refreshes every 3 minutes |
+| Model snapshot | `market:models:v8`, 10-minute backend cache; page polls every 5 minutes |
+| Daily plan | `market:daily:v8`, 2-minute backend cache; page refreshes every 3 minutes |
 | HUB quotes | 30 seconds |
 | Stock / industry flow | 60 seconds |
 | KDJ | 60 seconds |
@@ -181,12 +192,13 @@ Fallbacks: after consecutive Eastmoney failures a 45-second circuit sends calls 
 python scripts/model_selftest.py
 ```
 
-Offline, synthetic, no network: registry version and the four models, HMM states and transition matrix, percolation on 220 rows, a nine-down-close sequence producing `buy.count == 9` and `bias == 偏多`, and KDJ on 180 synthetic bars. GitHub Actions runs `Model check` on weekdays, on backend pushes and on demand. Run it before publishing a model change.
+Offline, synthetic, no network: registry version and the four models; HMM states, filtered state, transition matrix and quality; percolation on 220 rows with a bootstrap interval; a nine-down-close sequence producing `buy.count == 9`, `bias == 偏多` and a quality score; KDJ on 180 synthetic bars. GitHub Actions runs `Model check` on weekdays, on backend pushes and on demand. Run it before publishing a model change.
 
 ### Changelog
 
 | Registry | Change |
 | --- | --- |
+| 2.2.0 | HMM 2.1.0 (filtered state, quality/separation, risk score, suggested exposure), percolation 2.1.0 (bootstrap interval/stability, breadth trend), TD 1.1.0 (quality/freshness/completion); transparent composite score; cache keys `market:models:v8` / `market:daily:v8` |
 | 2.1.0 | TD Sequential 1.0.0 added; HMM 2.0.0 (multi-start, confidence, entropy, regime age, state stats); percolation 2.0.0 (stable hash, spanning, susceptibility, baseline, 50×50 grid, industry groups); snapshot key moved to `market:models:v5` |
 | 2.0.0 | Registry split out; HMM 1.1.0 + percolation 1.1.0 + KDJ 1.2.0; parameters centralised, selftest wired into CI |
 | 1.x | Parameters lived in each implementation; the UI read raw fields |

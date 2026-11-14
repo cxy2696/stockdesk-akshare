@@ -6,6 +6,8 @@
 
 > 当前版本 **1.12.0**（iOS **3.9.0 (32)**），安装包与源码一致；构建时把 `VERSION` 改成目标版本即可。
 
+> Ollama 辅助判断仅 macOS / Windows 提供，默认关闭；没有安装 Ollama 或没有选中模型时不会启用。安装与配置见 [Ollama 指南](OLLAMA.md)。iOS 不集成 Ollama。
+
 ## 下载安装 / Download & install
 
 | 平台 | 推荐文件 | 安装 |
@@ -128,6 +130,8 @@ python run.py --port 8770
 - **macOS 提示未签名**：右键 App → 打开。
 
 ## English
+
+> Current version **1.12.0** (iOS **3.9.0 (32)**). Ollama is macOS/Windows only and off by default; without Ollama or a selected model it stays disabled. iOS does not integrate Ollama. See [Ollama guide](OLLAMA.md).
 
 ### What you need
 
