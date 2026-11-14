@@ -10,12 +10,20 @@ StockDesk 可以把当前市场、量化模型和账户汇总发给**本机 Olla
 
 ### 1. 安装与启动
 
+**macOS / Linux**
+
 ```bash
-# macOS / Linux（Windows 安装包同名）
 brew install ollama        # 或从 https://ollama.com/download 下载
 ollama serve               # 常驻服务，默认 http://127.0.0.1:11434
 ollama pull deepseek-r1:8b # 推荐：8B，20–60 秒出结果
 ```
+
+**Windows**
+
+1. 从 <https://ollama.com/download> 下载 `OllamaSetup.exe` 安装；安装后托盘会出现 Ollama。
+2. 打开 PowerShell，执行 `ollama pull deepseek-r1:8b`。
+3. 默认服务地址 `http://127.0.0.1:11434`；StockDesk 设置里填同一地址即可。
+4. 如果 11434 被占用或需要局域网访问，先 `setx OLLAMA_HOST 0.0.0.0:11434`，退出托盘里的 Ollama 再重开。
 
 显存/内存充足可以用 `deepseek-r1:14b`，结果更稳但更慢。也可以用任意 Ollama 支持的聊天模型，只要在设置里填对模型名。
 
