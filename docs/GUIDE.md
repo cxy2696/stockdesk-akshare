@@ -409,6 +409,15 @@ The IPA is unsigned. The macOS build is Apple Silicon only; Intel Macs should ru
 - **Heatmap**: grouped by industry, area = market cap, colour = change; drill down, breadcrumb, search, up/down filters; tiny blocks are hidden.
 - **KDJ Alerts**: `J >= 118` overbought / `J <= -14` oversold; 5m/30m; labelled ETF proxy fallback; 60-second refresh.
 
+### Ollama (macOS / Windows only)
+
+1. Install Ollama, run `ollama pull deepseek-r1:8b`, and keep `ollama serve` running.
+2. Settings → Local Ollama: enable, keep `http://127.0.0.1:11434`, choose `deepseek-r1:8b`, test and save.
+3. Daily Plan / Quant Models → Generate. The first run takes 20–60 seconds and is cached for 10 minutes; nothing runs automatically.
+4. Off by default. If Ollama or the model is missing, the card explains why and the rest of the app is unaffected. iOS does not integrate Ollama.
+
+Privacy and Windows setup: [Ollama guide](OLLAMA.md).
+
 ### Model refresh
 
 - Backend cache: models 10 minutes, quotes 20 seconds, money flow 60 seconds, news 2 minutes; the full-market snapshot is cached for up to 10 minutes.
