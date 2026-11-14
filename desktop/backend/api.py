@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import advice, backtest, clock, daily, db, kdj, market, patterns as pattern_lib, portfolio, repo, screener, state, td as td_model, technical
+from . import advice, backtest, clock, daily, db, kdj, market, ollama as ollama_lib, patterns as pattern_lib, portfolio, repo, screener, state, td as td_model, technical
 from .config import APP_VERSION, INDEXES
 
 router = APIRouter()
@@ -36,6 +36,44 @@ def fail(msg: str, code: int = 400):
 @router.get("/api/health")
 def health():
     return ok({"version": APP_VERSION, "time": time.strftime("%Y-%m-%d %H:%M:%S"), "status": clock.market_status()})
+
+
+class OllamaConfigIn(BaseModel):
+    enabled: Optional[bool] = None
+    host: Optional[str] = None
+    model: Optional[str] = None
+    temperature: Optional[float] = None
+    timeout: Optional[int] = None
+    num_predict: Optional[int] = None
+
+
+@router.get("/api/ollama/config")
+def ollama_config():
+    return ok(ollama_lib.config())
+
+
+@router.put("/api/ollama/config")
+def ollama_config_save(body: OllamaConfigIn):
+    try:
+        cfg = ollama_lib.save_config(body.model_dump(exclude_none=True))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return ok(cfg)
+
+
+@router.get("/api/ollama/health")
+def ollama_health():
+    return ok(ollama_lib.health())
+
+
+@router.get("/api/ollama/models")
+def ollama_models():
+    return ok({"models": ollama_lib.models(), "host": ollama_lib.config()["host"]})
+
+
+@router.post("/api/ollama/advice")
+def ollama_advice(force: bool = Query(False), cached_only: bool = Query(False)):
+    return ok(ollama_lib.advice(force=force, cached_only=cached_only))
 
 
 @router.get("/api/market/indices")
@@ -88,7 +126,7 @@ def market_td(code: str, limit: int = Query(220, ge=30, le=800)):
 @router.get("/api/market/industry-focus")
 def market_industry_focus():
     """Industry breadth + flow + key names from the cached model snapshot."""
-    snap = db.cache_get("market:models:v5", 900)
+    snap = db.cache_get("market:models:v8", 900)
     if snap:
         return ok({"focus": snap.get("industry_focus") or [], "td": snap.get("td") or {},
                    "conclusion": snap.get("conclusion") or {}, "cached": True})
@@ -226,7 +264,7 @@ def stock_detail(code: str):
     # Industry focus: use the cached model snapshot instead of triggering a
     # full-market recompute while the user is just opening a stock.
     try:
-        snap = db.cache_get("market:models:v5", 900)
+        snap = db.cache_get("market:models:v8", 900)
         if snap:
             ind = data.get("industry") or ""
             focus = next((x for x in (snap.get("industry_focus") or []) if x.get("name") == ind), None)

@@ -164,6 +164,7 @@ extension View {
 
 extension Double {
     func fmt(_ digits: Int = 2) -> String {
+        guard isFinite else { return "--" }
         let f = NumberFormatter()
         f.numberStyle = .decimal
         f.minimumFractionDigits = digits
@@ -172,7 +173,8 @@ extension Double {
     }
 
     func pct(_ digits: Int = 2) -> String {
-        (self > 0 ? "+" : "") + String(format: "%.\(digits)f%%", self)
+        guard isFinite else { return "--" }
+        return (self > 0 ? "+" : "") + String(format: "%.\(digits)f%%", self)
     }
 
     func signed(_ digits: Int = 2) -> String {
@@ -192,7 +194,7 @@ extension Optional where Wrapped == Double {
 }
 
 func shortMoney(_ v: Double?) -> String {
-    guard let v else { return "--" }
+    guard let v, v.isFinite else { return "--" }
     let abs = Swift.abs(v)
     if abs >= 1e12 { return String(format: "%.2f万亿", v / 1e12) }
     if abs >= 1e8 { return String(format: "%.2f亿", v / 1e8) }

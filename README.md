@@ -9,21 +9,21 @@
 **个人股票投资台 / Personal equity investment desk**  
 Mac · Windows · iPhone · iPad · US Equities
 
-[项目主页](https://cxy2696.github.io/stockdesk-akshare/) · [使用指南](docs/GUIDE.md) · [安装构建](docs/INSTALL.md) · [模型说明](docs/MODELS.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases) · [English](#english)
+[项目主页](https://cxy2696.github.io/stockdesk-akshare/) · [使用指南](docs/GUIDE.md) · [安装构建](docs/INSTALL.md) · [模型说明](docs/MODELS.md) · [Ollama 指南](docs/OLLAMA.md) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases) · [English](#english)
 
 ![Mac HUB](screenshots/mac-hub.png)
 
-> **1.11.0 安装包**：macOS、Windows 与 iOS 安装包已全部更新到 1.11.0 / 3.8.0，可直接从 GitHub Release 下载；macOS 校验和见 release 附件。
+> **1.12.0 安装包**：macOS、Windows 与 iOS 已更新到 1.12.0 / 3.9.0。Ollama 辅助判断仅支持 macOS / Windows，默认关闭；没有本地 Ollama 时不会启用。
 
 ## 下载 / Download
 
 | 平台 Platform | 文件 File | 版本 Version | 说明 Notes |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.dmg` / `.zip` | 1.11.0 | 打开 DMG，双击 `Install-StockDesk.command` |
-| Windows 10/11 x64 | `StockDesk.exe` | 1.11.0 | 双击；需要 WebView2 |
-| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.8.0-unsigned.ipa` | 3.8.0 | 用 Sideloadly / AltStore / Xcode 重签 |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.12.0.dmg` / `.zip` | 1.12.0 | 打开 DMG，双击 `Install-StockDesk.command` |
+| Windows 10/11 x64 | `StockDesk.exe` | 1.12.0 | 双击；需要 WebView2 |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.9.0-unsigned.ipa` | 3.9.0 | 用 Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | latest | 见 [PACKAGES](docs/PACKAGES.md) |
-| 源码 | `main` 分支 | **1.11.0** | 见下方快速开始 |
+| 源码 | `main` 分支 | **1.12.0** | 见下方快速开始 |
 
 - 安装包在 [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
 - macOS App 为 ad-hoc 签名，下载后需运行安装脚本清除 `com.apple.quarantine`。脚本被拦截时右键 → 打开；手动命令：
@@ -40,6 +40,13 @@ A local-first, single-user equity desk: portfolio, quotes, review, backtests, HM
 
 > 本仓库是独立副本，不影响你当前本地正在使用的 StockDesk。<br>
 > This is an independent snapshot and does not affect your existing StockDesk install.
+
+## 1.12.0 更新 / What's new
+
+- **本地 Ollama 辅助判断（仅 macOS / Windows）**：设置里新增地址、模型、温度、超时、tokens 与连接测试；每日策略和量化模型页可让本机 Ollama 生成一段结构化第二意见。默认关闭，检测不到 Ollama 或没有模型时不会启用，也不会自动生成。
+- **模型 2.2.0**：HMM 增加过滤后状态、状态质量/区分度、风险分与建议暴露；渗流增加 12 次 bootstrap 区间、稳定性和广度趋势；九转增加质量/新鲜度/完成度；新增透明综合评分（HMM 42% / 渗流 38% / 九转 20%）。
+- **数据展示修复**：桌面与 iOS 的数字格式化统一过滤 NaN/Infinity；每日策略补综合分、质量、过滤后状态、稳定性与趋势；模型页补综合评分卡、分项进度条和依据；空数据/失败状态不再白屏。
+- **文档**：新增 [Ollama 本地部署与配置指南](docs/OLLAMA.md)，模型、架构、安装和使用指南同步到 1.12.0 / 3.9.0。
 
 ## 1.11.0 更新 / What's new
 
@@ -65,7 +72,8 @@ A local-first, single-user equity desk: portfolio, quotes, review, backtests, HM
 | 自选与个股 | 实时行情、日/周/月 K、MACD、九转、筹码、黄金分割、支撑压力、九转与行业关注卡 |
 | 板块跟踪 | 行业/概念、市场情绪、涨停池、可交互个股热图、形态选股 |
 | 策略回测 | 10 套策略、手续费/印花税/滑点、资金曲线、交易明细 |
-| 量化模型 | 5 指数 3 状态 HMM、渗流最大连通簇、九转结构、行业关注、个股仓位建议 |
+| 量化模型 | 5 指数 3 状态 HMM、渗流最大连通簇、九转结构、综合评分、行业关注、个股仓位建议 |
+| Ollama 辅助 | 仅 macOS / Windows；本机模型生成结构化第二意见，默认关闭，可配地址/模型/温度/超时 |
 | 指数分析 | A 股 12 个宽基 + 海外指数：趋势、均线、RSI、MACD、支撑压力与结论 |
 | KDJ 预警 | 半导体/通信设备 + 9 个 A 股指数，5m/30m K/D/J、RSV、MA5/20、量比、中枢 |
 | 地域与行业 | 中国上市公司地图、34 个省级行政区切换、省份龙头、行业要闻（已并入每日策略） |
@@ -130,8 +138,8 @@ stockdesk-akshare/
 
 | 平台 | 版本 |
 | --- | --- |
-| macOS / Windows | **1.11.0** |
-| iOS | **3.8.0 (31)** |
+| macOS / Windows | **1.12.0** |
+| iOS | **3.9.0 (32)** |
 | US | 1.0.2 |
 | 容器 | `stockdesk-akshare-a-share:latest` / `stockdesk-akshare-us:1.0.2` |
 
@@ -139,9 +147,11 @@ stockdesk-akshare/
 
 StockDesk is a local-first, single-user equity research desk for macOS, Windows, iOS and the web. It combines portfolio tracking, quotes, review analytics, backtests, HMM/percolation/TD models, KDJ alerts and regional/industry views in a HUD-style interface. Account data and market caches stay local.
 
-**Download:** macOS, Windows and iOS installers are all updated to 1.11.0 / 3.8.0 and are attached to the v1.11.0 release. The `main` branch matches the installers and can also be built from source with the commands above. macOS is Apple Silicon only; run `Install-StockDesk.command` after downloading to clear Gatekeeper quarantine. Windows needs WebView2; choose More info → Run anyway if SmartScreen blocks it. The iOS IPA is unsigned and must be re-signed.
+**Download:** macOS, Windows and iOS installers are all updated to 1.12.0 / 3.9.0 and are attached to the v1.12.0 release. The `main` branch matches the installers and can also be built from source with the commands above. macOS is Apple Silicon only; run `Install-StockDesk.command` after downloading to clear Gatekeeper quarantine. Windows needs WebView2; choose More info → Run anyway if SmartScreen blocks it. The iOS IPA is unsigned and must be re-signed.
+
+**1.12.0 highlights:** a local Ollama second opinion on macOS/Windows (off by default; disabled automatically when Ollama or the selected model is missing), model registry 2.2.0 with a filtered HMM state, state quality/separation, bootstrap percolation intervals, TD quality/freshness and a transparent composite score, plus NaN-safe formatting and richer empty states across desktop and iOS.
 
 **1.11.0 highlights:** the HUB centre now opens Portfolio; the former Industry News entry is now Index Analysis; Daily Plan merges market headlines with clickable full-text links, fixes main-force flow, and adds HMM/percolation/TD conclusions plus industry focus; Portfolio combines overview, asset analysis, advice and trades; TD Sequential and upgraded HMM/percolation live on the Models page; Review charts get distinct colours and first-day handling; Regions covers all 34 province-level divisions; the stock heatmap is drillable, searchable and filterable; the in-app Guide is a full nine-chapter manual.
 
-**Versions:** macOS/Windows 1.11.0 · iOS 3.8.0 (31) · US 1.0.2.<br>
+**Versions:** macOS/Windows 1.12.0 · iOS 3.9.0 (32) · US 1.0.2.<br>
 **License:** MIT. Market data is for research only, not investment advice.

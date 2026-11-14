@@ -163,12 +163,68 @@ def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["sta
     next_day_switch = round(float(1 - A[current][current]), 3)
     history = [int(h) for h in hard[-60:]]
 
+    # Online (filtered) probability: what the model would have said today
+    # without peeking at future bars.  Useful to show whether the smoothed
+    # posterior is confirmed by the live filter.
+    B = np.exp(-0.5 * (np.log(2 * math.pi * var) + (x[:, None] - mu) ** 2 / var)) + 1e-300
+    alpha = np.zeros((n, k))
+    alpha[0] = np.maximum(gamma[0], 1e-9) * B[0]
+    alpha[0] /= max(alpha[0].sum(), 1e-300)
+    for t in range(1, n):
+        alpha[t] = (alpha[t - 1] @ A) * B[t]
+        alpha[t] /= max(alpha[t].sum(), 1e-300)
+    filtered = alpha[-1] / max(alpha[-1].sum(), 1e-300)
+    filtered_state = int(np.argmax(filtered))
+
+    # How separated are the fitted states?  A tiny separation means the label
+    # is mostly noise even if the posterior is confident.
+    sep = 99.0
+    for i in range(k):
+        for j in range(i + 1, k):
+            pooled = math.sqrt(max((var[i] + var[j]) / 2, 1e-9))
+            sep = min(sep, abs(float(mu[i] - mu[j])) / pooled)
+    sep = round(float(sep), 3) if sep < 90 else None
+    quality = 0
+    if sep is not None:
+        quality = 100 * (0.32 * min(conf / 0.85, 1.0) + 0.48 * min(sep / 1.5, 1.0) + 0.20 * (1 if best["converged"] else 0.55))
+    if sep is not None and sep < 0.25:
+        quality = min(quality, 45)
+    quality = int(max(0, min(100, round(quality))))
+    separation_label = "清晰" if (sep is not None and sep >= 1.0) else ("一般" if (sep is not None and sep >= 0.4) else "重叠")
+    risk_score = int(max(0, min(100, round(
+        100 * (float(probs[0]) * 0.85 + next_day_switch * 0.35 + (1 - conf) * 0.15)
+        + (8 if sep is not None and sep < 0.4 else 0)
+    ))))
+    exposure = [0.25, 0.50, 0.75][min(current, 2)]
+    exposure += (conf - 0.5) * 0.20
+    if current == 0:
+        exposure -= 0.08
+    exposure = round(max(0.10, min(0.90, exposure)), 2)
+    next_entropy = float(-(A[current] * np.log(np.maximum(A[current], 1e-12))).sum() / math.log(k))
+
     interpretation = _hmm_read(current, labels, conf, entropy, mu, var, A, duration, age, next_day_switch, stats)
+    if sep is not None and sep < 0.4:
+        interpretation.append(
+            f"注意：三种状态的收益分布比较接近（区分度 {sep:.2f}），状态标签只能作弱参考；"
+            "不要把“震荡/强势”当成精确预测，仓位仍按风险和支撑压力执行。"
+        )
 
     return {
         "state": labels[current],
         "state_index": current,
         "confidence": round(conf, 4),
+        "filtered": {
+            "state": labels[filtered_state],
+            "state_index": filtered_state,
+            "confidence": round(float(filtered[filtered_state]), 4),
+            "probabilities": [round(float(v), 4) for v in filtered],
+        },
+        "state_separation": sep,
+        "separation_label": separation_label,
+        "quality": quality,
+        "risk_score": risk_score,
+        "suggested_exposure": exposure,
+        "transition_entropy": round(next_entropy, 3),
         "entropy": round(entropy, 3),
         "regime_age": age,
         "flip_risk": next_day_switch,
@@ -329,6 +385,22 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True) -> 
     baseline = sum(robust) / len(robust)
     p_value = sum(1 for x in robust if x >= giant_occ) / len(robust)
 
+    # Bootstrap the occupancy itself: with the same up-ratio, how wide is the
+    # giant-cluster distribution?  A narrow interval means today's breadth is
+    # statistically stable, not a one-snapshot accident.
+    boot = []
+    for seed in range(12):
+        rnd = random.Random(1000 + seed)
+        sample = rnd.choices([1, 0], weights=[max(occ, 1), max(n - occ, 1)], k=n)
+        sample += [0] * (cols * cols - len(sample))
+        comp = _largest_component(sample, cols)
+        boot.append(len(comp) / max(sum(sample[:n]), 1))
+    boot_sorted = sorted(boot)
+    ci_low = round(boot_sorted[1], 4)
+    ci_high = round(boot_sorted[-2], 4)
+    ci_width = round(ci_high - ci_low, 4)
+    stability = round(max(0.0, min(1.0, 1 - ci_width / 0.30)), 3)
+
     if giant_occ >= PERC_THRESHOLD:
         confidence = min(0.95, 0.55 + distance * 2 + (0.2 if spanning else 0))
         note = (f"上涨家数 {occ}/{n}，最大连通簇覆盖上涨股的 {giant_occ * 100:.0f}%，"
@@ -342,10 +414,26 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True) -> 
         confidence = max(0.35, 0.6 + distance)
         note = (f"最大连通簇只有 {giant_occ * 100:.0f}%，上涨股彼此孤立，"
                 f"属于少数主线的结构性行情；追扩散型普涨容易落空。")
+    confidence = round(min(0.95, max(0.20, confidence * 0.72 + stability * 0.28)), 2)
     if p_value >= 0.66:
         note += " 随机重排也能得到相近结果，当前广度本身偏强，不是排序造成的假象。"
     elif p_value <= 0.33:
         note += " 随机重排的结果明显更弱，说明真实行业结构对扩散有贡献。"
+
+    history_key = "market:perc:history:v1"
+    try:
+        history = db.cache_get(history_key) or []
+    except Exception:
+        history = []
+    prev = history[-1] if history else None
+    delta = round(giant_occ - float(prev.get("giant_occupied") or 0), 4) if prev else None
+    trend = "—" if delta is None else ("扩大" if delta > 0.02 else ("收缩" if delta < -0.02 else "持平"))
+    if with_grid:
+        history.append({"ts": time.time(), "giant_occupied": round(giant_occ, 4), "ratio": round(ratio, 4)})
+        try:
+            db.cache_set(history_key, history[-40:])
+        except Exception:
+            pass
 
     result = {
         "total": n, "up": occ, "ratio": round(ratio, 4), "threshold": PERC_THRESHOLD,
@@ -354,6 +442,8 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True) -> 
         "susceptibility": round(chi, 3), "spanning": spanning,
         "status": status, "distance": round(distance, 4), "confidence": round(confidence, 2),
         "random_baseline": round(baseline, 4), "p_value": round(p_value, 2),
+        "bootstrap": {"low": ci_low, "high": ci_high, "width": ci_width, "stability": stability},
+        "history_delta": delta, "trend": trend,
         "grid": {"cols": 50, "rows": 50, "cells": _visual_grid(grid, cols, set(largest))} if with_grid else None,
         "robustness": {"mean": round(baseline, 4), "min": min(robust), "max": max(robust)},
         "note": note,
@@ -528,40 +618,150 @@ def _industry_focus(perc: dict) -> list[dict]:
     return out
 
 
-def _conclusion(hmm: dict, perc: dict, td_snap: dict) -> dict:
+def _ensemble(hmm: dict, perc: dict, td_snap: dict, breadth: dict | None = None) -> dict:
+    """A transparent 0–100 blend of the three models.
+
+    The score is deliberately simple: HMM 42%, percolation 38%, TD 20%.
+    It is not a new black box; every component is visible in the UI so the
+    user can see why the stance changed.
+    """
+    hstate = hmm.get("state") or "震荡"
+    hconf = float(hmm.get("confidence") or 0.5)
+    hq = float(hmm.get("quality") or 50)
+    filtered = (hmm.get("filtered") or {}).get("state")
+    base = {"弱势": 28.0, "震荡": 50.0, "强势": 72.0}.get(hstate, 50.0)
+    hscore = base + (hconf - 0.5) * 26 + (hq - 50) * 0.10
+    if filtered == hstate:
+        hscore += 3
+    elif filtered:
+        hscore -= 2
+
+    giant = float(perc.get("giant_occupied") or 0)
+    stability = float((perc.get("bootstrap") or {}).get("stability") or 0.5)
+    pscore = 18 + giant * 118 + (stability - 0.5) * 10
+    if perc.get("spanning"):
+        pscore += 4
+    if (perc.get("trend") or "") == "收缩":
+        pscore -= 4
+
+    counts = (td_snap or {}).get("counts") or {}
+    buys = int(counts.get("buy") or 0)
+    sells = int(counts.get("sell") or 0)
+    tscore = 50 + (buys - sells) * 6
+
+    score = max(0.0, min(100.0, 0.42 * hscore + 0.38 * pscore + 0.20 * tscore))
+    if score >= 70:
+        stance, position = "进攻", "60%–80%"
+    elif score >= 58:
+        stance, position = "均衡偏多", "45%–65%"
+    elif score >= 45:
+        stance, position = "中性", "35%–50%"
+    elif score >= 32:
+        stance, position = "均衡偏防守", "25%–40%"
+    else:
+        stance, position = "防守", "0%–20%"
+
+    agreement = sum(1 for ok in (hscore >= 58, pscore >= 58, tscore >= 55) if ok)
+    drivers = [
+        f"HMM {hstate}（置信 {hconf * 100:.0f}%，质量 {hq:.0f}，过滤后 {filtered or '—'}）",
+        f"渗流 {perc.get('status') or '—'}（最大簇 {giant * 100:.0f}%，稳定性 {stability * 100:.0f}%）",
+        f"九转 买 {buys} / 卖 {sells}",
+    ]
+    if breadth:
+        up = int(breadth.get("up") or 0)
+        down = int(breadth.get("down") or 0)
+        if up + down:
+            drivers.append(f"广度 涨 {up} / 跌 {down}")
+    return {
+        "score": int(round(score)),
+        "stance": stance,
+        "position": position,
+        "agreement": agreement,
+        "components": {"hmm": int(round(hscore)), "percolation": int(round(pscore)), "td": int(round(tscore))},
+        "drivers": drivers,
+        # The weaker leg sets the confidence: a stable breadth reading cannot
+        # rescue an HMM whose states overlap.
+        "quality": int(round(min(hq, stability * 100))),
+    }
+
+
+def _conclusion(hmm: dict, perc: dict, td_snap: dict, ensemble: dict | None = None) -> dict:
     hmm_state = hmm.get("state") or "震荡"
     giant = perc.get("giant_occupied") or 0
     regime = "扩散" if giant >= PERC_THRESHOLD else ("临界" if giant >= PERC_THRESHOLD - 0.08 else "分裂")
+    ens = ensemble or _ensemble(hmm, perc, td_snap)
+    stance, position = ens["stance"], ens["position"]
     if hmm_state == "强势" and regime == "扩散":
-        stance, position = "进攻", "60%–80%"
+        bullets = [
+            f"仓位：模型一致度 {ens['agreement']}/3，总仓位按 {position} 执行；单票不超过 15%，单行业不超过 30%。",
+            "选股：优先上涨占比 ≥ 60% 且最大簇没有收缩的行业，再从里面挑站上 MA20、成交额放大的龙头。",
+            "节奏：九转买结构出现的标的可以分批试仓；卖结构出现、且跌破 5 日线的持仓先减一半。",
+        ]
     elif hmm_state == "弱势" and regime == "分裂":
-        stance, position = "防守", "0%–20%"
-    elif hmm_state == "强势" or regime == "扩散":
-        stance, position = "均衡偏多", "45%–65%"
+        bullets = [
+            f"仓位：模型一致度 {ens['agreement']}/3，建议总仓位 {position}，先保住本金。",
+            "选股：只做最强 1–2 条主线，不补弱势行业的反弹；没有把握就空仓等。",
+            "节奏：反弹用来减仓，不用来抄底；九转买结构也要等放量止跌再试。",
+        ]
     else:
-        stance, position = "均衡偏防守", "25%–45%"
-    bullets = [
-        f"仓位：{hmm_state} × {regime}，建议总仓位 {position}；单票不超过 15%，单行业不超过 30%。",
-        f"选股：优先上涨占比 ≥ 60% 且最大簇没有收缩的行业，再从里面挑站上 MA20、成交额放大的龙头。",
-        f"节奏：九转买结构出现的标的可以分批试仓；卖结构出现、且跌破 5 日线的持仓先减一半。",
-    ]
+        bullets = [
+            f"仓位：模型一致度 {ens['agreement']}/3，建议总仓位 {position}；单票不超过 15%，单行业不超过 30%。",
+            "选股：优先上涨占比 ≥ 60% 且最大簇没有收缩的行业，再从里面挑站上 MA20、成交额放大的龙头。",
+            "节奏：九转买结构出现的标的可以分批试仓；卖结构出现、且跌破 5 日线的持仓先减一半。",
+        ]
     if td_snap.get("counts", {}).get("sell", 0) > td_snap.get("counts", {}).get("buy", 0):
         bullets.append("提醒：当前卖出结构多于买入结构，别在放量长阳后追价，等回踩再说。")
     elif td_snap.get("counts", {}).get("buy", 0) > 0:
         bullets.append("提醒：已有买入结构完成，低吸机会比追涨多，但必须等止跌信号，不接下跌中的飞刀。")
-    text = (f"模型给结论：{hmm_state}状态（概率 {hmm.get('confidence', 0) * 100:.0f}%）"
-            f"叠加广度{regime}（最大簇 {giant * 100:.0f}%），策略取「{stance}」，"
+    text = (f"模型给结论：综合评分 {ens['score']} 分（HMM {hmm_state}、广度{regime}、"
+            f"九转买 {ens['components'].get('td', 50)} 分），策略取「{stance}」，"
             f"总仓位控制在 {position}。")
     return {"stance": stance, "position": position, "regime": regime, "hmm": hmm_state,
-            "text": text, "bullets": bullets}
+            "text": text, "bullets": bullets, "ensemble": ens}
 
 
 # ---------------------------------------------------------------------------
 # Snapshot
 # ---------------------------------------------------------------------------
 
+_MODEL_LOCK = __import__("threading").Lock()
+_MODEL_REFRESHING = False
+
+
+def _refresh_models() -> None:
+    global _MODEL_REFRESHING
+    try:
+        _compute_model_snapshot()
+    except Exception:
+        pass
+    finally:
+        with _MODEL_LOCK:
+            _MODEL_REFRESHING = False
+
+
 def model_snapshot() -> dict:
-    cached = db.cache_get("market:models:v5", 600)
+    """Serve the last snapshot immediately and refresh stale data in a thread.
+
+    A cold model run can take 10–30 s even on a healthy network, and much longer
+    when a quote host is rate-limited.  Blocking the whole Models page on it
+    felt like a broken screen; a stale snapshot plus a background refresh keeps
+    the page usable, with the timestamp visible.
+    """
+    global _MODEL_REFRESHING
+    cached = db.cache_get("market:models:v8")
+    if cached:
+        age = time.time() - float(cached.get("ts") or 0)
+        if age > 600:
+            with _MODEL_LOCK:
+                if not _MODEL_REFRESHING:
+                    _MODEL_REFRESHING = True
+                    __import__("threading").Thread(target=_refresh_models, daemon=True).start()
+        return cached
+    return _compute_model_snapshot()
+
+
+def _compute_model_snapshot() -> dict:
+    cached = db.cache_get("market:models:v8", 600)
     if cached:
         return cached
     rows = (market.fetch_spot(ttl=600) or {}).get("rows") or []
@@ -613,7 +813,12 @@ def model_snapshot() -> dict:
     perc = _percolation(rows)
     td_snap = _td_snapshot(hmm_indices, kl_map, perc, rows)
     focus = _industry_focus(perc)
-    conclusion = _conclusion(hmm, perc, td_snap)
+    breadth = {
+        "up": sum(1 for r in rows if (r.get("pct") or 0) > 0),
+        "down": sum(1 for r in rows if (r.get("pct") or 0) < 0),
+    }
+    ensemble = _ensemble(hmm, perc, td_snap, breadth)
+    conclusion = _conclusion(hmm, perc, td_snap, ensemble)
     out = {
         "ts": time.time(),
         "hmm": hmm,
@@ -621,9 +826,10 @@ def model_snapshot() -> dict:
         "hmm_summary": hmm_summary,
         "percolation": perc,
         "td": td_snap,
+        "ensemble": ensemble,
         "industry_focus": focus,
         "conclusion": conclusion,
         "model_meta": model_registry.meta(),
     }
-    db.cache_set("market:models:v5", out)
+    db.cache_set("market:models:v8", out)
     return out

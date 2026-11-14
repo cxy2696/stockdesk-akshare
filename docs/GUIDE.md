@@ -2,7 +2,7 @@
 
 [中文](#中文) · [English](#english) · [下载页](https://cxy2696.github.io/stockdesk-akshare/#download) · [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)
 
-> 适用版本：macOS / Windows **1.11.0** · iOS **3.8.0 (31)** · 美股 **1.0.2**
+> 适用版本：macOS / Windows **1.12.0** · iOS **3.9.0 (32)** · 美股 **1.0.2**
 >
 > 第一次用只看第 1、2 节。后面的页面说明当字典查，不用一次读完。
 
@@ -12,13 +12,13 @@
 
 | 平台 | 推荐文件 | 大小 | 安装 |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.zip` | 41 MB | 解压后双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.12.0.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.12.0.zip` | 41 MB | 解压后双击 `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe` | 52 MB | 双击；需要 WebView2 |
-| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.8.0-unsigned.ipa` | 1.9 MB | Sideloadly / AltStore / Xcode 重签 |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.9.0-unsigned.ipa` | 1.9 MB | Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | — | 见 [PACKAGES](PACKAGES.md) |
 
-> 安装包与源码版本一致，均为 1.11.0 / iOS 3.8.0；需要自行构建时用 `cd desktop && ./build_app.sh`（macOS）或 `build_win.ps1`（Windows），iOS 用 `xcodegen generate` 后从 Xcode 打包。
+> 安装包与源码版本一致，均为 1.12.0 / iOS 3.9.0；需要自行构建时用 `cd desktop && ./build_app.sh`（macOS）或 `build_win.ps1`（Windows），iOS 用 `xcodegen generate` 后从 Xcode 打包。
 
 #### macOS 首次打开
 
@@ -80,7 +80,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:1.0.2
 | 板块跟踪 | `/screener` | 板块、市场情绪、个股热图、形态选股 | 切行业/概念；热图下钻进个股 |
 | 地域 | `/regions` | 34 个省级行政区的公司数、涨跌、资金、龙头 | 切省份；地图点击联动 |
 | 指数分析 | `/index-analysis` | 12 个 A 股宽基 + 3 个海外指数、支撑压力、结论 | 看综合评分和偏多/偏空数量 |
-| 量化模型 | `/models` | HMM、渗流、九转、行业关注、个股仓位建议 | 先看结论条，再看拆解 |
+| 量化模型 | `/models` | HMM、渗流、九转、综合评分、行业关注、个股仓位建议 | 先看综合评分和结论条，再看拆解 |
 | KDJ 预警 | `/kdj` | 5m / 30m 的 K/D/J、RSV、量比、中枢 | 看极值方向和持续性 |
 | 设置 | `/settings` | 资产、主题、缩放、语言、缓存、数据目录 | 备份前先退出 App |
 | 使用指南 | `/guide` | 5 分钟上手到版本更新，9 章 | 侧栏目录跳转；页内可点进各页面 |
@@ -135,9 +135,11 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:1.0.2
 
 ### 7. 量化模型
 
+模型注册表 2.2.0：HMM 2.1.0（过滤后状态、状态质量/区分度、风险分、建议暴露）、渗流 2.1.0（12 次 bootstrap 区间、稳定性、广度趋势）、九转 1.1.0（质量、新鲜度、完成度）。顶部「综合评分」把三者按 HMM 42% / 渗流 38% / 九转 20% 合成 0–100 分，并显示分项、一致度和依据；分项不足时按中性 50 分计入，不会因为缺数据把分数拉爆。
+
 ![量化模型](assets/models.png)
 
-模型注册表 **2.1.0**，四个模型各管一段：
+模型注册表 **2.2.0**，四个模型各管一段：
 
 - **HMM 2.0.0**：3 状态高斯隐马尔可夫，输入 5 个核心指数的日对数收益（上证、沪深300、创业板、深证、科创50）。多起点 Baum-Welch（3 个初始化，取似然最优），状态按均值排序为弱势 / 震荡 / 强势。输出后验置信度、熵、已持续天数、平均持续天数、离开概率，以及每个状态的日均收益、年化波动、夏普和胜率。
 - **渗流 2.0.0**：全市场约 5,500 只股票按稳定哈希排进二维方格，避免按代码成块；4 邻接找最大连通簇，阈值 0.592746。输出最大簇占比、簇数量、是否跨越整张格点、susceptibility、随机重排基线与 p 值，以及 50×50 分块图。行业字段缺失时按市场分组。
@@ -186,7 +188,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:1.0.2
 
 ![iPhone HUB](assets/ios-hub.png)
 
-完全独立的 SwiftUI App，当前 **3.8.0 (31)**，支持 iPhone 与 iPad：HUB 3+5 模块、搜索/自选/笔记/异常提醒、100%/120%/150%、横竖屏、本地 `stockdesk.json`。iPad 会自动放大 HUB、四列 KPI、双列 KDJ 图表和地图；150% 自动单列 HUB。
+完全独立的 SwiftUI App，当前 **3.9.0 (32)**，支持 iPhone 与 iPad：HUB 3+5 模块、搜索/自选/笔记/异常提醒、100%/120%/150%、横竖屏、本地 `stockdesk.json`。iPad 会自动放大 HUB、四列 KPI、双列 KDJ 图表和地图；150% 自动单列 HUB。
 
 本轮变化：
 
@@ -322,7 +324,7 @@ pip install -r requirements.txt && python run.py --port 8770
 
 ![设置](assets/settings.png)
 
-设置含初始资产、名称 / UID、HUD / 亮色 / 深色、100% / 120% / 150%、中文 / English、缓存清理、数据目录；iOS 还有屏幕方向。缩放只放大文字，地图和图表不拉伸。子页面右下角分享按钮生成长图，HUB 首页不显示分享。
+设置含初始资产、名称 / UID、HUD / 亮色 / 深色、100% / 120% / 150%、中文 / English、缓存清理、数据目录；macOS / Windows 还有「Ollama 本地辅助」：默认关闭，填地址（本机 `http://127.0.0.1:11434`）和模型（如 `deepseek-r1:8b`），测试连接后保存，才可在每日策略/模型页生成辅助判断；详细步骤、局域网与隐私见 [Ollama 指南](OLLAMA.md)。iOS 不集成 Ollama，只有屏幕方向与原生功能。缩放只放大文字，地图和图表不拉伸。子页面右下角分享按钮生成长图，HUB 首页不显示分享。
 
 ### 17. 常见问题
 
@@ -331,7 +333,7 @@ pip install -r requirements.txt && python run.py --port 8770
 - **Windows 没窗口**：装 WebView2；SmartScreen 选「更多信息 → 仍要运行」；或 `StockDesk.exe --browser`。
 - **iOS 安装失败**：IPA 未签名，必须重签；免费签名 7 天过期。
 - **端口被占用**：启动器会自动换端口，看日志里的实际地址。
-- **页面还是旧版**：设置 → 数据与缓存里服务版本应为 1.11.0；强制刷新或退出重开。旧入口 `/asset-analysis`、`/advice-center`、`/industry-news` 会自动跳转。
+- **页面还是旧版**：设置 → 数据与缓存里服务版本应为 1.12.0；强制刷新或退出重开。旧入口 `/asset-analysis`、`/advice-center`、`/industry-news` 会自动跳转。
 - **加载慢或数字不动**：公开接口会限流。HUB 30 秒、自选 45 秒、KDJ 60 秒、每日策略 3 分钟、模型页 5 分钟自动刷新（后端缓存 10 分钟）；缓存没过期时返回同一份数据。
 - **板块或 KDJ 数据不对**：东方财富不可达时回退新浪（行业代码 `SINA*`）或 ETF 代理，页面会标注。
 - **清缓存**：设置 → 数据 → 清理行情缓存；不会删账户和交易。
@@ -348,7 +350,7 @@ cd frontend && npm ci && npm run build && cd ..
 python main.py            # --browser 仅浏览器
 ```
 
-macOS 打包：`cd desktop && VERSION=1.11.0 ./package_macos.sh`<br>
+macOS 打包：`cd desktop && VERSION=1.12.0 ./package_macos.sh`<br>
 Windows 打包：`cd desktop && powershell -ExecutionPolicy Bypass -File .\build_win.ps1`
 
 完整依赖、iOS/容器构建与发版见 [INSTALL](INSTALL.md)。行情与模型用于研究，不构成投资建议。
@@ -359,10 +361,10 @@ Windows 打包：`cd desktop && powershell -ExecutionPolicy Bypass -File .\build
 
 | Platform | File | Size | Install |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.dmg` | 43 MB | Open the DMG and run `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.11.0.zip` | 41 MB | Unzip and run `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.12.0.dmg` | 43 MB | Open the DMG and run `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.12.0.zip` | 41 MB | Unzip and run `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe` | 52 MB | Double-click; WebView2; SmartScreen → More info → Run anyway |
-| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.8.0-unsigned.ipa` | 1.9 MB | Re-sign with Sideloadly / AltStore / Xcode |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-3.9.0-unsigned.ipa` | 1.9 MB | Re-sign with Sideloadly / AltStore / Xcode |
 
 The macOS app is ad-hoc signed. The installer clears `com.apple.quarantine`; manual fallback:
 
@@ -392,7 +394,7 @@ The IPA is unsigned. The macOS build is Apple Silicon only; Intel Macs should ru
 - **Portfolio** (`/portfolio`): four tabs — overview, asset analysis, advice, trades. `/asset-analysis` and `/advice-center` redirect to the matching tab.
 - **Review**: NAV, drawdown, exposure, monthly heatmap, FIFO stats. Trend chart separates NAV, MA20 (cyan solid) and MA60 (purple dashed); single-day data shows a point and a note instead of a blank chart.
 - **Index Analysis**: 12 A-share broad indices plus S&P 500, Nasdaq and Dow, with support/resistance and a bias score. `/industry-news` also lands here.
-- **Quant Models**: registry 2.1.0 — HMM 2.0.0 on five indices, percolation 2.0.0 (~5,500 stocks, threshold 0.592746), TD 1.0.0, KDJ 1.2.0.
+- **Quant Models**: registry 2.2.0 — HMM 2.1.0 on five indices, percolation 2.1.0 (~5,500 stocks, threshold 0.592746, bootstrap), TD 1.1.0, KDJ 1.2.0; transparent composite score.
 - **Regions**: 34 province-level divisions with company count, breadth, flow, key industries and leaders; search, previous/next, map click.
 - **Heatmap**: grouped by industry, area = market cap, colour = change; drill down, breadcrumb, search, up/down filters; tiny blocks are hidden.
 - **KDJ Alerts**: `J >= 118` overbought / `J <= -14` oversold; 5m/30m; labelled ETF proxy fallback; 60-second refresh.
@@ -421,7 +423,7 @@ Data lives in `~/Library/Application Support/StockDesk` (macOS), `%LOCALAPPDATA%
 - Windows no window: install WebView2, choose Run anyway, or use `StockDesk.exe --browser`.
 - iOS install fails: re-sign the IPA; free signatures expire after 7 days.
 - Port in use: the launcher picks the next free port; check the log.
-- Old pages or blank screen after upgrading: hard refresh; Settings → Data should show version 1.11.0.
+- Old pages or blank screen after upgrading: hard refresh; Settings → Data should show version 1.12.0.
 - Data looks wrong: refresh; sectors/KDJ fall back to Sina/ETF proxy when Eastmoney is unavailable.
 
 ### Build
@@ -433,7 +435,7 @@ cd frontend && npm ci && npm run build && cd ..
 python main.py
 ```
 
-macOS package: `VERSION=1.11.0 ./package_macos.sh`<br>
+macOS package: `VERSION=1.12.0 ./package_macos.sh`<br>
 Windows package: `powershell -ExecutionPolicy Bypass -File .\build_win.ps1`
 
 See [INSTALL](INSTALL.md) for full build/release steps. Market data is for research only, not investment advice.

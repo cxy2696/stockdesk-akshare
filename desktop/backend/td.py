@@ -197,10 +197,31 @@ def td_sequence(closes: list[float], highs: list[float] | None = None,
     setup_high = max(h[-min(n, 20):])
     read = _read(signal, b, s, cb, cs, bars_since_buy9, bars_since_sell9, c[-1], setup_low, setup_high)
 
+    if signal in ("countdown_buy", "countdown_sell", "watch_buy", "watch_sell"):
+        signal_age = 0
+    elif signal in ("buy_9", "buy_13") and bars_since_buy9 is not None:
+        signal_age = bars_since_buy9
+    elif signal in ("sell_9", "sell_13") and bars_since_sell9 is not None:
+        signal_age = bars_since_sell9
+    else:
+        age_candidates = [x for x in (bars_since_buy9, bars_since_sell9) if x is not None]
+        signal_age = min(age_candidates) if age_candidates else None
+    freshness = "新" if signal_age is not None and signal_age <= 2 else (
+        "近期" if signal_age is not None and signal_age <= 6 else "过期")
+    quality = int(max(0, min(100, round(
+        abs(score - 50) * 1.6
+        + (18 if signal in ("buy_13", "sell_13") else 10 if signal in ("buy_9", "sell_9") else 4)
+        + (8 if signal_age is not None and signal_age <= 6 else 0)
+    ))))
+
     return {
         "available": True,
         "buy": {"count": b, "completed": b >= SETUP_LEN, "bars_since": bars_since_buy9},
         "sell": {"count": s, "completed": s >= SETUP_LEN, "bars_since": bars_since_sell9},
+        "quality": quality,
+        "completion": {"setup": round(max(b, s) / SETUP_LEN, 2), "countdown": round((cb if buy_cd_live else cs) / COUNTDOWN_LEN, 2)},
+        "freshness": freshness,
+        "signal_age": signal_age,
         "countdown": {
             "direction": "buy" if buy_cd_live else ("sell" if sell_cd_live else None),
             "count": cb if buy_cd_live else (cs if sell_cd_live else 0),
@@ -274,6 +295,8 @@ def td_brief(closes: list[float], highs: list[float] | None = None,
         "bias": full["bias"],
         "score": full["score"],
         "strength": full["strength"],
+        "quality": full.get("quality"),
+        "freshness": full.get("freshness"),
         "buy_count": full["buy"]["count"],
         "sell_count": full["sell"]["count"],
         "countdown": full["countdown"]["count"],

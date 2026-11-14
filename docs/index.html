@@ -124,7 +124,7 @@
           </div>
 
           <div class="hero-meta">
-            <span>macOS 1.11.0</span><span>Windows 1.11.0</span><span>iOS 3.8.0</span><span>US 1.0.2</span><span>MIT</span>
+            <span>macOS 1.12.0</span><span>Windows 1.12.0</span><span>iOS 3.9.0</span><span>US 1.0.2</span><span>MIT</span>
           </div>
         </div>
 
@@ -465,7 +465,7 @@
         <span class="rail-no">06</span>
         <span class="rail-label">WHAT'S NEW</span>
         <span class="rail-line" aria-hidden="true"></span>
-        <span class="rail-note">RELEASE 1.11.0 / DESKTOP + IOS 3.8.0</span>
+        <span class="rail-note">RELEASE 1.12.0 / DESKTOP + IOS 3.9.0</span>
       </div>
 
       <div class="section-head reveal">
@@ -474,7 +474,7 @@
           <h2 class="display">页面更少，<br>结论更清楚。</h2>
         </div>
         <div class="head-side">
-          <p>行业要闻并进每日策略，资产分析与投资建议并进持仓管理；「行业要闻」入口改为「指数分析」。<br>新增九转模型；热图、地域与复盘图表重做。</p>
+          <p>模型 2.2 增加过滤后 HMM 状态、状态质量、渗流 bootstrap 与综合评分；macOS / Windows 可接本机 Ollama 做第二意见（默认关闭）。<br>桌面与 iOS 的数字格式化、空态和模型页同步修复。</p>
         </div>
       </div>
 
@@ -485,6 +485,7 @@
         <div><b>04</b><span>九转模型 · 建仓 9 根、倒计时 13 根；5 个指数、持仓与临界行业龙头各一份</span></div>
         <div><b>05</b><span>个股热图 · 面积 = 总市值、颜色 = 涨跌幅；下钻、面包屑、搜索与涨跌筛选</span></div>
         <div><b>06</b><span>地域与复盘 · 34 个省级行政区可逐个切换；净值 / MA20 / MA60 与沪深300 基准分开画</span></div>
+        <div><b>07</b><span>Ollama 辅助 · macOS / Windows 本机模型给出倾向、依据、风险与动作；默认关闭，可配地址/模型/超时</span></div>
       </div>
     </div>
   </section>
@@ -521,7 +522,7 @@
             macOS
           </span>
           <b data-i18n="edMac">原生窗口，双击即用。</b>
-          <span class="edition-version">1.11.0</span>
+          <span class="edition-version">1.12.0</span>
         </a>
         <a class="edition" href="#download" target="_blank" rel="noopener">
           <span class="edition-no">02</span>
@@ -530,7 +531,7 @@
             Windows
           </span>
           <b data-i18n="edWin">单文件 exe，WebView2。</b>
-          <span class="edition-version">1.11.0</span>
+          <span class="edition-version">1.12.0</span>
         </a>
         <a class="edition" href="#download" target="_blank" rel="noopener">
           <span class="edition-no">03</span>
@@ -539,7 +540,7 @@
             iOS
           </span>
           <b data-i18n="edIOS">iPhone / iPad 上的 HUB。</b>
-          <span class="edition-version">3.8.0</span>
+          <span class="edition-version">3.9.0</span>
         </a>
         <a class="edition" href="#download" target="_blank" rel="noopener">
           <span class="edition-no">04</span>
@@ -581,7 +582,7 @@
           <div class="start-actions">
             <a class="start-download" href="#download">
               <span data-i18n="download">下载</span>
-              <span class="start-version">v1.11.0</span>
+              <span class="start-version">v1.12.0</span>
               <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2.2v7.1M4.4 6.7 7 9.3l2.6-2.6M2.4 11.7h9.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
             <a class="start-guide" href="https://github.com/cxy2696/stockdesk-akshare/blob/main/docs/GUIDE.md">
@@ -627,33 +628,33 @@ cd .. &amp;&amp; python main.py</code></pre>
       <div class="download-head reveal">
         <p class="eyebrow">GET THE DESK</p>
         <h2 class="display">选择版本，<br class="mobile-break">直接下载。</h2>
-        <p>点击即开始下载 1.11.0 安装包。macOS 提供 DMG 安装镜像和 ZIP 便携包；Windows 为精简单文件 exe；iOS 为 3.8.0 未签名 IPA。</p>
+        <p>点击即开始下载 1.12.0 安装包。macOS 提供 DMG 安装镜像和 ZIP 便携包；Windows 为精简单文件 exe；iOS 为 3.9.0 未签名 IPA。Ollama 辅助只在 macOS / Windows 提供，默认关闭。</p>
       </div>
       <div class="download-grid">
         <div class="download-card reveal">
           <span class="download-no">01</span>
           <h3>macOS</h3>
           <p>原生 WebKit 窗口。打开 DMG，双击 Install-StockDesk.command 安装并启动。</p>
-          <span class="download-version">1.11.0 · Apple Silicon · 43 MB</span>
-          <a class="download-go" href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.11.0/StockDesk-macOS-1.11.0.dmg" download="StockDesk-macOS-1.11.0.dmg">下载 DMG 安装包 <i>↓</i></a>
-          <a class="download-alt" href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.11.0/StockDesk-macOS-1.11.0.zip" download="StockDesk-macOS-1.11.0.zip">或下载 ZIP 便携包（41 MB）</a>
+          <span class="download-version">1.12.0 · Apple Silicon · 43 MB</span>
+          <a class="download-go" href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.12.0/StockDesk-macOS-1.12.0.dmg" download="StockDesk-macOS-1.12.0.dmg">下载 DMG 安装包 <i>↓</i></a>
+          <a class="download-alt" href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.12.0/StockDesk-macOS-1.12.0.zip" download="StockDesk-macOS-1.12.0.zip">或下载 ZIP 便携包（41 MB）</a>
         </div>
-        <a class="download-card reveal" href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.11.0/StockDesk.exe" download="StockDesk.exe">
+        <a class="download-card reveal" href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.12.0/StockDesk.exe" download="StockDesk.exe">
           <span class="download-no">02</span>
           <h3>Windows</h3>
           <p>精简单文件 exe，Windows 10/11 原生 WebView2 窗口；SmartScreen 拦截时「更多信息 → 仍要运行」。</p>
-          <span class="download-version">1.11.0 · x64 · 约 52 MB</span>
+          <span class="download-version">1.12.0 · x64 · 约 52 MB</span>
           <span class="download-go">下载 Windows 包 <i>↓</i></span>
         </a>
-        <a class="download-card reveal" href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.11.0/StockDesk-iOS-3.8.0-unsigned.ipa" download="StockDesk-iOS-3.8.0-unsigned.ipa">
+        <a class="download-card reveal" href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.12.0/StockDesk-iOS-3.9.0-unsigned.ipa" download="StockDesk-iOS-3.9.0-unsigned.ipa">
           <span class="download-no">03</span>
           <h3>iOS</h3>
           <p>未签名 IPA，需要用自己的 Apple ID 重签后安装。</p>
-          <span class="download-version">3.8.0 · arm64 · 1.9 MB</span>
+          <span class="download-version">3.9.0 · arm64 · 1.9 MB</span>
           <span class="download-go">下载 iOS 包 <i>↓</i></span>
         </a>
       </div>
-      <p class="download-foot">文件名：StockDesk-macOS-1.11.0.dmg / .zip · StockDesk.exe · StockDesk-iOS-3.8.0-unsigned.ipa · <a href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.11.0/SHA256SUMS-macOS.txt">SHA256 校验和</a></p>
+      <p class="download-foot">文件名：StockDesk-macOS-1.12.0.dmg / .zip · StockDesk.exe · StockDesk-iOS-3.9.0-unsigned.ipa · <a href="https://github.com/cxy2696/stockdesk-akshare/releases/download/v1.12.0/SHA256SUMS-macOS.txt">SHA256 校验和</a></p>
       <p class="download-foot">macOS 首次打开：运行安装包里的 Install-StockDesk.command；如被 Gatekeeper 拦截，右键 → 打开，或执行 xattr -dr com.apple.quarantine /Applications/StockDesk.app。</p>
     </div>
   </section>

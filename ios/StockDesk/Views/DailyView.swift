@@ -8,6 +8,8 @@ struct DailyView: View {
     @State private var loading = true
     @State private var picking = true
     @State private var news: [NewsItem] = []
+    @State private var newsError: String?
+    @State private var loadError: String?
 
     var body: some View {
         ScrollView {
@@ -17,6 +19,9 @@ struct DailyView: View {
                 } else if let s = state {
                     summaryCard(s)
                     modelBriefCard(s)
+                    if let loadError {
+                        errorBanner(loadError)
+                    }
                     analysisCard(s)
                     tdCard(s)
                     levelsCard(s)
@@ -53,17 +58,24 @@ struct DailyView: View {
                     .background(Theme.accent.opacity(0.07))
                     .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
 
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 6) {
-                    ForEach(s.indices) { i in
-                        VStack(spacing: 2) {
-                            Text(i.short).font(.system(size: 9)).foregroundStyle(Theme.textDim).lineLimit(1)
-                            Text(i.price.fmt(0)).font(.system(size: 11.5, weight: .semibold, design: .rounded)).lineLimit(1)
-                            Text(i.pct.pct()).font(.system(size: 9.5, weight: .medium)).foregroundStyle(Theme.trendColor(i.pct))
+                if s.indices.isEmpty {
+                    Text("指数行情暂不可用，下拉刷新重试。")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(Theme.up)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 6) {
+                        ForEach(s.indices) { i in
+                            VStack(spacing: 2) {
+                                Text(i.short).font(.system(size: 9)).foregroundStyle(Theme.textDim).lineLimit(1)
+                                Text(QuantModels.num(i.price, 0)).font(.system(size: 11.5, weight: .semibold, design: .rounded)).lineLimit(1)
+                                Text(QuantModels.pctText(i.pct)).font(.system(size: 9.5, weight: .medium)).foregroundStyle(Theme.trendColor(i.pct))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .background(Theme.cardSoft)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                        .background(Theme.cardSoft)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
                 }
 
@@ -72,7 +84,7 @@ struct DailyView: View {
                 HStack(spacing: 16) {
                     kv("涨停", "\(s.breadth.limitUp)", Theme.up)
                     kv("跌停", "\(s.breadth.limitDown)", Theme.down)
-                    kv("成交额", shortMoney(s.turnover), Theme.text)
+                    kv("成交额", QuantModels.money(s.turnover), Theme.text)
                     kv("温度", "\(s.score)", Theme.trendColor(Double(s.score - 50)))
                     kv("结论", s.label, Theme.trendColor(Double(s.score - 50)))
                 }
@@ -101,7 +113,7 @@ struct DailyView: View {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("当前仓位").font(.system(size: 10)).foregroundStyle(Theme.textDim)
-                                Text(String(format: "%.1f%%", a.currentPct)).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(Theme.text)
+                                Text(QuantModels.num(a.currentPct, 1) + "%").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(Theme.text)
                             }
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
@@ -124,7 +136,7 @@ struct DailyView: View {
                         HStack(spacing: 14) {
                             kv("单票上限", "\(a.singleCap)%")
                             kv("现金下限", "\(a.cashFloor)%")
-                            kv("仓位缺口", String(format: "%+.1fpp", a.gap), Theme.trendColor(a.gap))
+                            kv("仓位缺口", gapText(a.gap), Theme.trendColor(a.gap))
                         }
                         ForEach(a.reasons, id: \.self) { r in
                             Text("· " + r).font(.system(size: 10.5)).foregroundStyle(Theme.textSub)
@@ -161,8 +173,8 @@ struct DailyView: View {
                                 }
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 3) {
-                                    Text(h.price.fmt()).font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundStyle(Theme.text)
-                                    Text(h.pct.pct()).font(.system(size: 10)).foregroundStyle(Theme.trendColor(h.pct))
+                                    Text(QuantModels.num(h.price)).font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundStyle(Theme.text)
+                                    Text(QuantModels.pctText(h.pct)).font(.system(size: 10)).foregroundStyle(Theme.trendColor(h.pct))
                                 }
                                 Text("\(h.score)").font(.system(size: 12, weight: .bold, design: .rounded))
                                     .foregroundStyle(Theme.accent)
@@ -211,11 +223,15 @@ struct DailyView: View {
     private func sectorCol(_ title: String, _ boards: [Board], positive: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).font(.system(size: 9.5)).foregroundStyle(Theme.textDim)
-            ForEach(boards.prefix(4)) { b in
-                HStack(spacing: 3) {
-                    Text(b.name).font(.system(size: 9.5)).foregroundStyle(Theme.textSub).lineLimit(1)
-                    Spacer(minLength: 2)
-                    Text(b.pct.pct()).font(.system(size: 9.5, weight: .semibold)).foregroundStyle(Theme.trendColor(b.pct))
+            if boards.isEmpty {
+                Text("暂无").font(.system(size: 9.5)).foregroundStyle(Theme.textDim)
+            } else {
+                ForEach(boards.prefix(4)) { b in
+                    HStack(spacing: 3) {
+                        Text(b.name).font(.system(size: 9.5)).foregroundStyle(Theme.textSub).lineLimit(1)
+                        Spacer(minLength: 2)
+                        Text(QuantModels.pctText(b.pct)).font(.system(size: 9.5, weight: .semibold)).foregroundStyle(Theme.trendColor(b.pct))
+                    }
                 }
             }
         }
@@ -229,6 +245,33 @@ struct DailyView: View {
         }
     }
 
+    private func gapText(_ value: Double) -> String {
+        guard value.isFinite else { return "--" }
+        return String(format: "%+.1fpp", value)
+    }
+
+    private func errorBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 7) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.up)
+                .padding(.top, 1)
+            Text(message)
+                .font(.system(size: 9.5))
+                .foregroundStyle(Theme.up)
+                .lineSpacing(1.6)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Button("重试") { Task { await load() } }
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+                .buttonStyle(.plain)
+        }
+        .padding(9)
+        .background(Theme.up.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
     private var dateText: String {
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         return df.string(from: Date())
@@ -236,11 +279,15 @@ struct DailyView: View {
 
     private func summaryText(_ s: MarketState) -> String {
         let sh = s.indices.first
-        var t = "今日 A 股\(s.label)，上证指数 \(sh?.pct.pct() ?? "--") 收于 \(sh?.price.fmt() ?? "--")，"
+        var t = "今日 A 股\(s.label)，上证指数 \(QuantModels.pctText(sh?.pct)) 收于 \(QuantModels.num(sh?.price))，"
         t += "全市场 \(s.breadth.up) 家上涨、\(s.breadth.down) 家下跌，涨停 \(s.breadth.limitUp) 家、跌停 \(s.breadth.limitDown) 家，"
-        t += "成交额约 \(shortMoney(s.turnover))。"
+        t += "成交额约 \(QuantModels.money(s.turnover))。"
         if let top = s.top.first { t += "领涨行业：\(top.name)。" }
-        t += "市场温度 \(s.score)，建议总仓位 \(advice?.targetLow ?? 0)%–\(advice?.targetHigh ?? 0)%。"
+        if let advice {
+            t += "市场温度 \(s.score)，建议总仓位 \(advice.targetLow)%–\(advice.targetHigh)%。"
+        } else {
+            t += "市场温度 \(s.score)，仓位建议暂不可用。"
+        }
         return t
     }
 
@@ -248,16 +295,22 @@ struct DailyView: View {
     private func levelsCard(_ s: MarketState) -> some View {
         Card(title: "明日关注", subtitle: "近 20 日支撑 / 压力 · MA20 / MA60") {
             VStack(spacing: 7) {
-                ForEach(s.indices) { i in
-                    HStack(spacing: 8) {
-                        Text(i.name).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.text).frame(width: 64, alignment: .leading)
-                        Text(i.price.fmt()).font(.system(size: 10.5, design: .monospaced)).foregroundStyle(Theme.textSub).frame(width: 62, alignment: .trailing)
-                        Spacer()
-                        Text("支撑 " + i.support.fmt()).font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Theme.up)
-                        Text("压力 " + i.resistance.fmt()).font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Theme.down)
+                if s.indices.isEmpty {
+                    Text("指数行情暂不可用，下拉刷新重试。")
+                        .font(.system(size: 10.5)).foregroundStyle(Theme.up)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    ForEach(s.indices) { i in
+                        HStack(spacing: 8) {
+                            Text(i.name).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.text).frame(width: 64, alignment: .leading)
+                            Text(QuantModels.num(i.price)).font(.system(size: 10.5, design: .monospaced)).foregroundStyle(Theme.textSub).frame(width: 62, alignment: .trailing)
+                            Spacer()
+                            Text("支撑 " + QuantModels.num(i.support)).font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Theme.up)
+                            Text("压力 " + QuantModels.num(i.resistance)).font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Theme.down)
+                        }
+                        .padding(.vertical, 5)
+                        .overlay(alignment: .bottom) { SoftDivider() }
                     }
-                    .padding(.vertical, 5)
-                    .overlay(alignment: .bottom) { SoftDivider() }
                 }
                 Text("站上压力位视为转强信号；跌破支撑位应降低仓位。")
                     .font(.system(size: 9)).foregroundStyle(Theme.textDim).frame(maxWidth: .infinity, alignment: .leading)
@@ -291,22 +344,22 @@ struct DailyView: View {
                     ForEach(s.indices) { i in
                         HStack(spacing: 0) {
                             Text(i.short).font(.system(size: 9.5, weight: .semibold)).frame(width: 44, alignment: .leading)
-                            Text(i.price.fmt(0)).font(.system(size: 9.5, design: .rounded)).frame(width: 62, alignment: .trailing)
-                            Text(i.pct.pct()).font(.system(size: 9.5)).foregroundStyle(Theme.trendColor(i.pct)).frame(width: 52, alignment: .trailing)
-                            Text(i.pct7.pct()).font(.system(size: 8.5)).foregroundStyle(Theme.trendColor(i.pct7)).frame(width: 44, alignment: .trailing)
-                            Text(i.pct20.pct()).font(.system(size: 8.5)).foregroundStyle(Theme.trendColor(i.pct20)).frame(width: 44, alignment: .trailing)
-                            Text(i.pct30.pct()).font(.system(size: 8.5)).foregroundStyle(Theme.trendColor(i.pct30)).frame(width: 44, alignment: .trailing)
-                            Text(i.pct60.pct()).font(.system(size: 8.5)).foregroundStyle(Theme.trendColor(i.pct60)).frame(width: 44, alignment: .trailing)
-                            Text(i.ma20?.fmt(0) ?? "--").font(.system(size: 9, design: .monospaced)).frame(width: 48, alignment: .trailing)
-                            Text(i.ma60?.fmt(0) ?? "--").font(.system(size: 9, design: .monospaced)).frame(width: 48, alignment: .trailing)
-                            Text(i.rsi.map { String(format: "%.0f", $0) } ?? "--").font(.system(size: 9)).frame(width: 34, alignment: .trailing)
-                            Text((i.macdDif.map { String(format: "%.0f", $0) } ?? "--") + "/" + (i.macdDea.map { String(format: "%.0f", $0) } ?? "--"))
+                            Text(QuantModels.num(i.price, 0)).font(.system(size: 9.5, design: .rounded)).frame(width: 62, alignment: .trailing)
+                            Text(QuantModels.pctText(i.pct)).font(.system(size: 9.5)).foregroundStyle(Theme.trendColor(i.pct)).frame(width: 52, alignment: .trailing)
+                            Text(QuantModels.pctText(i.pct7)).font(.system(size: 8.5)).foregroundStyle(Theme.trendColor(i.pct7)).frame(width: 44, alignment: .trailing)
+                            Text(QuantModels.pctText(i.pct20)).font(.system(size: 8.5)).foregroundStyle(Theme.trendColor(i.pct20)).frame(width: 44, alignment: .trailing)
+                            Text(QuantModels.pctText(i.pct30)).font(.system(size: 8.5)).foregroundStyle(Theme.trendColor(i.pct30)).frame(width: 44, alignment: .trailing)
+                            Text(QuantModels.pctText(i.pct60)).font(.system(size: 8.5)).foregroundStyle(Theme.trendColor(i.pct60)).frame(width: 44, alignment: .trailing)
+                            Text(QuantModels.num(i.ma20, 0)).font(.system(size: 9, design: .monospaced)).frame(width: 48, alignment: .trailing)
+                            Text(QuantModels.num(i.ma60, 0)).font(.system(size: 9, design: .monospaced)).frame(width: 48, alignment: .trailing)
+                            Text(QuantModels.num(i.rsi, 0)).font(.system(size: 9)).frame(width: 34, alignment: .trailing)
+                            Text(QuantModels.num(i.macdDif, 0) + "/" + QuantModels.num(i.macdDea, 0))
                                 .font(.system(size: 8, design: .monospaced)).frame(width: 76, alignment: .trailing)
                             Text(i.tdBuy > 0 ? "买\(i.tdBuy)" : (i.tdSell > 0 ? "卖\(i.tdSell)" : "--"))
                                 .font(.system(size: 8.5)).foregroundStyle(i.tdBuy > 0 ? Theme.down : (i.tdSell > 0 ? Theme.up : Theme.textDim)).frame(width: 40, alignment: .trailing)
                             Text(i.bottomDull ? "钝化" : "--").font(.system(size: 8)).foregroundStyle(i.bottomDull ? Theme.up : Theme.textDim).frame(width: 40, alignment: .trailing)
-                            Text(i.support?.fmt(0) ?? "--").font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.down).frame(width: 48, alignment: .trailing)
-                            Text(i.resistance?.fmt(0) ?? "--").font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.up).frame(width: 48, alignment: .trailing)
+                            Text(QuantModels.num(i.support, 0)).font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.down).frame(width: 48, alignment: .trailing)
+                            Text(QuantModels.num(i.resistance, 0)).font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.up).frame(width: 48, alignment: .trailing)
                         }
                         .foregroundStyle(Theme.text)
                         .padding(.vertical, 6)
@@ -329,19 +382,23 @@ struct DailyView: View {
     private func hotColumn(_ title: String, _ list: [Quote], up: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title).font(.system(size: 9)).foregroundStyle(Theme.textDim)
-            ForEach(Array(list.prefix(10).enumerated()), id: \.element.id) { i, q in
-                NavigationLink {
-                    StockDetailView(code: q.code, name: q.name)
-                } label: {
-                    HStack(spacing: 3) {
-                        Text("\(i + 1)").font(.system(size: 8)).foregroundStyle(Theme.textDim).frame(width: 10, alignment: .leading)
-                        Text(q.name).font(.system(size: 10)).foregroundStyle(Theme.text).lineLimit(1)
-                        Spacer(minLength: 2)
-                        Text(q.pct.pct()).font(.system(size: 9.5, weight: .semibold)).foregroundStyle(Theme.trendColor(q.pct))
+            if list.isEmpty {
+                Text("暂无").font(.system(size: 9)).foregroundStyle(Theme.textDim)
+            } else {
+                ForEach(Array(list.prefix(10).enumerated()), id: \.element.id) { i, q in
+                    NavigationLink {
+                        StockDetailView(code: q.code, name: q.name)
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text("\(i + 1)").font(.system(size: 8)).foregroundStyle(Theme.textDim).frame(width: 10, alignment: .leading)
+                            Text(q.name).font(.system(size: 10)).foregroundStyle(Theme.text).lineLimit(1)
+                            Spacer(minLength: 2)
+                            Text(QuantModels.pctText(q.pct)).font(.system(size: 9.5, weight: .semibold)).foregroundStyle(Theme.trendColor(q.pct))
+                        }
+                        .padding(.vertical, 2)
                     }
-                    .padding(.vertical, 2)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -356,9 +413,9 @@ struct DailyView: View {
         return Card(title: "主力追踪", subtitle: "个股与行业当日主力净额") {
             VStack(alignment: .leading, spacing: 9) {
                 HStack(spacing: 6) {
-                    flowMetric("净流入", shortMoney(totalIn), Theme.up)
-                    flowMetric("净流出", shortMoney(totalOut), Theme.down)
-                    flowMetric("净额", shortMoney(totalIn + totalOut), Theme.trendColor(totalIn + totalOut))
+                    flowMetric("净流入", QuantModels.money(totalIn), Theme.up)
+                    flowMetric("净流出", QuantModels.money(totalOut), Theme.down)
+                    flowMetric("净额", QuantModels.money(totalIn + totalOut), Theme.trendColor(totalIn + totalOut))
                 }
                 HStack(alignment: .top, spacing: 10) {
                     flowColumn("个股净流入", rows: inflowRows, positive: true)
@@ -366,14 +423,18 @@ struct DailyView: View {
                     industryFlowColumn(industryRows)
                 }
                 let chips = Array(s.industriesIn.prefix(4))
-                HStack(spacing: 5) {
-                    ForEach(chips) { b in
-                        Text("资金 · \(b.name)")
-                            .font(.system(size: 8.5))
-                            .padding(.horizontal, 5).padding(.vertical, 3)
-                            .background(Theme.accent.opacity(0.08))
-                            .foregroundStyle(Theme.accent)
-                            .clipShape(Capsule())
+                if chips.isEmpty {
+                    Text("暂无关注行业").font(.system(size: 9)).foregroundStyle(Theme.textDim)
+                } else {
+                    HStack(spacing: 5) {
+                        ForEach(chips) { b in
+                            Text("资金 · \(b.name)")
+                                .font(.system(size: 8.5))
+                                .padding(.horizontal, 5).padding(.vertical, 3)
+                                .background(Theme.accent.opacity(0.08))
+                                .foregroundStyle(Theme.accent)
+                                .clipShape(Capsule())
+                        }
                     }
                 }
                 Text("主力净额 = 超大单 + 大单净买入。单日容易被一笔大单带偏，连看 3–5 天更可靠。")
@@ -402,7 +463,7 @@ struct DailyView: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(q.name).font(.system(size: 9.5)).foregroundStyle(Theme.text).lineLimit(1)
-                        Text(shortMoney(q.mainInflow)).font(.system(size: 8.5, design: .rounded))
+                        Text(QuantModels.money(q.mainInflow)).font(.system(size: 8.5, design: .rounded))
                             .foregroundStyle(positive ? Theme.up : Theme.down).lineLimit(1)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -425,9 +486,9 @@ struct DailyView: View {
                     HStack(spacing: 2) {
                         Text(b.name).font(.system(size: 9.5)).foregroundStyle(Theme.text).lineLimit(1)
                         Spacer(minLength: 1)
-                        Text(b.pct.pct()).font(.system(size: 8)).foregroundStyle(Theme.trendColor(b.pct))
+                        Text(QuantModels.pctText(b.pct)).font(.system(size: 8)).foregroundStyle(Theme.trendColor(b.pct))
                     }
-                    Text(shortMoney(b.inflow)).font(.system(size: 8.5, design: .rounded))
+                    Text(QuantModels.money(b.inflow)).font(.system(size: 8.5, design: .rounded))
                         .foregroundStyle(Theme.trendColor(b.inflow)).lineLimit(1)
                 }
                 .padding(.vertical, 2)
@@ -534,26 +595,39 @@ struct DailyView: View {
                     Text("趋势").frame(width: 40, alignment: .trailing)
                 }
                 .font(.system(size: 8.5)).foregroundStyle(Theme.textDim).padding(.vertical, 4)
-                ForEach(s.industryTrends) { b in
-                    HStack {
-                        Text(b.name).font(.system(size: 10.5)).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                        Text(b.pct5.pct()).font(.system(size: 9)).foregroundStyle(Theme.trendColor(b.pct5)).frame(width: 46, alignment: .trailing)
-                        Text(b.pct20.pct()).font(.system(size: 9)).foregroundStyle(Theme.trendColor(b.pct20)).frame(width: 46, alignment: .trailing)
-                        Text(b.pct60.pct()).font(.system(size: 9)).foregroundStyle(Theme.trendColor(b.pct60)).frame(width: 46, alignment: .trailing)
-                        Text(b.trend ?? "震荡").font(.system(size: 8.5)).foregroundStyle(b.trend == "多头" ? Theme.up : (b.trend == "空头" ? Theme.down : Theme.textDim)).frame(width: 40, alignment: .trailing)
+                if s.industryTrends.isEmpty {
+                    Text("行业趋势暂不可用（板块行情未返回），下拉刷新重试。")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.up)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                } else {
+                    ForEach(s.industryTrends) { b in
+                        HStack {
+                            Text(b.name).font(.system(size: 10.5)).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                            Text(QuantModels.pctText(b.pct5)).font(.system(size: 9)).foregroundStyle(Theme.trendColor(b.pct5)).frame(width: 46, alignment: .trailing)
+                            Text(QuantModels.pctText(b.pct20)).font(.system(size: 9)).foregroundStyle(Theme.trendColor(b.pct20)).frame(width: 46, alignment: .trailing)
+                            Text(QuantModels.pctText(b.pct60)).font(.system(size: 9)).foregroundStyle(Theme.trendColor(b.pct60)).frame(width: 46, alignment: .trailing)
+                            Text(b.trend ?? "震荡").font(.system(size: 8.5)).foregroundStyle(b.trend == "多头" ? Theme.up : (b.trend == "空头" ? Theme.down : Theme.textDim)).frame(width: 40, alignment: .trailing)
+                        }
+                        .padding(.vertical, 5)
+                        SoftDivider()
                     }
-                    .padding(.vertical, 5)
-                    SoftDivider()
                 }
-                HStack(spacing: 5) {
-                    ForEach(s.industriesIn.prefix(4)) { b in
-                        Text("关注 · \(b.name)").font(.system(size: 8.5))
-                            .padding(.horizontal, 5).padding(.vertical, 3)
-                            .background(Theme.accent.opacity(0.08)).foregroundStyle(Theme.accent)
-                            .clipShape(Capsule())
+                let focus = Array(s.industriesIn.prefix(4))
+                if focus.isEmpty {
+                    Text("暂无关注行业").font(.system(size: 9)).foregroundStyle(Theme.textDim).padding(.top, 6)
+                } else {
+                    HStack(spacing: 5) {
+                        ForEach(focus) { b in
+                            Text("关注 · \(b.name)").font(.system(size: 8.5))
+                                .padding(.horizontal, 5).padding(.vertical, 3)
+                                .background(Theme.accent.opacity(0.08)).foregroundStyle(Theme.accent)
+                                .clipShape(Capsule())
+                        }
                     }
+                    .padding(.top, 6)
                 }
-                .padding(.top, 6)
             }
         }
     }
@@ -561,33 +635,63 @@ struct DailyView: View {
     private func newsCard(_ s: MarketState) -> some View {
         Card(title: "行业要闻", subtitle: "7×24 快讯 · 点击读全文") {
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(news.prefix(6)) { n in
-                    Link(destination: URL(string: n.url ?? "") ?? URL(string: "https://finance.eastmoney.com/")!) {
-                        HStack(alignment: .top, spacing: 6) {
-                            Text(String(n.time.suffix(5))).font(.system(size: 8.5, design: .monospaced)).foregroundStyle(Theme.textDim)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(n.title).font(.system(size: 10.5)).foregroundStyle(Theme.text).lineLimit(2)
-                                if let summary = n.summary, !summary.isEmpty {
-                                    Text(summary).font(.system(size: 8.5)).foregroundStyle(Theme.textDim).lineLimit(1)
+                if news.isEmpty {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(Theme.up)
+                            .padding(.top, 1)
+                        Text(newsError ?? "暂无要闻")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.up)
+                            .lineSpacing(1.6)
+                        Spacer(minLength: 0)
+                        Button("重试") { Task { await loadNews() } }
+                            .font(.system(size: 9.5, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                            .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 4)
+                } else {
+                    ForEach(news.prefix(6)) { n in
+                        Link(destination: newsURL(n.url)) {
+                            HStack(alignment: .top, spacing: 6) {
+                                Text(String(n.time.suffix(5))).font(.system(size: 8.5, design: .monospaced)).foregroundStyle(Theme.textDim)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(n.title).font(.system(size: 10.5)).foregroundStyle(Theme.text).lineLimit(2)
+                                    if let summary = n.summary, !summary.isEmpty {
+                                        Text(summary).font(.system(size: 8.5)).foregroundStyle(Theme.textDim).lineLimit(1)
+                                    }
                                 }
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.up.right").font(.system(size: 8)).foregroundStyle(Theme.textDim)
                             }
-                            Spacer(minLength: 0)
-                            Image(systemName: "arrow.up.right").font(.system(size: 8)).foregroundStyle(Theme.textDim)
+                            .padding(.vertical, 2)
                         }
-                        .padding(.vertical, 2)
                     }
                 }
-                HStack(spacing: 5) {
-                    ForEach(s.top.prefix(4)) { b in
-                        Text("关注 · \(b.name)").font(.system(size: 8.5))
-                            .padding(.horizontal, 5).padding(.vertical, 3)
-                            .background(Theme.up.opacity(0.07)).foregroundStyle(Theme.up)
-                            .clipShape(Capsule())
+                let tops = Array(s.top.prefix(4))
+                if tops.isEmpty {
+                    Text("暂无关注行业").font(.system(size: 9)).foregroundStyle(Theme.textDim).padding(.top, 4)
+                } else {
+                    HStack(spacing: 5) {
+                        ForEach(tops) { b in
+                            Text("关注 · \(b.name)").font(.system(size: 8.5))
+                                .padding(.horizontal, 5).padding(.vertical, 3)
+                                .background(Theme.up.opacity(0.07)).foregroundStyle(Theme.up)
+                                .clipShape(Capsule())
+                        }
                     }
+                    .padding(.top, 4)
                 }
-                .padding(.top, 4)
             }
         }
+    }
+
+    private func newsURL(_ raw: String?) -> URL {
+        let fallback = URL(string: "https://finance.eastmoney.com/")!
+        guard let raw, !raw.isEmpty, let url = URL(string: raw), url.scheme != nil else { return fallback }
+        return url
     }
 
     private var indicatorNotes: some View {
@@ -612,12 +716,24 @@ struct DailyView: View {
         let s = await MarketService.shared.marketState()
         state = s
         advice = AdviceEngine.compute(summary: store.summary, state: s)
-        news = await MarketService.shared.marketNews(limit: 8)
+        if s.indices.isEmpty {
+            loadError = "主要指数行情暂不可用，部分卡片为空。下拉刷新或点重试。"
+        } else if s.top.isEmpty && s.bottom.isEmpty && s.industryTrends.isEmpty {
+            loadError = "行业板块数据暂不可用（接口未返回），下拉刷新或点重试。"
+        } else {
+            loadError = nil
+        }
+        await loadNews()
         loading = false
         picking = true
         let spot = (try? await MarketService.shared.spot())?.rows ?? []
         let candidates = spot.sorted { ($0.amount ?? 0) > ($1.amount ?? 0) }
         picks = await PatternEngine.picks(candidates: candidates, limit: 80, top: 12)
         picking = false
+    }
+
+    private func loadNews() async {
+        news = await MarketService.shared.marketNews(limit: 8)
+        newsError = news.isEmpty ? "要闻加载失败或暂无数据，下拉刷新重试。" : nil
     }
 }

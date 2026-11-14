@@ -5,6 +5,7 @@ import { ArrowRightOutlined, ReloadOutlined, SyncOutlined } from '@ant-design/ic
 import { api } from '../api'
 import { Card, EmptyState } from '../components/ui'
 import PositionAdviceCard from '../components/PositionAdvice'
+import OllamaAdvice from '../components/OllamaAdvice'
 import { fmt, trendClass } from '../utils'
 
 export default function Daily() {
@@ -169,6 +170,10 @@ export default function Daily() {
 
       <ModelStrip model={model} onJump={() => jump('daily-models')} />
 
+      <div style={{ marginTop: 14 }}>
+        <OllamaAdvice compact />
+      </div>
+
       <div className="grid-2" style={{ marginTop: 14, alignItems: 'start' }}>
         <FlowBoard hot={brief.hot} nav={nav} />
         <HotBoard hot={brief.hot} nav={nav} />
@@ -256,23 +261,34 @@ function ModelStrip({ model, onJump }: { model: any; onJump: () => void }) {
   const c = model?.conclusion
   if (!c?.text) return null
   const td = model?.td?.counts ?? {}
+  const ens = model?.ensemble ?? {}
+  const agreement = Number.isFinite(ens.agreement) ? ens.agreement : '--'
+  const quality = Number.isFinite(ens.quality) ? ens.quality : null
   return (
     <div className="model-strip" onClick={onJump} role="button" tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter') onJump() }}>
       <div className="model-strip-main">
-        <span>今日模型结论</span>
+        <span>今日模型结论 · 综合 {Number.isFinite(ens.score) ? ens.score : '--'} 分</span>
         <b>{c.stance}</b>
-        <em>总仓位 {c.position}</em>
+        <em>总仓位 {c.position} · 一致度 {agreement}/3{quality != null ? ` · 质量 ${quality}` : ''}</em>
       </div>
       <div className="model-strip-text">{c.text}</div>
       <div className="model-strip-tags">
-        <span>HMM {c.hmm}</span>
+        <span>HMM {c.hmm}{hmmConfidence(model) ? ` ${hmmConfidence(model)}%` : ''}</span>
         <span>渗流 {c.regime}</span>
         <span>九转 买 {td.buy ?? 0} / 卖 {td.sell ?? 0}</span>
+        {ens.components && (
+          <span>分项 H {ens.components.hmm ?? '--'} / P {ens.components.percolation ?? '--'} / TD {ens.components.td ?? '--'}</span>
+        )}
         <span className="model-strip-more">查看拆解 <ArrowRightOutlined /></span>
       </div>
     </div>
   )
+}
+
+function hmmConfidence(model: any): number | null {
+  const v = model?.hmm?.confidence
+  return typeof v === 'number' && Number.isFinite(v) ? Math.round(v * 100) : null
 }
 
 function FlowBoard({ hot, nav }: { hot: any; nav: (p: string) => void }) {
@@ -390,16 +406,20 @@ function QuantAnalysis({ brief, model, nav }: { brief: any; model: any; nav: (p:
         <div className="model-mini">
           <div className="model-mini-head"><span>HMM 市场状态</span><b className={hmm?.state === '强势' ? 'up' : hmm?.state === '弱势' ? 'down' : ''}>{hmm?.state ?? '--'}</b></div>
           <div className="model-mini-body">
-            概率 {((hmm?.confidence ?? 0) * 100).toFixed(0)}% · 已持续 {hmm?.regime_age ?? '--'} 天
+            概率 {Math.round((hmm?.confidence ?? 0) * 100)}% · 已持续 {hmm?.regime_age ?? '--'} 天
           </div>
-          <div className="model-mini-foot">历史平均 {hmm?.expected_days ?? '--'} 天 · 明日离开概率 {((hmm?.flip_risk ?? 0) * 100).toFixed(0)}%</div>
+          <div className="model-mini-foot">
+            质量 {hmm?.quality ?? '--'} · 过滤后 {hmm?.filtered?.state ?? '--'} · 风险 {hmm?.risk_score ?? '--'}
+          </div>
         </div>
         <div className="model-mini">
           <div className="model-mini-head"><span>渗流广度</span><b className={perc?.status?.includes('超') ? 'up' : perc?.status?.includes('临界') ? '' : 'down'}>{perc?.status ?? '--'}</b></div>
           <div className="model-mini-body">
             最大簇 {((perc?.giant_occupied ?? 0) * 100).toFixed(0)}% · 上涨占比 {((perc?.ratio ?? 0) * 100).toFixed(0)}%
           </div>
-          <div className="model-mini-foot">阈值 {(perc?.threshold ?? 0.5927) * 100}% · {perc?.clusters ?? '--'} 个连通簇</div>
+          <div className="model-mini-foot">
+            稳定性 {perc?.bootstrap?.stability != null ? Math.round(perc.bootstrap.stability * 100) : '--'}% · 趋势 {perc?.trend ?? '—'} · {perc?.clusters ?? '--'} 簇
+          </div>
         </div>
         <div className="model-mini">
           <div className="model-mini-head"><span>九转信号</span><b>{brief.td?.counts?.buy ?? 0} 买 / {brief.td?.counts?.sell ?? 0} 卖</b></div>

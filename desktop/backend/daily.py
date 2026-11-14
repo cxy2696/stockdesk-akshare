@@ -93,7 +93,7 @@ def _model_snapshot() -> dict:
         return {}
 
 
-_CACHE_KEY = "market:daily:v5"
+_CACHE_KEY = "market:daily:v8"
 _REFRESH_LOCK = __import__("threading").Lock()
 _REFRESHING = False
 
@@ -206,6 +206,7 @@ def _compute_daily() -> dict:
         "model": {
             "hmm": model.get("hmm") or {},
             "hmm_indices": model.get("hmm_indices") or [],
+            "ensemble": model.get("ensemble") or {},
             "hmm_summary": model.get("hmm_summary") or {},
             "percolation": model.get("percolation") or {},
             "td": td_snap,

@@ -28,6 +28,7 @@ regime = _hmm(returns)
 assert regime and regime["state"] in ("强势", "震荡", "弱势")
 assert len(regime["probabilities"]) == 3
 assert "aic" in regime and "transition" in regime
+assert "filtered" in regime and "quality" in regime and regime["quality"] >= 0
 
 rows = []
 for i in range(220):
@@ -39,12 +40,14 @@ p = _percolation(rows)
 assert p and p["total"] == 220
 assert 0 <= p["giant_occupied"] <= 1
 assert p["threshold"] == meta["models"]["percolation"]["params"]["threshold"]
+assert "bootstrap" in p and p["bootstrap"]["stability"] >= 0
 
 # Nine consecutive lower closes must produce a completed buy setup.
 td_closes = [10 - 0.1 * i for i in range(24)]
 td_now = td.td_sequence(td_closes, [c + 0.2 for c in td_closes], [c - 0.2 for c in td_closes])
 assert td_now["available"] and td_now["buy"]["count"] == 9
 assert td_now["bias"] == "偏多" and td_now["signal"] in ("buy_9", "buy_13")
+assert "quality" in td_now and td_now["quality"] >= 0
 
 bars = []
 for i in range(180):

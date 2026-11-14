@@ -4,6 +4,7 @@ import { Button, Spin, Table } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { api } from '../api'
 import { Card, EmptyState } from '../components/ui'
+import OllamaAdvice from '../components/OllamaAdvice'
 import { fmt, trendClass } from '../utils'
 
 /* ------------------------------------------------------------------ utils */
@@ -356,6 +357,17 @@ function TdTable({
       ),
     },
     {
+      title: '质量',
+      key: 'quality',
+      width: 84,
+      align: 'center',
+      render: (_: any, x: any) => (
+        <span className="chip" title={`${x.td?.freshness ?? '--'} · ${x.td?.completion?.setup != null ? Math.round(x.td.completion.setup * 100) : '--'}% 结构`}>
+          {x.td?.quality ?? '--'} · {x.td?.freshness ?? '--'}
+        </span>
+      ),
+    },
+    {
       title: '倒计时',
       key: 'countdown',
       width: 156,
@@ -444,6 +456,7 @@ export default function Models() {
   const perc = data?.percolation
   const td = data?.td
   const conclusion = data?.conclusion
+  const ensemble = data?.ensemble
   const meta = data?.model_meta
   const focus: any[] = useMemo(() => {
     if (data?.industry_focus?.length) return data.industry_focus
@@ -705,6 +718,38 @@ export default function Models() {
         </div>
       )}
 
+      <div className="ensemble-grid">
+        <div className="ensemble-score">
+          <span>综合评分</span>
+          <b style={{ color: stanceTone(ensemble?.stance ?? conclusion?.stance) }}>{ensemble?.score ?? '--'}</b>
+          <em>{ensemble?.stance ?? conclusion?.stance ?? '--'} · 一致度 {ensemble?.agreement ?? '--'}/3</em>
+        </div>
+        <div className="ensemble-bars">
+          {[
+            ['HMM', ensemble?.components?.hmm, '状态与置信度'],
+            ['渗流', ensemble?.components?.percolation, '广度连通'],
+            ['九转', ensemble?.components?.td, '动能衰竭'],
+          ].map(([label, value, hint]) => (
+            <div key={String(label)} className="ensemble-bar-row">
+              <span>{label}<em>{hint}</em></span>
+              <div className="ensemble-bar"><i style={{ width: `${Math.max(0, Math.min(100, Number(value) || 0))}%` }} /></div>
+              <b>{Number.isFinite(Number(value)) ? Math.round(Number(value)) : '--'}</b>
+            </div>
+          ))}
+        </div>
+        <div className="ensemble-drivers">
+          <span>评分依据</span>
+          {(ensemble?.drivers ?? []).slice(0, 4).map((d: string, i: number) => (
+            <div key={i}>· {d}</div>
+          ))}
+          {!(ensemble?.drivers ?? []).length && <div className="muted small">模型计算中。</div>}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <OllamaAdvice title="本地模型辅助判断" />
+      </div>
+
       {/* HMM */}
       <Card
         title={<SectionTitle title="HMM · 市场状态" desc="3 状态高斯隐马尔可夫 · 5 个核心指数日收益 · 后验概率" />}
@@ -773,6 +818,10 @@ export default function Models() {
               <Metric label="已持续" value={`${hmm.regime_age ?? '--'} 天`} sub={`历史平均 ${hmm.expected_days ?? '--'} 天`} />
               <Metric label="预计还能持续" value={`${num(hmm.expected_days, 1)} 天`} sub="按状态转移矩阵估算" title="状态的历史平均持续时间，不是到期时间" />
               <Metric label="明日离开概率" value={share(hmm.flip_risk)} sub="概率越低，状态越稳" />
+              <Metric label="过滤后状态" value={hmm.filtered?.state ?? '--'} sub={`置信 ${share(hmm.filtered?.confidence)}`} title="只用当天之前的数据递推，不含未来信息" />
+              <Metric label="状态质量" value={hmm.quality ?? '--'} sub={`区分度 ${hmm.separation_label ?? '--'} · ${num(hmm.state_separation, 2)}`} />
+              <Metric label="风险分" value={hmm.risk_score ?? '--'} sub={Number(hmm.risk_score) >= 60 ? '偏高风险' : '风险可控'} />
+              <Metric label="建议暴露" value={share(hmm.suggested_exposure)} sub="仅由 HMM 状态给出，最终仓位看综合评分" />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
@@ -1048,6 +1097,18 @@ export default function Models() {
                   title="随机重排后最大簇不低于实际的占比，越小说明真实结构越强"
                 />
                 <Metric label="距离阈值" value={`${(Number(perc.distance ?? 0) * 100).toFixed(1)} pct`} sub={Number(perc.distance) >= 0 ? '已超过临界' : '还差一点到临界'} />
+                <Metric
+                  label="Bootstrap 稳定性"
+                  value={share(perc.bootstrap?.stability)}
+                  sub={`区间 ${share(perc.bootstrap?.low)}–${share(perc.bootstrap?.high)}`}
+                  title="固定上涨比例重采样 12 次，最大簇的波动越小越稳定"
+                />
+                <Metric
+                  label="广度趋势"
+                  value={perc.trend ?? '—'}
+                  color={perc.trend === '扩大' ? 'var(--up)' : perc.trend === '收缩' ? 'var(--down)' : 'var(--text)'}
+                  sub={perc.history_delta == null ? '首次记录' : `较上次 ${(Number(perc.history_delta) * 100).toFixed(1)} pct`}
+                />
               </div>
 
               <div className="grid-2" style={{ marginTop: 14, alignItems: 'start' }}>

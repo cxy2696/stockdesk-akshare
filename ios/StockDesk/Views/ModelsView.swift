@@ -38,6 +38,7 @@ struct ModelsView: View {
     @State private var tds: [IndexTD] = []
     @State private var loading = true
     @State private var lastUpdated = ""
+    @State private var loadError: String?
 
     private var hmm: HMMSnapshot? { hmms.indices.contains(sel) ? hmms[sel].snapshot : hmms.first?.snapshot }
 
@@ -47,14 +48,14 @@ struct ModelsView: View {
         guard let p = perc else { return "等待" }
         return p.giantOccupied >= p.threshold ? "扩散" : p.giantOccupied >= p.threshold - 0.08 ? "临界" : "分裂"
     }
-    private var stance: String {
+    private var modelStance: String {
         let state = hmm?.state ?? "震荡"
         if state == "强势" && regime == "扩散" { return "进攻" }
         if state == "弱势" && regime != "扩散" { return "防守" }
         if state == "强势" || regime == "扩散" { return "均衡偏多" }
         return "均衡偏防守"
     }
-    private var positionText: String {
+    private var modelPositionText: String {
         let state = hmm?.state ?? "震荡"
         if state == "强势" && regime == "扩散" { return "60%–80%" }
         if state == "强势" && regime == "临界" { return "50%–70%" }
@@ -63,8 +64,30 @@ struct ModelsView: View {
         if regime == "扩散" { return "50%–70%" }
         return "30%–50%"
     }
+    private var composite: CompositeScore? {
+        QuantModels.composite(
+            hmm: hmm,
+            percolation: perc,
+            tdBuys: tds.filter { $0.buy >= 7 }.count,
+            tdSells: tds.filter { $0.sell >= 7 }.count,
+            tdTotal: tds.count,
+            tdCompletion: tds.isEmpty
+                ? nil
+                : Double(tds.reduce(0) { $0 + max($1.buy, $1.sell) }) / Double(tds.count * 9),
+            hmmLabel: "HMM · " + (hmms.indices.contains(sel) ? hmms[sel].name : "指数")
+        )
+    }
+    private var stance: String { composite?.stance ?? modelStance }
+    private var positionText: String { composite?.position ?? modelPositionText }
     private var targetPositionPct: Double {
-        stance == "进攻" ? 80 : stance == "均衡偏多" ? 62 : stance == "均衡偏防守" ? 45 : 25
+        switch stance {
+        case "进攻": return 80
+        case "均衡偏多": return 62
+        case "中性": return 45
+        case "均衡偏防守": return 30
+        case "防守": return 15
+        default: return 50
+        }
     }
 
     private var stockPlans: [StockPlan] {
@@ -109,7 +132,7 @@ struct ModelsView: View {
                 HStack {
                     Text("HMM 定仓位，渗流定行业，九转定买卖点。三个模型各管一段，都不预测点位。")
                     Spacer()
-                    Text("v2.1.0 \(lastUpdated.isEmpty ? "" : "· " + lastUpdated)")
+                    Text("v2.2.0 \(lastUpdated.isEmpty ? "" : "· " + lastUpdated)")
                         .font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
                 }
                     .font(.system(size: 9.5)).foregroundStyle(Theme.textDim).lineSpacing(2)
@@ -131,6 +154,41 @@ struct ModelsView: View {
                     }
                     let counts = Dictionary(grouping: hmms, by: { $0.snapshot.state }).mapValues(\.count)
                     Text("5 个 A 股核心指数：强势 \(counts["强势"] ?? 0) · 震荡 \(counts["震荡"] ?? 0) · 弱势 \(counts["弱势"] ?? 0)").font(.system(size: 9)).foregroundStyle(Theme.textSub)
+                }
+
+                if let c = composite {
+                    Card(title: "综合评分", subtitle: "HMM 42% · 渗流 38% · 九转 20% · 透明加权") {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            Text("\(c.score)")
+                                .font(.system(size: 30, weight: .bold, design: .rounded))
+                                .foregroundStyle(Theme.accent)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(c.stance).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text)
+                                Text("一致度 \(c.agreement)/3 · 质量 \(c.quality) · \(c.missing.isEmpty ? "三项齐全" : "缺 " + c.missing.joined(separator: "/"))")
+                                    .font(.system(size: 9)).foregroundStyle(Theme.textDim)
+                            }
+                            Spacer()
+                        }
+                        ForEach(c.components) { comp in
+                            HStack(spacing: 7) {
+                                Text(comp.label).font(.system(size: 9.5)).foregroundStyle(Theme.textSub).frame(width: 96, alignment: .leading).lineLimit(1)
+                                GeometryReader { geo in
+                                    ZStack(alignment: .leading) {
+                                        Capsule().fill(Theme.borderSoft).frame(height: 5)
+                                        Capsule().fill(comp.available ? Theme.accent : Theme.textDim)
+                                            .frame(width: geo.size.width * CGFloat(max(0, min(100, comp.score))) / 100, height: 5)
+                                    }
+                                }.frame(height: 5)
+                                Text("\(comp.score)").font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Theme.text).frame(width: 26, alignment: .trailing)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(Array(c.drivers.prefix(4).enumerated()), id: \.offset) { _, d in
+                                Text("· " + d).font(.system(size: 9)).foregroundStyle(Theme.textDim).lineLimit(2)
+                            }
+                        }.padding(.top, 3)
+                    }
                 }
 
                 Card(title: "模型组合策略", subtitle: "HMM 决定仓位 · 渗流决定行业与标的") {

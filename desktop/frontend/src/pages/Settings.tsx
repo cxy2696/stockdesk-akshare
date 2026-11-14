@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Button, Descriptions, Form, Input, InputNumber, Segmented, Tag, message } from 'antd'
-import { ClearOutlined, ReloadOutlined, SaveOutlined, WalletOutlined } from '@ant-design/icons'
+import { Button, Descriptions, Form, Input, InputNumber, Segmented, Switch, Tag, message } from 'antd'
+import { ClearOutlined, CloudServerOutlined, ReloadOutlined, SaveOutlined, WalletOutlined } from '@ant-design/icons'
 import { api } from '../api'
 import { Card, StatLine } from '../components/ui'
 import { fmt } from '../utils'
@@ -17,6 +17,10 @@ export default function SettingsPage() {
   const initialAdmin = getAdmin()
   const [adminName, setAdminName] = useState(initialAdmin.name)
   const [adminUid, setAdminUid] = useState(initialAdmin.uid)
+  const [ollama, setOllama] = useState<any>(null)
+  const [ollamaHealth, setOllamaHealth] = useState<any>(null)
+  const [ollamaModels, setOllamaModels] = useState<string[]>([])
+  const [ollamaBusy, setOllamaBusy] = useState(false)
 
   const load = async () => {
     const [s, h] = await Promise.all([api.get<any>('/api/portfolio/summary'), api.get<any>('/api/health')])
@@ -27,7 +31,62 @@ export default function SettingsPage() {
 
   useEffect(() => {
     load()
+    loadOllama()
   }, [])
+
+  const loadOllama = async () => {
+    try {
+      const cfg = await api.get<any>('/api/ollama/config')
+      setOllama(cfg)
+      const m = await api.get<any>('/api/ollama/models').catch(() => ({ models: [] }))
+      setOllamaModels(m?.models ?? [])
+      const h = await api.get<any>('/api/ollama/health').catch(() => null)
+      setOllamaHealth(h)
+    } catch {
+      /* settings stay usable even if Ollama is down */
+    }
+  }
+
+  const saveOllama = async () => {
+    if (!ollama) return
+    setOllamaBusy(true)
+    try {
+      const cfg = await api.put<any>('/api/ollama/config', {
+        enabled: !!ollama.enabled,
+        host: String(ollama.host || '').trim(),
+        model: String(ollama.model || '').trim(),
+        temperature: Number(ollama.temperature ?? 0.25),
+        timeout: Number(ollama.timeout ?? 150),
+        num_predict: Number(ollama.num_predict ?? 900),
+      })
+      setOllama(cfg)
+      message.success('Ollama 配置已保存')
+      const h = await api.get<any>('/api/ollama/health').catch(() => null)
+      setOllamaHealth(h)
+    } catch (e: any) {
+      message.error(e?.message ?? '保存失败')
+    } finally {
+      setOllamaBusy(false)
+    }
+  }
+
+  const testOllama = async () => {
+    setOllamaBusy(true)
+    try {
+      const [h, m] = await Promise.all([
+        api.get<any>('/api/ollama/health'),
+        api.get<any>('/api/ollama/models').catch(() => ({ models: [] })),
+      ])
+      setOllamaHealth(h)
+      setOllamaModels(m?.models ?? [])
+      if (h?.ok && h?.model_ready) message.success('Ollama 已连接，模型可用')
+      else message.warning(h?.error || 'Ollama 已连接，但当前模型不可用')
+    } catch (e: any) {
+      message.error(e?.message ?? '连接失败')
+    } finally {
+      setOllamaBusy(false)
+    }
+  }
 
   const save = async () => {
     const v = await form.validateFields()
@@ -137,6 +196,85 @@ export default function SettingsPage() {
       </div>
 
       <div style={{ marginTop: 14 }}>
+        <Card
+          title={<span><CloudServerOutlined /> Ollama 本地辅助判断</span>}
+          desc="把市场聚合、模型结论和持仓汇总发给本机 Ollama，换取一段结构化第二意见"
+        >
+          <div className="grid-2" style={{ alignItems: 'start' }}>
+            <div>
+              <div className="row-between" style={{ marginBottom: 10 }}>
+                <span className="small">启用辅助判断</span>
+                <Switch checked={!!ollama?.enabled} onChange={(v) => setOllama((prev: any) => ({ ...(prev ?? {}), enabled: v }))} />
+              </div>
+              <div className="muted small" style={{ marginBottom: 4 }}>Ollama 地址</div>
+              <Input
+                value={ollama?.host ?? ''}
+                onChange={(e) => setOllama((prev: any) => ({ ...(prev ?? {}), host: e.target.value }))}
+                placeholder="http://127.0.0.1:11434"
+              />
+              <div className="muted small" style={{ marginTop: 6, lineHeight: 1.6 }}>
+                Mac / Windows 本机用 127.0.0.1；iPhone 真机填 Mac 的局域网地址，例如 192.168.1.20。
+              </div>
+            </div>
+            <div>
+              <div className="muted small" style={{ marginBottom: 4 }}>模型</div>
+              <Input
+                value={ollama?.model ?? ''}
+                onChange={(e) => setOllama((prev: any) => ({ ...(prev ?? {}), model: e.target.value }))}
+                placeholder="deepseek-r1:8b"
+              />
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 6 }}>
+                {(ollamaModels.length ? ollamaModels : ['deepseek-r1:8b']).slice(0, 6).map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    className={`chip chip-btn ${ollama?.model === name ? 'active' : ''}`}
+                    onClick={() => setOllama((prev: any) => ({ ...(prev ?? {}), model: name }))}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+              <div className="grid-3" style={{ marginTop: 10, gap: 8 }}>
+                <div>
+                  <div className="muted small">温度</div>
+                  <InputNumber min={0} max={1} step={0.05} value={Number(ollama?.temperature ?? 0.25)} onChange={(v) => setOllama((prev: any) => ({ ...(prev ?? {}), temperature: v }))} style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <div className="muted small">超时（秒）</div>
+                  <InputNumber min={10} max={300} step={10} value={Number(ollama?.timeout ?? 150)} onChange={(v) => setOllama((prev: any) => ({ ...(prev ?? {}), timeout: v }))} style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <div className="muted small">最大 tokens</div>
+                  <InputNumber min={128} max={2000} step={100} value={Number(ollama?.num_predict ?? 900)} onChange={(v) => setOllama((prev: any) => ({ ...(prev ?? {}), num_predict: v }))} style={{ width: '100%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
+            <Button icon={<ReloadOutlined />} loading={ollamaBusy} onClick={testOllama}>测试连接</Button>
+            <Button type="primary" icon={<SaveOutlined />} loading={ollamaBusy} onClick={saveOllama}>保存</Button>
+            {ollamaHealth && (
+              <span className="small">
+                <Tag color={ollamaHealth.ok && ollamaHealth.model_ready ? 'green' : ollamaHealth.ok ? 'orange' : 'red'}>
+                  {ollamaHealth.ok ? (ollamaHealth.model_ready ? '已连接 · 模型可用' : '已连接 · 模型缺失') : '连接失败'}
+                </Tag>
+                <span className="muted">
+                  {ollamaHealth.version ? `v${ollamaHealth.version} · ` : ''}
+                  {ollamaHealth.models?.length ?? 0} 个模型
+                  {ollamaHealth.error ? ` · ${ollamaHealth.error}` : ''}
+                </span>
+              </span>
+            )}
+          </div>
+          <div className="muted small" style={{ marginTop: 10, lineHeight: 1.7 }}>
+            只发送指数/广度/模型状态、账户总额和持仓权重；不发送交易备注与完整流水。请求只到你自己填的 Ollama 地址。
+            首次生成约 20–60 秒，结果缓存 10 分钟；模型只是辅助，不构成投资建议。
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ marginTop: 14 }}>
         <Card title="管理员名片" desc="显示在 HUD 中枢左下角">
           <div className="grid-2" style={{ alignItems: 'end' }}>
             <div>
@@ -166,7 +304,7 @@ export default function SettingsPage() {
         <Card title="关于 StockDesk">
           <Descriptions size="small" column={2} colon={false} labelStyle={{ color: 'var(--text-sub)', width: 110 }} contentStyle={{ color: 'var(--text)' }}>
             <Descriptions.Item label="应用">StockDesk · 个人股票投资台</Descriptions.Item>
-            <Descriptions.Item label="版本">v1.11.0</Descriptions.Item>
+            <Descriptions.Item label="版本">v1.12.0</Descriptions.Item>
             <Descriptions.Item label="定位">本地优先、单用户、离线可用的投资工作台</Descriptions.Item>
             <Descriptions.Item label="技术栈">FastAPI + React + ECharts</Descriptions.Item>
             <Descriptions.Item label="数据存储">SQLite（本地 data 目录）</Descriptions.Item>

@@ -47,9 +47,220 @@ struct PercolationSnapshot {
     var note: String
 }
 
+struct CompositeComponent: Identifiable {
+    var key: String
+    var label: String
+    var score: Int
+    var weight: Double
+    var quality: Int
+    var detail: String
+    var available: Bool
+    var id: String { key }
+}
+
+/// Local composite of the three on-device models. Same weights as the backend
+/// model registry: HMM 42%, percolation 38%, TD 20%.
+struct CompositeScore {
+    var score: Int
+    var stance: String
+    var position: String
+    var agreement: Int
+    var quality: Int
+    var components: [CompositeComponent]
+    var drivers: [String]
+    var missing: [String]
+}
+
 enum QuantModels {
     static let labels = ["弱势", "震荡", "强势"]
     static let percThreshold = 0.592746
+
+    // MARK: - Safe display helpers
+
+    static func num(_ value: Double?, _ digits: Int = 2) -> String {
+        guard let value, value.isFinite else { return "--" }
+        return value.fmt(digits)
+    }
+
+    static func pctText(_ value: Double?, _ digits: Int = 2) -> String {
+        guard let value, value.isFinite else { return "--" }
+        return value.pct(digits)
+    }
+
+    static func percent(_ value: Double?, _ digits: Int = 1) -> String {
+        guard let value, value.isFinite else { return "--" }
+        return value.fmt(digits) + "%"
+    }
+
+    static func money(_ value: Double?) -> String {
+        guard let value, value.isFinite else { return "--" }
+        return shortMoney(value)
+    }
+
+    static func safe(_ value: Double?) -> Double? {
+        guard let value, value.isFinite else { return nil }
+        return value
+    }
+
+    // MARK: - Composite score
+
+    static func composite(
+        hmm: HMMSnapshot?,
+        percolation: PercolationSnapshot?,
+        tdBuys: Int,
+        tdSells: Int,
+        tdTotal: Int,
+        tdCompletion: Double? = nil,
+        hmmLabel: String = "HMM"
+    ) -> CompositeScore? {
+        guard hmm != nil || percolation != nil || tdTotal > 0 else { return nil }
+
+        var components: [CompositeComponent] = []
+        var drivers: [String] = []
+        var missing: [String] = []
+        var weighted = 0.0
+        var qualityWeighted = 0.0
+        var qualitySum = 0.0
+
+        // HMM 42%: state direction tilted by posterior confidence.
+        var hmmScore = 50
+        var hmmQuality = 0
+        if let h = hmm {
+            let stateIndex = min(max(h.stateIndex, 0), 2)
+            let base = [22.0, 50.0, 80.0][stateIndex]
+            let rawConfidence = h.probabilities.map(\.p).max() ?? 0.5
+            let confidence = min(max(rawConfidence.isFinite ? rawConfidence : 0.5, 0), 1)
+            let direction: Double = base > 55 ? 1 : (base < 45 ? -1 : 0)
+            hmmScore = clampScore(base + direction * (confidence - 0.5) * 40)
+            hmmQuality = clampScore(20 + (confidence - 1.0 / 3.0) / (2.0 / 3.0) * 80)
+            let confidenceText = percent(confidence * 100, 1)
+            components.append(CompositeComponent(
+                key: "hmm",
+                label: hmmLabel,
+                score: hmmScore,
+                weight: 0.42,
+                quality: hmmQuality,
+                detail: "\(h.state) · 后验 \(confidenceText) · 预计 \(num(h.expectedDays, 1)) 天",
+                available: true
+            ))
+            weighted += Double(hmmScore) * 0.42
+            qualitySum += Double(hmmQuality) * 0.42
+            qualityWeighted += 0.42
+            drivers.append("HMM \(h.state)，后验 \(confidenceText)")
+        } else {
+            missing.append("HMM")
+            components.append(CompositeComponent(key: "hmm", label: hmmLabel, score: 50, weight: 0.42, quality: 0, detail: "数据缺失 · 按中性 50 计入", available: false))
+            weighted += 50 * 0.42
+        }
+
+        // Percolation 38%: breadth ratio plus how far the giant cluster is
+        // above/below the 0.5927 threshold.
+        var percScore = 50
+        var percQuality = 0
+        if let p = percolation {
+            let ratio = p.ratio.isFinite ? p.ratio : 0.5
+            let giant = p.giantOccupied.isFinite ? p.giantOccupied : p.threshold
+            let ratioScore = 50 + (ratio - 0.5) * 100
+            let giantScore = 50 + (giant - p.threshold) * 150
+            percScore = clampScore(ratioScore * 0.4 + giantScore * 0.6)
+            let robustness = p.robustnessMean.isFinite ? p.robustnessMean : 0.5
+            let sample = min(1, max(0, Double(p.total) / 1000))
+            percQuality = clampScore(robustness * 100 * 0.7 + sample * 100 * 0.3)
+            let ratioText = percent(ratio * 100, 1)
+            let giantText = percent(giant * 100, 1)
+            components.append(CompositeComponent(
+                key: "percolation",
+                label: "渗流",
+                score: percScore,
+                weight: 0.38,
+                quality: percQuality,
+                detail: "\(p.status) · 上涨 \(ratioText) · 最大簇 \(giantText)",
+                available: true
+            ))
+            weighted += Double(percScore) * 0.38
+            qualitySum += Double(percQuality) * 0.38
+            qualityWeighted += 0.38
+            drivers.append("渗流 \(p.status)，上涨 \(ratioText)，最大簇 \(giantText)")
+        } else {
+            missing.append("渗流")
+            components.append(CompositeComponent(key: "percolation", label: "渗流", score: 50, weight: 0.38, quality: 0, detail: "数据缺失 · 按中性 50 计入", available: false))
+            weighted += 50 * 0.38
+        }
+
+        // TD 20%: net buy/sell structures across the tracked indices.
+        var tdScore = 50
+        var tdQuality = 0
+        if tdTotal > 0 {
+            let buys = max(0, tdBuys)
+            let sells = max(0, tdSells)
+            let net = Double(buys - sells) / Double(max(tdTotal, 1))
+            tdScore = clampScore(50 + net * 50)
+            let rawCompletion = tdCompletion ?? (Double(max(buys, sells)) / Double(max(tdTotal, 1)))
+            let completion = min(max(rawCompletion.isFinite ? rawCompletion : 0, 0), 1)
+            tdQuality = clampScore(20 + completion * 80)
+            components.append(CompositeComponent(
+                key: "td",
+                label: "九转",
+                score: tdScore,
+                weight: 0.20,
+                quality: tdQuality,
+                detail: "买 \(buys) / 卖 \(sells) · \(tdTotal) 个指数",
+                available: true
+            ))
+            weighted += Double(tdScore) * 0.20
+            qualitySum += Double(tdQuality) * 0.20
+            qualityWeighted += 0.20
+            drivers.append("九转 买 \(buys) / 卖 \(sells)")
+        } else {
+            missing.append("九转")
+            components.append(CompositeComponent(key: "td", label: "九转", score: 50, weight: 0.20, quality: 0, detail: "数据缺失 · 按中性 50 计入", available: false))
+            weighted += 50 * 0.20
+        }
+
+        let score = clampScore(weighted)
+        let direction = score >= 56 ? 1 : (score <= 44 ? -1 : 0)
+        let agreement = [hmmScore, percScore, tdScore].filter { value in
+            if direction == 0 { return abs(value - 50) <= 7 }
+            let sign = value >= 56 ? 1 : (value <= 44 ? -1 : 0)
+            return sign == direction
+        }.count
+        let stance = stanceFor(score)
+        let quality = qualityWeighted > 0 ? clampScore(qualitySum / qualityWeighted) : 0
+
+        return CompositeScore(
+            score: score,
+            stance: stance,
+            position: positionFor(stance),
+            agreement: agreement,
+            quality: quality,
+            components: components,
+            drivers: drivers,
+            missing: missing
+        )
+    }
+
+    private static func clampScore(_ value: Double) -> Int {
+        guard value.isFinite else { return 50 }
+        return Int(min(100, max(0, value.rounded())))
+    }
+
+    private static func stanceFor(_ score: Int) -> String {
+        if score >= 75 { return "进攻" }
+        if score >= 60 { return "均衡偏多" }
+        if score >= 45 { return "中性" }
+        if score >= 32 { return "均衡偏防守" }
+        return "防守"
+    }
+
+    private static func positionFor(_ stance: String) -> String {
+        switch stance {
+        case "进攻": return "60%–80%"
+        case "均衡偏多": return "45%–65%"
+        case "中性": return "30%–50%"
+        case "均衡偏防守": return "15%–30%"
+        default: return "0%–15%"
+        }
+    }
 
     static func hmm(_ x: [Double], k: Int = 3, iters: Int = 40) -> HMMSnapshot? {
         let n = x.count

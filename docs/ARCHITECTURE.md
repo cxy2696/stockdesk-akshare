@@ -32,6 +32,7 @@ iOS
 - `backend/market.py` 负责 A 股行情、指数、K 线、搜索和板块数据。
 - `backend/models.py` 实现三状态高斯 HMM、渗流最大连通簇，并把九转、行业关注和组合结论组装成模型快照。
 - `backend/td.py` 是独立的 TD Sequential 实现，只吃收盘价（可选高低价），不依赖行情层。
+- `backend/ollama.py` 负责本机 Ollama 的健康检查、模型列表、上下文组装和结构化辅助判断；只发送聚合数据，不发送交易备注。
 - `backend/daily.py` 并行拉行情、模型、要闻、资金流、行业趋势和仓位建议，组装每日策略响应。
 - `backend/state.py` 提供市场状态、板块、资金流、指数分析、要闻、地域和公司分布。
 - `backend/portfolio.py` 处理交易流水、成本、净值与回撤。
@@ -68,13 +69,15 @@ HMM 的输入是五个 A 股指数的日对数收益，输出弱势 / 震荡 / �
 
 | 键 | TTL | 内容 |
 | --- | --- | --- |
-| `market:models:v5` | 600 秒 | HMM、渗流、九转、行业关注、组合结论、模型注册表 |
+| `market:models:v8` | 600 秒 | HMM（过滤后/质量/风险）、渗流（bootstrap/趋势）、九转、行业关注、综合评分、模型注册表 |
 | `market:daily:v5` | 120 秒 | 每日策略整页响应（行情、模型摘要、要闻、资金流、趋势、仓位建议） |
 | `market:state` | 60 秒 | 市场状态、温度、指数 |
 | `spot:v3` | 180 / 600 秒 | 全市场快照（默认 3 分钟，模型与市场状态读 10 分钟） |
 | `fund:individual` | 60 秒 | 个股主力资金（新浪两端各 900 只） |
 
-模型和每日策略的键名带版本号（`:v5`），改字段结构时升版本，旧缓存自然失效，不用写迁移。
+模型和每日策略的键名带版本号（`:v8`），改字段结构时升版本，旧缓存自然失效，不用写迁移。
+
+Ollama 建议缓存在 `ollama:advice:v1:<model>`，10 分钟；`cached_only=1` 只读缓存，只有用户点“生成”才强制重算。
 
 并发控制：
 
@@ -99,7 +102,13 @@ HMM 的输入是五个 A 股指数的日对数收益，输出弱势 / 震荡 / �
 
 ### 行业关注接口
 
-- `GET /api/market/industry-focus` 优先读 `market:models:v5` 缓存，命中时返回 `cached: true`；没命中就现场算一次模型快照。
+- `GET /api/market/industry-focus` 优先读 `market:models:v8` 缓存，命中时返回 `cached: true`；没命中就现场算一次模型快照。
+
+### Ollama 接口
+
+- `GET/PUT /api/ollama/config`：读写 `enabled/host/model/temperature/timeout/num_predict`，默认 `enabled=false`。
+- `GET /api/ollama/health`、`GET /api/ollama/models`：探测 `/api/tags` 与 `/api/version`，返回可用模型和缺失原因。
+- `POST /api/ollama/advice?force=&cached_only=`：组装市场/模型/持仓聚合上下文，调用 `/api/chat`（`stream=false`、`format=json`），解析为倾向/仓位/依据/风险/动作；失败返回中文错误，不抛 500。
 - 返回 `focus[]`（行业广度、最大簇、资金、龙头、关注要点）、`td` 和 `conclusion`。
 - 资金字段来自板块列表；板块接口不可用时该字段为空，前端写“数据源暂未返回”。
 
@@ -164,7 +173,8 @@ US edition
 - `main.py` finds a free port, starts uvicorn and opens a pywebview window. If the native window cannot start, it falls back to your browser.
 - `backend/app.py` serves both the API and the built frontend.
 - `backend/market.py` handles A-share quotes, indices, candles, search and sectors.
-- `backend/models.py` contains the HMM, the percolation giant component, and assembles the model snapshot with TD, industry focus and the combined stance.
+- `backend/models.py` contains the HMM, the percolation giant component, and assembles the model snapshot with TD, industry focus, a transparent composite score and the combined stance.
+- `backend/ollama.py` talks to a local Ollama instance; aggregate data only, disabled by default.
 - `backend/td.py` is a standalone TD Sequential implementation over closes (highs/lows optional).
 - `backend/daily.py` fans out to quotes, models, news, flow, industry trends and position advice, then assembles the Daily Plan payload.
 - `backend/state.py` covers market state, boards, flow, index analysis, news, regions and company distribution.
@@ -199,7 +209,7 @@ The percolation model places about 5,500 stocks on a 2-D lattice in `crc32(code)
 
 | Key | TTL | Contents |
 | --- | --- | --- |
-| `market:models:v5` | 600 s | HMM, percolation, TD, industry focus, stance, registry meta |
+| `market:models:v8` | 600 s | HMM (filtered/quality/risk), percolation (bootstrap/trend), TD, industry focus, ensemble, registry meta |
 | `market:daily:v5` | 120 s | full Daily Plan payload |
 | `market:state` | 60 s | market state, temperature, indices |
 | `spot:v3` | 180 / 600 s | full-market snapshot (3 min by default, 10 min for models and market state) |
@@ -229,7 +239,8 @@ Concurrency:
 
 ### Industry focus endpoint
 
-- `GET /api/market/industry-focus` reads `market:models:v5` first (`cached: true`), otherwise computes a snapshot.
+- `GET /api/market/industry-focus` reads `market:models:v8` first (`cached: true`), otherwise computes a snapshot.
+- Ollama: `GET/PUT /api/ollama/config`, `GET /api/ollama/health`, `GET /api/ollama/models`, `POST /api/ollama/advice`; local-only, disabled by default.
 - Returns `focus[]` (breadth, giant share, flow, leader, focus line), `td` and `conclusion`.
 - Flow comes from the board list; when boards are unavailable the field is empty and the UI says “data source has not returned”.
 

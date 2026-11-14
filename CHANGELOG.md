@@ -4,6 +4,14 @@
 
 ## 中文
 
+### 1.12.0
+
+- **Ollama 本地辅助判断（仅 macOS / Windows）**：新增 `backend/ollama.py` 与 `/api/ollama/config|health|models|advice`；设置页可配地址、模型、温度、超时、最大 tokens，支持测试连接与保存。每日策略和量化模型页显示结构化第二意见（倾向/仓位/依据/风险/动作），默认关闭；未检测到 Ollama 或模型时给出中文提示，不自动生成。
+- **模型 2.2.0**：HMM 2.1.0（过滤后在线状态、state_separation/separation_label、quality、risk_score、suggested_exposure）；渗流 2.1.0（12 次 bootstrap 区间/稳定性、trend/history_delta）；九转 1.1.0（quality/freshness/completion/signal_age）；新增透明综合评分（HMM 42% / 渗流 38% / 九转 20%）。
+- **数据展示修复**：桌面 `fmt.*` 与 iOS `fmt/pct/shortMoney` 过滤 NaN/Infinity；每日策略补综合分/一致度/质量/分项与 HMM/渗流/九转新字段；模型页补综合评分卡、分项进度条、drivers、过滤后状态、bootstrap、趋势、九转质量/新鲜度；空态与错误可读。
+- **文档**：新增 `docs/OLLAMA.md`（macOS/Windows 本地部署、局域网、隐私、FAQ）；README、GUIDE、MODELS、ARCHITECTURE、INSTALL、官网与 iOS README 更新到 1.12.0 / 3.9.0。
+- 版本：macOS / Windows **1.12.0**；iOS **3.9.0 (32)**；美股 **1.0.2**。
+
 ### 1.11.0
 
 - **HUB 与导航**：中央资产中枢点击直接进入「持仓管理」，不再弹四宫格；右侧「行业要闻」更名为「指数分析」；侧栏新增「使用指南」。原「资产分析」「投资建议」入口收进持仓管理。
@@ -79,6 +87,14 @@
 - 提供 A 股和美股两个 GHCR 容器。
 
 ## English
+
+### 1.12.0
+
+- **Local Ollama second opinion (macOS / Windows only)**: new `backend/ollama.py` and `/api/ollama/*` endpoints; Settings can configure host, model, temperature, timeout and max tokens, with connection test. Daily Plan and Models show a structured opinion (stance/exposure/rationale/risks/actions). Off by default; when Ollama or the model is missing the UI explains why and never auto-generates.
+- **Model registry 2.2.0**: HMM 2.1.0 (filtered online state, separation/quality, risk score, suggested exposure); percolation 2.1.0 (12-run bootstrap interval/stability, trend/delta); TD 1.1.0 (quality/freshness/completion). Adds a transparent composite score (HMM 42% / percolation 38% / TD 20%).
+- **Display fixes**: NaN/Infinity guards in desktop and iOS formatters; Daily Plan shows composite score, agreement, quality and component scores; Models adds a composite card, component bars, drivers, filtered state, bootstrap, trend and TD quality/freshness; readable empty/error states.
+- **Docs**: new `docs/OLLAMA.md`; README, guide, models, architecture, install, site and iOS README updated to 1.12.0 / 3.9.0.
+- Versions: macOS/Windows **1.12.0**, iOS **3.9.0 (32)**, US **1.0.2**.
 
 ### 1.11.0
 

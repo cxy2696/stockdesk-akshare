@@ -9,7 +9,7 @@
 完全独立的原生 iOS / iPadOS 股票投资 App：**不依赖 Mac 后端**，行情、K 线、财务、持仓、复盘、回测、选股、提醒全部在 iPhone 本地完成。
 SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切换明亮/深色；设置内可切换中文 / English。
 
-**v3.8.0 (31)**：HUB 中央圆盘直接进持仓管理，右侧第三个入口从「行业要闻」改为「指数分析」；每日策略的主力追踪改成三列（个股流入 / 个股流出 / 行业流入），新增「模型结论」和「九转模型分析」两张卡；持仓管理顶部加「资产分析 / 投资建议」快捷入口；要闻标题可点开东方财富全文并显示摘要；量化模型页补上九转卡片（模型版本 v2.1.0）。
+**v3.9.0 (32)**：桌面 1.12 的模型与展示修复同步到 iOS：量化模型页新增综合评分卡（HMM 42% / 渗流 38% / 九转 20%），每日策略保留三列主力追踪、模型结论与九转卡，数字格式化过滤 NaN/Infinity，空态与错误提示更明确。iOS 不集成 Ollama（该功能仅 macOS / Windows）。
 
 上一版 3.7.3 的内容保留：HUB 3+4、长图分享、个股仓位建议、行业临界、资产快照缓存、指数分析、顶部搜索/自选/笔记/提醒、K 线拖动查看每日数据、筹码与黄金分割、九转与底部钝化。
 
@@ -140,7 +140,7 @@ xcodegen generate          # 由 project.yml 生成 StockDesk.xcodeproj
 open StockDesk.xcodeproj   # ⌘R 跑真机或模拟器；Product → Archive 打 IPA
 ```
 
-依赖：Xcode 15+、XcodeGen（`brew install xcodegen`）。工程版本由 `project.yml` 的 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` 决定，当前 3.8.0 (31)。
+依赖：Xcode 15+、XcodeGen（`brew install xcodegen`）。工程版本由 `project.yml` 的 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` 决定，当前 3.9.0 (32)。
 
 ## 已知限制
 
@@ -160,7 +160,7 @@ open StockDesk.xcodeproj   # ⌘R 跑真机或模拟器；Product → Archive �
 
 ## English
 
-StockDesk for iOS is a fully standalone SwiftUI app, now at **3.8.0 (31)**. It does **not** require the Mac backend: quotes, candles, fundamentals, portfolio, review, backtest, screening and alerts all run on the iPhone.
+StockDesk for iOS is a fully standalone SwiftUI app, now at **3.9.0 (32)**. It does **not** require the Mac backend: quotes, candles, fundamentals, portfolio, review, backtest, screening and alerts all run on the iPhone.
 
 - SwiftUI + Swift Charts
 - HUB home with three left actions and five right modules (Backtest, Regions, Index Analysis, Quant Models, KDJ Alerts); the central disc opens Portfolio directly
