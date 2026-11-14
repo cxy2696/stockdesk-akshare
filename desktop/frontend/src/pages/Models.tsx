@@ -588,7 +588,7 @@ export default function Models() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <div style={{ textAlign: 'right' }}>
             <div className="mono small" style={{ color: 'var(--text-sub)' }}>
-              MODEL v{meta?.registry_version ?? '2.1.0'}
+              MODEL v{meta?.registry_version ?? '2.2.0'}
             </div>
             <div className="muted" style={{ fontSize: 10 }}>
               {updated ? `快照 ${updated}` : last ? `刷新 ${last}` : loading ? '计算中…' : '--'}
@@ -1619,9 +1619,9 @@ export default function Models() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border-soft)', fontSize: 9.5, color: 'var(--text-dim)' }}>
-            <span>HMM v{meta?.models?.hmm?.version ?? '2.0.0'} · 3 状态 / 420 日</span>
-            <span>渗流 v{meta?.models?.percolation?.version ?? '2.0.0'} · 4 邻接 / 阈值 0.5927</span>
-            <span>九转 v{meta?.models?.td?.version ?? '1.0.0'} · 9 / 13</span>
+            <span>HMM v{meta?.models?.hmm?.version ?? '2.1.0'} · 3 状态 / 420 日</span>
+            <span>渗流 v{meta?.models?.percolation?.version ?? '2.1.0'} · 4 邻接 / 阈值 0.5927</span>
+            <span>九转 v{meta?.models?.td?.version ?? '1.1.0'} · 9 / 13</span>
             <span>后端每 10 分钟缓存一次，页面显示最近一次快照</span>
           </div>
         </Card>
