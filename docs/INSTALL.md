@@ -77,7 +77,7 @@ cd desktop
 
 - `release/StockDesk-macOS-1.17.0.dmg` —— 打开后把 App 拖进 Applications
 - `release/StockDesk-macOS-1.17.0.zip` —— 解压后打开 `StockDesk.app`
-- `release/SHA256SUMS-macOS.txt` —— 下载校验和
+- `release/SHA256SUMS-macOS.txt` —— 打包脚本生成的下载校验和（本地汇总见根目录 `release/SHA256SUMS.txt`）
 
 `stockdesk.spec` 已排除 `pyarrow`、`scipy`、`matplotlib`、`PIL`、`openpyxl` 等未使用的可选依赖，DMG 约 43 MB、ZIP 约 42 MB；首次打开如果被 Gatekeeper 拦住，右键 → 打开即可。
 
@@ -186,7 +186,7 @@ The version is read from `APP_VERSION` in `backend/config.py`; override it with 
 
 - `release/StockDesk-macOS-1.17.0.dmg` — open and drag the app into Applications
 - `release/StockDesk-macOS-1.17.0.zip` — unzip and open `StockDesk.app`
-- `release/SHA256SUMS-macOS.txt` — download checksums
+- `release/SHA256SUMS-macOS.txt` — checksums written by the packaging script (the consolidated local manifest is `release/SHA256SUMS.txt`)
 
 `stockdesk.spec` excludes unused optional packages such as `pyarrow`, `scipy`, `matplotlib`, `PIL` and `openpyxl`; the DMG is about 43 MB and the ZIP about 42 MB. If Gatekeeper blocks the first launch, right-click → Open.
 

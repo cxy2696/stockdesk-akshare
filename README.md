@@ -30,7 +30,7 @@ Mac · Windows · iPhone · iPad · US Equities
 | 源码 | `main` 分支 | **1.17.0** | 见下方快速开始；本地构建/打包流程不变 |
 | 本地产物 | `release/` | 1.17.0 / 4.1.2 | 已在本机验证的 DMG / ZIP / IPA / 模拟器 App |
 
-- 安装包在 [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
+- 安装包在 [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)；本目录用 `release/SHA256SUMS.txt` 校验。
 - macOS App 为 ad-hoc 签名，下载后需运行安装脚本清除 `com.apple.quarantine`。脚本被拦截时右键 → 打开；手动命令：
   ```bash
   xattr -dr com.apple.quarantine /Applications/StockDesk.app
