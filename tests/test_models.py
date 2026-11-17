@@ -18,3 +18,31 @@ def test_light_percolation_keeps_displayed_fields():
                 "spanning", "status", "clusters", "top_clusters"):
         assert light[key] == full[key]
     assert light["bootstrap"]["width"] == 0
+
+
+def test_percolation_trace_is_reproducible():
+    rows = _rows(600)
+    first = models._percolation(rows, with_grid=False)
+    second = models._percolation(rows, with_grid=False)
+    trace = first["trace"]
+    assert trace["algorithm"] == "breadth-lattice-union-find-v1"
+    assert trace["layout"] == "crc32-stable-order"
+    assert trace["seeds"]["baseline"] == [11, 23, 37]
+    assert trace["grid_sha"] == second["trace"]["grid_sha"]
+    assert first["largest"] == second["largest"]
+
+    light = models._percolation(rows, with_grid=False, light=True)
+    assert light["trace"]["light"] is True
+    assert light["trace"]["grid_sha"] == trace["grid_sha"]
+
+
+def test_hmm_trace_contract():
+    import numpy as np
+    x = np.random.default_rng(3).normal(size=180)
+    h = models._hmm(x, 3, 40)
+    trace = h["trace"]
+    assert trace["algorithm"] == "gaussian-hmm-baum-welch-v1"
+    assert trace["k"] == 3
+    assert trace["samples"] == 180
+    assert trace["engine"] == h["engine"]
+    assert trace["converged"] == h["converged"]

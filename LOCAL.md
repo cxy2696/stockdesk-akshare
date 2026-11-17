@@ -22,7 +22,8 @@
   - `bindings.cpp`：pybind11 绑定。
 - 修复 `cols=0` 除零、HMM 输入未校验、假报 `converged=True`、非方形格点边界错误。
 - 编译参数按平台切换，Windows 不再因 `-O3` 构建失败。
-- 渗流的 3 次随机重排和 12 次 bootstrap 合并为一次 `grid_batch` C++ 调用；5 个指数的 HMM 拟合并行执行（rflux/native 计算释放 GIL）。
+- 渗流的 3 次随机重排和 12 次 bootstrap 合并为一次 `grid_batch` C++ 调用；批量路径复用 union-find 工作区，只计算 size/spanning，不分配完整 largest/sizes。5 个指数的 HMM 拟合并行执行（rflux/native 计算释放 GIL）。
+- 模型快照带 `trace`：算法名、布局、引擎、种子、输入规模、格点 SHA-256 摘要、HMM 样本/重启/迭代/收敛状态，结果可复现对账。
 - C++ 计算期间释放 GIL；渗流格点从 Python 到 C++ 全程使用 uint8 numpy 连续内存，避免逐次列表转换；HMM 每轮只计算一次归一化项。
 
 **界面**
@@ -45,7 +46,7 @@
 
 | 项目 | 结果 |
 | --- | --- |
-| `pytest -q tests` | 59 passed |
+| `pytest -q tests` | 61 passed |
 | 冷启动首屏 | 概览和轻量状态不再同步抓完整快照；指数缓存单飞，HUD 2–6 秒出数据 |
 | `ruff check desktop/backend us tests --select F,E9` | 通过 |
 | `python scripts/api_smoke.py http://127.0.0.1:8765` | 47 个只读 + 3 个写接口 + SPA 通过 |

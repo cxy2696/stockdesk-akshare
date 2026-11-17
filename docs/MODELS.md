@@ -28,6 +28,7 @@
   - `state_separation` / `separation_label`：状态均值差 / 合并波动；低于 0.4 标为“重叠”，此时状态标签只能作弱参考
   - `quality` 状态质量、`risk_score` 风险分、`suggested_exposure` 仅由 HMM 给出的参考暴露
   - `samples` 样本天数、`converged` 是否收敛、`iterations` 迭代次数、`loglik` / `aic` / `bic` 拟合诊断
+  - `trace`：算法、引擎、k、样本、重启次数、最大迭代、初始方差/方差下限、收敛状态
   - `summary` 一句人类可读的总结，`interpretation` 是逐条解释
 - 用途：决定总仓位。读的时候概率不到 60% 就当作震荡，不因为单日概率变化调仓。
 
@@ -45,6 +46,7 @@
   - `grid`：50×50 分块图，把全市场压进一张图，而不是只看前 2,500 只
   - `industries[]`：行业/板块分组的广度、最大簇、状态、龙头。行业字段缺失超过 60% 时按市场分组，接口里 `grouping` 会标注
 - 用途：决定做哪个行业。最大簇在临界线附近时，不押单边。模型页默认展示九转摘要和行业/个股关注；行业子分组使用轻量模式，只算主簇和状态，不为每个行业重复 12 次 bootstrap。
+- 可追溯：输出 `trace` 包含 `algorithm`、`layout`、`engine`、`cols/n/occupied`、baseline/bootstrap 随机种子、格点 SHA-256 摘要和是否 light 模式；相同版本、相同输入可复现同一 `grid_sha`。
 
 ### 九转 TD 1.1.0
 

@@ -15,10 +15,12 @@ plain language so the UI can show a conclusion instead of a wall of numbers.
 """
 from __future__ import annotations
 
+import hashlib
 import math
 import random
 import time
 import zlib
+from functools import lru_cache
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
@@ -274,6 +276,18 @@ def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["sta
         "iterations": best["iterations"],
         "converged": best["converged"],
         "engine": best.get("engine") or ("StockDesk C++" if native.NATIVE else "NumPy"),
+        "trace": {
+            "algorithm": "gaussian-hmm-baum-welch-v1",
+            "engine": best.get("engine") or ("StockDesk C++" if native.NATIVE else "NumPy"),
+            "k": k,
+            "samples": n,
+            "restarts": 3,
+            "max_iterations": iters,
+            "initial_variance": round(var_floor, 8),
+            "variance_floor": 1e-8,
+            "converged": bool(best["converged"]),
+            "iterations": int(best["iterations"]),
+        },
         "samples": n,
         "feature": "日对数收益率",
         "interpretation": interpretation,
@@ -389,6 +403,12 @@ def _largest_component_batch(grids: np.ndarray, cols: int) -> tuple[list[int], l
     return sizes, spans
 
 
+@lru_cache(maxsize=16384)
+def _code_hash(code: str) -> int:
+    """Stable layout key; cached because the universe changes rarely."""
+    return zlib.crc32(code.encode())
+
+
 def _stable_order(rows: list[dict]) -> list[dict]:
     """Deterministic pseudo-random order.
 
@@ -396,7 +416,7 @@ def _stable_order(rows: list[dict]) -> list[dict]:
     sites highly correlated and inflates clusters.  A stable hash spreads codes
     across the lattice while keeping the result reproducible between calls.
     """
-    return sorted(rows, key=lambda r: zlib.crc32(str(r.get("code", "")).encode()))
+    return sorted(rows, key=lambda r: _code_hash(str(r.get("code", ""))))
 
 
 def _visual_grid(grid: list[int], cols: int, giant: set[int], out_cols: int = 50) -> list[int]:
@@ -509,10 +529,13 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True, lig
         note += " 随机重排的结果明显更弱，说明真实行业结构对扩散有贡献。"
 
     history_key = "market:perc:history:v1"
-    try:
-        history = db.cache_get(history_key) or []
-    except Exception:
+    if light:
         history = []
+    else:
+        try:
+            history = db.cache_get(history_key) or []
+        except Exception:
+            history = []
     prev = history[-1] if history else None
     delta = round(giant_occ - float(prev.get("giant_occupied") or 0), 4) if prev else None
     trend = "—" if delta is None else ("扩大" if delta > 0.02 else ("收缩" if delta < -0.02 else "持平"))
@@ -523,6 +546,17 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True, lig
         except Exception:
             pass
 
+    trace = {
+        "algorithm": "breadth-lattice-union-find-v1",
+        "layout": "crc32-stable-order",
+        "engine": "native-grid-batch" if native.NATIVE else "python-fallback",
+        "cols": cols,
+        "n": n,
+        "occupied": occ,
+        "seeds": {"baseline": [11, 23, 37], "bootstrap": list(range(1000, 1012))},
+        "grid_sha": hashlib.sha256(grid.tobytes()).hexdigest()[:16],
+        "light": light,
+    }
     result = {
         "total": n, "up": occ, "ratio": round(ratio, 4), "threshold": PERC_THRESHOLD,
         "largest": len(largest), "giant_ratio": round(giant, 4), "giant_occupied": round(giant_occ, 4),
@@ -532,6 +566,7 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True, lig
         "random_baseline": round(baseline, 4), "p_value": round(p_value, 2),
         "bootstrap": {"low": ci_low, "high": ci_high, "width": ci_width, "stability": stability},
         "history_delta": delta, "trend": trend,
+        "trace": trace,
         "grid": {"cols": 50, "rows": 50, "cells": _visual_grid(grid, cols, set(largest))} if with_grid else None,
         "robustness": {"mean": round(baseline, 4), "min": min(robust), "max": max(robust)},
         "note": note,
