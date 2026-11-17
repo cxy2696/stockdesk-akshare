@@ -57,9 +57,9 @@ struct InvestHudHeader: View {
 
             ViewThatFits(in: .horizontal) {
                 // iPad Pro: three columns, wide map.
-                hudColumns(map: 460, side: 148, spacing: 14)
+                hudColumns(map: 480, side: 140, spacing: 12)
                 // iPad mini: still three columns, compact widths.
-                hudColumns(map: 370, side: 126, spacing: 10)
+                hudColumns(map: 420, side: 132, spacing: 10)
                 // iPhone / narrow split view: map above two compact columns.
                 VStack(spacing: 10) {
                     hudMap
@@ -83,6 +83,7 @@ struct InvestHudHeader: View {
             }
 
             profile
+            if isPad && !store.indices.isEmpty { padMarketStrip }
         }
         .padding(.vertical, 4)
         .sheet(isPresented: $showSearch) {
@@ -229,6 +230,51 @@ struct InvestHudHeader: View {
         .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Theme.accent.opacity(0.18), lineWidth: 1))
     }
 
+    /// Compact index / breadth strip shown only on iPad, where the HUD has
+    /// spare vertical room. It mirrors the desktop LIVE status strip.
+    private var padMarketStrip: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(store.indices.prefix(5))) { idx in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(idx.short)
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundStyle(Theme.textDim)
+                    HStack(spacing: 4) {
+                        Text(idx.price.fmt())
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Theme.text)
+                        Text(idx.pct.pct())
+                            .font(.system(size: 8.5, weight: .semibold))
+                            .foregroundStyle(Theme.trendColor(idx.pct))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(Theme.cardSoft)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Theme.borderSoft, lineWidth: 0.8))
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(lang == "en" ? "UP / DOWN" : "涨 / 跌")
+                    .font(.system(size: 8, design: .monospaced))
+                    .foregroundStyle(Theme.textDim)
+                HStack(spacing: 3) {
+                    Text("\(store.breadth.up)").foregroundStyle(Theme.up)
+                    Text("/").foregroundStyle(Theme.textDim)
+                    Text("\(store.breadth.down)").foregroundStyle(Theme.down)
+                }
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+            }
+            .frame(width: 76, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Theme.cardSoft)
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+            .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Theme.borderSoft, lineWidth: 0.8))
+        }
+    }
+
     @State private var scan = false
 
     private var assetLevel: Int {
@@ -292,7 +338,7 @@ struct MoreView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("StockDesk").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
-                                Text("v4.1.2 · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
+                                Text("v\(AppInfo.version) · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
                                 Text("当前 \(ctx.date.formatted(.dateTime.hour().minute().second())) · 数据更新 \(store.lastRefresh.isEmpty ? "--:--:--" : store.lastRefresh)")
                                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.textDim)
                             }

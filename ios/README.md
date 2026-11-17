@@ -140,11 +140,13 @@ StockDesk/
 
 ```bash
 cd ios
-xcodegen generate          # 由 project.yml 生成 StockDesk.xcodeproj
-open StockDesk.xcodeproj   # ⌘R 跑真机或模拟器；Product → Archive 打 IPA
+./build_ios.sh --simulator   # 模拟器 App（快速验证，无需签名）
+./build_ios.sh               # 模拟器 App + 未签名真机 IPA
 ```
 
-依赖：Xcode 15+、XcodeGen（`brew install xcodegen`）。工程版本由 `project.yml` 的 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` 决定，当前 4.1.2 (36)。
+产物在 `ios/dist/`；真机安装最稳妥的方式仍是打开 `StockDesk.xcodeproj`，选择 Team 后 ⌘R；或 Product → Archive 导出。
+
+依赖：Xcode 15+、XcodeGen（`brew install xcodegen`）。工程版本由 `project.yml` 的 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` 决定，当前 4.1.2 (36)；HUD 与交易决策页的版本号从 Info.plist 读取，不再手写。
 
 ## 已知限制
 

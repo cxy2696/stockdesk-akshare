@@ -5,23 +5,14 @@ import asyncio
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Body, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter, Body, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import advice, backtest, clock, daily, db, decision, factors as factor_lib, market, native, ollama as ollama_lib, patterns as pattern_lib, portfolio, repo, screener, state, td as td_model, technical
-from .config import APP_VERSION, INDEXES
+from .config import APP_VERSION
 
 router = APIRouter()
-
-
-@router.on_event("startup")
-def _startup():
-    db.init()
-    if not db.get_setting("account"):
-        db.set_setting("account", repo.DEFAULT_ACCOUNT)
-
 
 
 def ok(data):

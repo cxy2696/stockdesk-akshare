@@ -1,25 +1,72 @@
-"""SQLite storage: trades / watchlist / alerts / settings + a JSON key-value cache."""
+"""SQLite storage: trades / watchlist / alerts / settings + a JSON key-value cache.
+
+Two databases are used:
+  * ``stockdesk.db`` — user data (trades, watchlist, settings).
+  * ``cache.db``      — disposable market-data snapshots (safe to delete).
+
+Both are opened per operation because uvicorn runs requests on a thread pool.
+The helper below always closes the connection: ``with sqlite3.connect(...)``
+only commits/rolls back, it does not close, so the previous implementation
+leaked file descriptors under sustained polling.
+"""
 from __future__ import annotations
 
 import json
+import math
 import sqlite3
 import threading
 import time
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 from .config import CACHE_PATH, DB_PATH
 
 _lock = threading.RLock()
+_initialized = False
 
 
 def _conn(path) -> sqlite3.Connection:
-    c = sqlite3.connect(path, check_same_thread=False)
+    c = sqlite3.connect(path, timeout=15, check_same_thread=False)
     c.row_factory = sqlite3.Row
+    # Wait instead of immediately raising "database is locked" when the
+    # WebSocket loop and a REST request write at the same time.
+    c.execute("PRAGMA busy_timeout=5000")
     return c
 
 
+@contextmanager
+def _db(path) -> Iterator[sqlite3.Connection]:
+    """Open, yield, commit on success, roll back on error, and always close."""
+    c = _conn(path)
+    try:
+        yield c
+        c.commit()
+    except BaseException:
+        c.rollback()
+        raise
+    finally:
+        c.close()
+
+
+@contextmanager
+def session():
+    """Serialized connection to the user database (closed automatically)."""
+    with _lock, _db(DB_PATH) as c:
+        yield c
+
+
+def _enable_wal(c: sqlite3.Connection) -> None:
+    try:
+        c.execute("PRAGMA journal_mode=WAL")
+        c.execute("PRAGMA synchronous=NORMAL")
+    except sqlite3.DatabaseError:
+        # Some network/read-only locations cannot use WAL; the default
+        # rollback journal still works, so never fail startup because of it.
+        pass
+
+
 def _migrate():
-    with _lock, _conn(DB_PATH) as c:
+    with _lock, _db(DB_PATH) as c:
         c.executescript(
             """
             CREATE TABLE IF NOT EXISTS trades (
@@ -68,19 +115,48 @@ def _migrate():
             );
             """
         )
-        c.commit()
+        _enable_wal(c)
 
 
 def init():
-    _migrate()
-    with _lock, _conn(CACHE_PATH) as c:
-        c.execute("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, ts REAL NOT NULL, v TEXT NOT NULL)")
-        c.commit()
+    """Create tables once. Safe to call from the app and the warm-up thread."""
+    global _initialized
+    with _lock:
+        if _initialized:
+            return
+        _migrate()
+        with _db(CACHE_PATH) as c:
+            c.execute("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, ts REAL NOT NULL, v TEXT NOT NULL)")
+            _enable_wal(c)
+        _initialized = True
 
 
 # ---------------------------------------------------------------- cache
+def _sanitize(value: Any) -> Any:
+    """Replace NaN/Infinity with None so the JSON encoder cannot fail.
+
+    Market calculations occasionally produce non-finite floats (an index with
+    no previous close, a zero denominator, ...). ``allow_nan=False`` would make
+    the whole cache write raise and turn a harmless gap into a 500 response.
+    """
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {k: _sanitize(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_sanitize(v) for v in value]
+    return value
+
+
+def _dumps(value: Any) -> str:
+    try:
+        return json.dumps(value, ensure_ascii=False, allow_nan=False, default=str)
+    except ValueError:
+        return json.dumps(_sanitize(value), ensure_ascii=False, allow_nan=False, default=str)
+
+
 def cache_get(key: str, ttl: float | None = None) -> Any | None:
-    with _lock, _conn(CACHE_PATH) as c:
+    with _lock, _db(CACHE_PATH) as c:
         row = c.execute("SELECT ts, v FROM kv WHERE k=?", (key,)).fetchone()
     if not row:
         return None
@@ -93,27 +169,34 @@ def cache_get(key: str, ttl: float | None = None) -> Any | None:
 
 
 def cache_age(key: str) -> float | None:
-    with _lock, _conn(CACHE_PATH) as c:
+    with _lock, _db(CACHE_PATH) as c:
         row = c.execute("SELECT ts FROM kv WHERE k=?", (key,)).fetchone()
     return time.time() - row["ts"] if row else None
 
 
 def cache_set(key: str, value: Any):
-    payload = json.dumps(value, ensure_ascii=False, allow_nan=False, default=str)
-    with _lock, _conn(CACHE_PATH) as c:
+    payload = _dumps(value)
+    with _lock, _db(CACHE_PATH) as c:
         c.execute("INSERT OR REPLACE INTO kv(k, ts, v) VALUES(?,?,?)", (key, time.time(), payload))
-        c.commit()
 
 
 def cache_delete(key: str):
-    with _lock, _conn(CACHE_PATH) as c:
+    with _lock, _db(CACHE_PATH) as c:
         c.execute("DELETE FROM kv WHERE k=?", (key,))
-        c.commit()
+
+
+def cache_clear(prefix: str = ""):
+    """Drop cached snapshots (all keys, or those starting with ``prefix``)."""
+    with _lock, _db(CACHE_PATH) as c:
+        if prefix:
+            c.execute("DELETE FROM kv WHERE k LIKE ?", (prefix + "%",))
+        else:
+            c.execute("DELETE FROM kv")
 
 
 # ---------------------------------------------------------------- settings
 def get_setting(key: str, default: Any = None) -> Any:
-    with _lock, _conn(DB_PATH) as c:
+    with _lock, _db(DB_PATH) as c:
         row = c.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
     if not row:
         return default
@@ -124,16 +207,16 @@ def get_setting(key: str, default: Any = None) -> Any:
 
 
 def set_setting(key: str, value: Any):
-    with _lock, _conn(DB_PATH) as c:
+    payload = _dumps(value)
+    with _lock, _db(DB_PATH) as c:
         c.execute(
             "INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)",
-            (key, json.dumps(value, ensure_ascii=False)),
+            (key, payload),
         )
-        c.commit()
 
 
 def all_settings() -> dict:
-    with _lock, _conn(DB_PATH) as c:
+    with _lock, _db(DB_PATH) as c:
         rows = c.execute("SELECT key, value FROM settings").fetchall()
     out = {}
     for r in rows:

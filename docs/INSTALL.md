@@ -70,10 +70,10 @@ python main.py --browser
 
 ```bash
 cd desktop
-VERSION=1.17.0 ./package_macos.sh
+./package_macos.sh
 ```
 
-脚本会构建前端、用 PyInstaller 生成 `dist/StockDesk.app`，并输出：
+版本号自动读取 `backend/config.py` 的 `APP_VERSION`；需要临时覆盖时用 `VERSION=x.y.z ./package_macos.sh`。脚本会构建前端、用 PyInstaller 生成 `dist/StockDesk.app`，并输出：
 
 - `release/StockDesk-macOS-1.17.0.dmg` —— 打开后把 App 拖进 Applications
 - `release/StockDesk-macOS-1.17.0.zip` —— 解压后打开 `StockDesk.app`
@@ -97,11 +97,25 @@ powershell -ExecutionPolicy Bypass -File .\build_win.ps1
 
 ```bash
 cd ios
-xcodegen generate
-open StockDesk.xcodeproj
+./build_ios.sh --simulator   # 模拟器 App，无需签名（快速验证）
+./build_ios.sh               # 模拟器 App + 未签名真机 IPA
 ```
 
-在 Signing & Capabilities 里选择自己的 Team，然后运行到模拟器或真机。
+产物在 `ios/dist/`：`StockDesk-simulator.app`、`StockDesk-iOS-<版本>-unsigned.ipa`。
+真机安装：用 Xcode 打开 `StockDesk.xcodeproj`，在 Signing & Capabilities 选择自己的 Team 后运行；或用 Sideloadly / AltStore 重签 IPA。免费 Apple ID 签名 7 天有效。
+
+### 测试与冒烟
+
+```bash
+# 后端单测 + 静态检查
+pip install -r desktop/requirements-dev.txt
+pytest -q tests
+ruff check desktop/backend us tests --select F,E9
+
+# 启动服务后跑端到端冒烟（另开终端）
+cd desktop && python main.py --headless --port 8765
+python scripts/api_smoke.py http://127.0.0.1:8765
+```
 
 ### 美股版
 
@@ -165,10 +179,10 @@ python main.py --browser
 
 ```bash
 cd desktop
-VERSION=1.17.0 ./package_macos.sh
+./package_macos.sh
 ```
 
-The script builds the frontend, runs PyInstaller, and writes:
+The version is read from `APP_VERSION` in `backend/config.py`; override it with `VERSION=x.y.z ./package_macos.sh` when needed. The script builds the frontend, runs PyInstaller, and writes:
 
 - `release/StockDesk-macOS-1.17.0.dmg` — open and drag the app into Applications
 - `release/StockDesk-macOS-1.17.0.zip` — unzip and open `StockDesk.app`
@@ -192,11 +206,23 @@ powershell -ExecutionPolicy Bypass -File .\build_win.ps1
 
 ```bash
 cd ios
-xcodegen generate
-open StockDesk.xcodeproj
+./build_ios.sh --simulator   # simulator app, no signing needed
+./build_ios.sh               # simulator app + unsigned device IPA
 ```
 
-Pick your team in Signing & Capabilities, then run on a simulator or device.
+Outputs live in `ios/dist/`: `StockDesk-simulator.app` and `StockDesk-iOS-<version>-unsigned.ipa`.
+For a device, open `StockDesk.xcodeproj`, pick your team in Signing & Capabilities, then run; or re-sign the IPA with Sideloadly / AltStore. Free Apple ID signatures expire after 7 days.
+
+### Tests and smoke
+
+```bash
+pip install -r desktop/requirements-dev.txt
+pytest -q tests
+ruff check desktop/backend us tests --select F,E9
+
+cd desktop && python main.py --headless --port 8765
+python scripts/api_smoke.py http://127.0.0.1:8765
+```
 
 ### US edition
 

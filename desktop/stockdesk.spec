@@ -1,11 +1,27 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec: build StockDesk.app (macOS) with bundled frontend."""
 import os
+import re
 import sys
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 block_cipher = None
 ROOT = os.path.abspath(os.getcwd())
+
+
+def app_version() -> str:
+    """Keep the bundle version in lockstep with backend/config.py."""
+    try:
+        with open(os.path.join(ROOT, "backend", "config.py"), encoding="utf-8") as fh:
+            match = re.search(r'^APP_VERSION\s*=\s*"([^"]+)"', fh.read(), re.MULTILINE)
+            if match:
+                return match.group(1)
+    except OSError:
+        pass
+    return "0.0.0"
+
+
+VERSION = app_version()
 
 datas = [
     (os.path.join(ROOT, "frontend", "dist"), "frontend_dist"),
@@ -81,8 +97,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "StockDesk",
         "CFBundleDisplayName": "StockDesk",
-        "CFBundleShortVersionString": "1.17.0",
-        "CFBundleVersion": "1.17.0",
+        "CFBundleShortVersionString": VERSION,
+        "CFBundleVersion": VERSION,
         "NSHighResolutionCapable": True,
         "LSMinimumSystemVersion": "12.0",
         "LSApplicationCategoryType": "public.app-category.finance",

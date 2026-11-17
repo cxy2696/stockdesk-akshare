@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./package_macos.sh                 # build + zip + dmg
-#   VERSION=1.17.0 ./package_macos.sh  # explicit version label
+#   VERSION=x.y.z ./package_macos.sh   # explicit version label
 #
 # Outputs to desktop/release/:
 #   StockDesk-macOS-<version>.dmg      drag-to-Applications installer
@@ -12,7 +12,8 @@
 set -e
 cd "$(dirname "$0")"
 
-VERSION="${VERSION:-1.17.0}"
+VERSION="${VERSION:-$(sed -n 's/^APP_VERSION = "\([^"]*\)".*/\1/p' backend/config.py | head -1)}"
+VERSION="${VERSION:-0.0.0}"
 if [ -z "${VENV:-}" ]; then
   for candidate in .venv ../.venv ../../.venv; do
     if [ -x "$candidate/bin/python" ]; then VENV="$candidate"; break; fi

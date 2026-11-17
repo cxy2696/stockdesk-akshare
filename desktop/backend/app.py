@@ -1,6 +1,7 @@
 """FastAPI app = API + built frontend (single origin, no CORS hassle)."""
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -14,8 +15,19 @@ from .config import APP_VERSION, frontend_dist
 FRONT = frontend_dist()
 
 
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    # Startup used to be duplicated between the router and the app (and used
+    # the deprecated on_event hook). One lifespan keeps it deterministic.
+    db.init()
+    if not db.get_setting("account"):
+        db.set_setting("account", repo.DEFAULT_ACCOUNT)
+    yield
+
+
 def create() -> FastAPI:
-    root = FastAPI(title="StockDesk", version=APP_VERSION, docs_url="/api/docs", openapi_url="/api/openapi.json")
+    root = FastAPI(title="StockDesk", version=APP_VERSION, docs_url="/api/docs",
+                   openapi_url="/api/openapi.json", lifespan=_lifespan)
     root.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -34,12 +46,6 @@ def create() -> FastAPI:
         return response
 
     root.include_router(api.router)
-
-    @root.on_event("startup")
-    def _startup():
-        db.init()
-        if not db.get_setting("account"):
-            db.set_setting("account", repo.DEFAULT_ACCOUNT)
 
     assets = FRONT / "assets"
     if assets.exists():

@@ -239,7 +239,6 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
         return {"ready": False, "date": spot.get("date"), "ts": spot.get("ts"),
                 "factors": [], "stocks": [], "classification": classify()}
     selected, screening = screen(rows)
-    selected_names = [f["name"] for f in selected]
     z_by_name: dict[str, list[float]] = {}
     for f in selected:
         dirn = int(f.get("direction") or 1)

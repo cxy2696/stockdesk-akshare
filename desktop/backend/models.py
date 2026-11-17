@@ -21,7 +21,6 @@ import time
 import zlib
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
-from statistics import mean
 
 import numpy as np
 

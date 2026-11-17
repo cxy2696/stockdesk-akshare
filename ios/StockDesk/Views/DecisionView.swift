@@ -62,7 +62,7 @@ struct DecisionView: View {
                         Text("1. 预测为正、概率 >55%：按每日策略的中上仓位执行。\n2. 预测接近 0、概率 45%–55%：只做结构性机会。\n3. 预测为负、概率 <45%：降低仓位，保留现金。\n个股先看评级与买区，跌破止损先减/清；“好”不等于一定上涨。")
                             .font(.system(size: 10.5)).foregroundStyle(Theme.textSub).lineSpacing(3)
                     }
-                    Text("v4.1.2 · " + (updated.isEmpty ? "" : updated)).font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
+                    Text("v\(AppInfo.version) · " + (updated.isEmpty ? "" : updated)).font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
                 }
             }
             .padding(14)

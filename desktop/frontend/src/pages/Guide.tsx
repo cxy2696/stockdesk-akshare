@@ -3,6 +3,8 @@ import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../components/ui'
 
+const APP_VERSION = __APP_VERSION__
+
 /* ------------------------------------------------------------------ data */
 
 const SECTIONS = [
@@ -15,7 +17,7 @@ const SECTIONS = [
   { id: 'guide-shortcuts', num: '07', title: '快捷键与效率', en: 'SHORTCUTS', desc: '⌘K、主题、缩放、长图' },
   { id: 'guide-faq', num: '08', title: '常见问题', en: 'FAQ', desc: '空数据、接口、安装、颜色' },
   { id: 'guide-decision', num: '09', title: '交易决策与预测', en: 'DECISION & FORECAST', desc: '买卖点、评级、层级、市场预测与参数说明' },
-  { id: 'guide-release', num: '10', title: '版本与更新', en: 'RELEASE', desc: '当前 1.16.0 与本次改动' },
+  { id: 'guide-release', num: '10', title: '版本与更新', en: 'RELEASE', desc: `当前 ${APP_VERSION} 与本次改动` },
 ]
 
 const INSTALL_ROWS = [
@@ -175,7 +177,7 @@ const PAGE_ROWS: PageRow[] = [
     path: '/guide',
     problem: '忘了怎么用的时候查，不用翻聊天记录。',
     how: '左侧目录跳转；宽屏为 sticky 侧栏，窄屏折叠为顶部横向滚动；页面表格里的页面名可以点进对应页。',
-    numbers: '10 章、16 个页面、13 个指标、当前版本 1.16.0。',
+    numbers: `10 章、16 个页面、13 个指标、当前版本 ${APP_VERSION}。`,
   },
 ]
 
@@ -451,7 +453,7 @@ const FAQ: [string, string][] = [
   ],
   [
     '升级后页面还是旧的，或者空白',
-    '先强制刷新（⌘⇧R / Ctrl+F5）或退出 App 重开；设置 → 数据与缓存里的服务版本应为 1.16.0。还不对，检查是不是开了旧端口或旧窗口；启动器会自动顺延端口，以日志里的实际地址为准。',
+    `先强制刷新（⌘⇧R / Ctrl+F5）或退出 App 重开；设置 → 数据与缓存里的服务版本应为 ${APP_VERSION}。还不对，检查是不是开了旧端口或旧窗口；启动器会自动顺延端口，以日志里的实际地址为准。`,
   ],
   [
     '换电脑怎么备份',
@@ -699,7 +701,7 @@ export default function Guide() {
           </nav>
           <div className="sd-toc-foot">
             <span>本地优先 · 单用户</span>
-            <span>v1.16.0</span>
+            <span>v{APP_VERSION}</span>
           </div>
         </aside>
 
@@ -726,7 +728,7 @@ export default function Guide() {
               </a>
             </div>
             <div className="sd-hero-meta">
-              <span className="sd-chip">v1.16.0</span>
+              <span className="sd-chip">v{APP_VERSION}</span>
               <span className="sd-chip">macOS · Windows · iOS</span>
               <span className="sd-chip">A 股 / 宽基 / 板块</span>
               <span className="sd-chip">本地 SQLite</span>
@@ -746,7 +748,7 @@ export default function Guide() {
                 <span>指标</span>
               </div>
               <div className="sd-hero-stat">
-                <b>1.16.0</b>
+                <b>{APP_VERSION}</b>
                 <span>当前版本</span>
               </div>
             </div>
@@ -1372,9 +1374,9 @@ python main.py`}</Code>
             </div>
           </Chapter>
 
-          <Chapter id="guide-release" num="10" title="版本与更新" en="RELEASE" desc="当前 1.16.0：精简阅读与因子筛选">
+          <Chapter id="guide-release" num="10" title="版本与更新" en="RELEASE" desc={`当前 ${APP_VERSION}：精简阅读与因子筛选`}>
             <div className="sd-release">
-              <div className="sd-release-badge">v1.16.0</div>
+              <div className="sd-release-badge">v{APP_VERSION}</div>
               <div className="sd-release-meta">
                 <b>精简阅读版</b>
                 <span>2026 年 11 月 · 桌面端</span>
@@ -1412,7 +1414,7 @@ python main.py`}</Code>
               <li>
                 <i>1</i>
                 <div>
-                  <b>确认版本。</b>设置 → 数据与缓存里的服务版本应为 1.16.0；页面还是旧的，先强制刷新或退出 App 重开。
+                  <b>确认版本。</b>设置 → 数据与缓存里的服务版本应为 {APP_VERSION}；页面还是旧的，先强制刷新或退出 App 重开。
                 </div>
               </li>
               <li>
@@ -1438,7 +1440,7 @@ python main.py`}</Code>
             </Note>
 
             <div className="sd-guide-foot">
-              <span>StockDesk · v1.16.0 · 本地优先</span>
+              <span>StockDesk · v{APP_VERSION} · 本地优先</span>
               <span>行情与模型用于研究；下单和盈亏由你自己承担。</span>
             </div>
           </Chapter>

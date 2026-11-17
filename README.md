@@ -17,6 +17,8 @@ Mac · Windows · iPhone · iPad · US Equities
 
 > **1.17.0 桌面端（源码/本地构建） / 1.17.0 安装包 / iOS 4.1.2**：本轮精简各页阅读负担，把高级图表、资金、要闻、筹码和参数说明收进“更多数据/高级设置”；功能不删，只减少默认可见内容。Releases 安装包已同步为 1.17.0。
 
+> **本地构建（2026-11-17）**：本目录已与上游 `main` 同步，并完成 SQLite 连接/并发加固、后端测试与 API 冒烟、iPad HUD 增强和跨端打包脚本整理。各端产物在 [`release/`](release/README.md)，完整变更与验证记录见 [LOCAL.md](LOCAL.md)。
+
 ## 下载 / Download
 
 | 平台 Platform | 文件 File | 版本 Version | 说明 Notes |
@@ -26,6 +28,7 @@ Mac · Windows · iPhone · iPad · US Equities
 | iPhone / iPad iOS 17+ | `StockDesk-iOS-4.1.2-unsigned.ipa` | 4.1.2 | 用 Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | latest | 见 [PACKAGES](docs/PACKAGES.md) |
 | 源码 | `main` 分支 | **1.17.0** | 见下方快速开始；本地构建/打包流程不变 |
+| 本地产物 | `release/` | 1.17.0 / 4.1.2 | 已在本机验证的 DMG / ZIP / IPA / 模拟器 App |
 
 - 安装包在 [Releases](https://github.com/cxy2696/stockdesk-akshare/releases)；macOS 用 `SHA256SUMS-macOS.txt` 校验。
 - macOS App 为 ad-hoc 签名，下载后需运行安装脚本清除 `com.apple.quarantine`。脚本被拦截时右键 → 打开；手动命令：

@@ -65,7 +65,6 @@ def _detect(df: pd.DataFrame, pattern: str) -> tuple[bool, str, float]:
     vol = df["volume"]
     last = float(close.iloc[-1])
     ma5, ma10, ma20, ma60 = [close.rolling(n).mean() for n in (5, 10, 20, 60)]
-    score = 50.0
 
     if pattern == "ma_bull":
         ok = last > ma5.iloc[-1] > ma10.iloc[-1] > ma20.iloc[-1] > ma60.iloc[-1] and ma20.iloc[-1] > ma20.iloc[-6]

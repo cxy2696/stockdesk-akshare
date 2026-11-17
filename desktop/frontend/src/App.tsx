@@ -48,7 +48,7 @@ const IndexAnalysis = lazy(() => import('./pages/IndexAnalysis'))
 const HubMap = lazy(() => import('./pages/HubMap'))
 const Models = lazy(() => import('./pages/Models'))
 
-const UI_VERSION = '1.16.0'
+const UI_VERSION = __APP_VERSION__
 
 const EN_NAV: Record<string, { label: string; title: string; sub: string }> = {
   '/': { label: 'Overview', title: 'Investment Overview', sub: 'Assets, holdings and today\'s market' },

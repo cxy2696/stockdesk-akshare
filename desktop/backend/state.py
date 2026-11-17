@@ -1,7 +1,6 @@
 """Market regime: index trends, breadth, turnover, leading sectors and a verdict."""
 from __future__ import annotations
 
-import math
 import threading
 import time
 import urllib.parse
@@ -699,7 +698,7 @@ def industry_trends(limit: int = 8) -> list[dict]:
         closes = [r["close"] for r in rows]
         if len(closes) < 25:
             continue
-        ma5 = _ma(closes, 5)
+        _ma(closes, 5)
         ma20 = _ma(closes, 20)
         ma60 = _ma(closes, 60)
         trend = "震荡"

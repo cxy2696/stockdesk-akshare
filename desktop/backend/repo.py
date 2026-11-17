@@ -4,7 +4,7 @@ from . import db
 
 
 def _rows(sql: str, params: tuple = ()) -> list[dict]:
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         return [dict(r) for r in c.execute(sql, params).fetchall()]
 
 
@@ -19,7 +19,7 @@ def watchlist() -> list[dict]:
 
 
 def watch_add(code: str, name: str = "", note: str = "") -> dict:
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         sort = (c.execute("SELECT COALESCE(MAX(sort),0)+1 FROM watchlist").fetchone()[0]) or 1
         c.execute(
             "INSERT OR IGNORE INTO watchlist(code,name,note,sort) VALUES(?,?,?,?)",
@@ -32,7 +32,7 @@ def watch_add(code: str, name: str = "", note: str = "") -> dict:
 
 
 def watch_remove(code: str):
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         c.execute("DELETE FROM watchlist WHERE code=?", (str(code),))
         c.commit()
 

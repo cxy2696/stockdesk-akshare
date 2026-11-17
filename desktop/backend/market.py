@@ -6,13 +6,11 @@ the app has no dependency on a browser-grade networking stack.
 from __future__ import annotations
 
 import json
-import re
 import time
 from pathlib import Path
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
 
 from . import clock, db
 from .config import EM_HIS, EM_LIST, EM_QUOTE, EM_UT, INDEXES, KLINE_TTL, QUOTE_TTL, SPOT_TTL

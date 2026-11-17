@@ -3,8 +3,7 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
-from datetime import date, datetime, timedelta
-from typing import Any
+from datetime import date, timedelta
 
 from . import db, market, technical
 
@@ -16,13 +15,13 @@ def _today() -> str:
 
 
 def load_trades() -> list[dict]:
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         rows = c.execute("SELECT * FROM trades ORDER BY trade_date, id").fetchall()
     return [dict(r) for r in rows]
 
 
 def _get_trade(tid: int) -> dict | None:
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         r = c.execute("SELECT * FROM trades WHERE id=?", (tid,)).fetchone()
     return dict(r) if r else None
 
@@ -51,7 +50,7 @@ def add_trade(code: str, side: str, price: float, qty: int, trade_date: str, fee
             raise ValueError(f"卖出数量超过持仓（当前持有 {held} 股）")
     if not name:
         name = market.resolve_name(code)
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         cur = c.execute(
             "INSERT INTO trades(code,name,side,price,qty,fee,trade_date,note) VALUES(?,?,?,?,?,?,?,?)",
             (code, name, side, price, qty, fee, trade_date, note or ""),
@@ -76,20 +75,20 @@ def update_trade(tid: int, **fields) -> dict:
     if not sets:
         raise ValueError("没有可更新的字段")
     vals.append(tid)
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         c.execute(f"UPDATE trades SET {','.join(sets)} WHERE id=?", vals)
         c.commit()
     return _get_trade(tid) or {}
 
 
 def delete_trade(tid: int):
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         c.execute("DELETE FROM trades WHERE id=?", (tid,))
         c.commit()
 
 
 def clear_trades():
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         c.execute("DELETE FROM trades")
         c.commit()
 
@@ -248,7 +247,7 @@ def summary() -> dict:
 
 
 def trades_any() -> bool:
-    with db._lock, db._conn(db.DB_PATH) as c:
+    with db.session() as c:
         r = c.execute("SELECT 1 FROM trades LIMIT 1").fetchone()
     return r is not None
 
@@ -329,7 +328,6 @@ def equity_curve(benchmark: str = "000300") -> dict:
     mark: dict[str, float] = dict(prior_close)
     nav_idx = 1.0
     first_total: float | None = None
-    base0 = capital0 if capital0 > 0 else 1.0
     nav, equity, bench_series, dd_series = [], [], [], []
     peak = nav_idx
     bench_last = b0 or 1.0
