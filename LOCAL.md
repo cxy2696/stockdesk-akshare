@@ -49,6 +49,14 @@
 | iOS 真机 IPA | `cd ios && ./build_ios.sh` | 未签名 IPA 生成（需自行重签） |
 | Windows | 官方 1.17.0 CI 产物 | 已在 Windows Server 2022 / Windows 10/11 完成打包与健康检查（上游 CI）；SHA-256 与官方 `SHA256SUMS-windows.txt` 完全一致 |
 
+## 本机截图 / Screenshots
+
+![macOS HUD](docs/local-mac-hud.png)
+
+| iPhone · 每日策略 | iPad mini · HUD |
+| --- | --- |
+| ![iPhone](docs/local-iphone-daily.png) | ![iPad](docs/local-ipad-hud.png) |
+
 ## 产物 / Artifacts
 
 | 文件 | 平台 | 说明 |
