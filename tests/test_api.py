@@ -7,10 +7,20 @@ from backend.app import create
 
 
 @pytest.fixture()
-def client(temp_db, monkeypatch):
+def client(temp_db, monkeypatch, tmp_path):
+    import backend.app as app_module
+
+    # Do not depend on `frontend/dist` being built in the Python CI job: give
+    # the app a tiny self-contained SPA shell and exercise the routing logic.
+    front = tmp_path / "frontend"
+    (front / "assets").mkdir(parents=True)
+    (front / "index.html").write_text("<!doctype html><title>StockDesk test shell</title>", encoding="utf-8")
+    (front / "assets" / "index-test.js").write_text("console.log('ok')", encoding="utf-8")
+    monkeypatch.setattr(app_module, "FRONT", front)
+
     monkeypatch.setattr(market, "resolve_name", lambda code: f"股票{code}")
     monkeypatch.setattr(market, "quotes", lambda codes: {})
-    return TestClient(create())
+    return TestClient(app_module.create())
 
 
 def test_health_and_openapi(client):
@@ -83,5 +93,7 @@ def test_backtest_metadata(client):
 def test_spa_and_unknown_api(client):
     index = client.get("/")
     assert index.status_code == 200
-    assert "StockDesk" in index.text
+    assert "StockDesk test shell" in index.text
+    assert client.get("/assets/index-test.js").status_code == 200
+    assert client.get("/assets/missing.js").status_code == 404
     assert client.get("/api/not-a-real-endpoint").status_code == 404
