@@ -19,19 +19,15 @@ SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切
 
 | 投资 HUD | 指数分析 | 持仓 |
 | --- | --- | --- |
-| ![持仓](docs/ios-portfolio.png) | ![指数](docs/ios-index.png) | ![持仓](docs/ios-portfolio.png) |
+| ![HUD](docs/ios-hub.png) | ![指数](docs/ios-index.png) | ![持仓](docs/ios-portfolio.png) |
 
-| 指数分析 | 投资 HUD 横屏 | 设置（主题 / 横屏） |
+| 投资 HUD 横屏 | 设置（主题 / 横屏） | 个股热图 |
 | --- | --- | --- |
-| ![指数](docs/ios-index.png) | ![横屏](docs/ios-landscape.png) | ![设置](docs/ios-settings.png) |
+| ![横屏](docs/ios-landscape.png) | ![设置](docs/ios-settings.png) | ![热图](docs/ios-heat.png) |
 
-| 个股热图 | 黄金分割 + 筹码 | 复盘总结 |
+| 黄金分割 + 筹码 | 复盘总结 | 回测 |
 | --- | --- | --- |
-| ![热图](docs/ios-heat.png) | ![黄金分割](docs/ios-fib.png) | ![复盘](docs/ios-analytics.png) |
-
-| 持仓（撑/压） | 自选（20/60 日） | 回测 |
-| --- | --- | --- |
-| ![持仓](docs/ios-portfolio.png) | ![自选](docs/ios-watch.png) | ![回测](docs/ios-backtest.png) |
+| ![黄金分割](docs/ios-fib.png) | ![复盘](docs/ios-analytics.png) | ![回测](docs/ios-backtest.png) |
 
 ---
 
@@ -41,7 +37,7 @@ SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切
 | --- | --- |
 | `dist/StockDesk-iOS-4.1.2-unsigned.ipa` | 未签名 IPA，用 Sideloadly / AltStore / Xcode 签名安装到真机 |
 | `dist/StockDesk-simulator.app` | 已编译 App，可直接装进 iOS 模拟器 |
-| `StockDesk.xcodeproj` | Xcode 工程，真机安装最稳妥的方式 |
+| `project.yml` + `build_ios.sh` | 运行 `xcodegen generate` 生成 Xcode 工程；脚本会自动执行 |
 
 > App 完全离线于你的数据：不登录、不上传，账户数据保存在 App 沙盒内。
 
@@ -51,7 +47,7 @@ SwiftUI + Swift Charts，默认 **「指挥舱 HUD」** 深色界面，也可切
 
 ### 方式 A：Xcode 直接跑真机（推荐，免费 Apple ID 即可）
 
-1. 用 Xcode 打开 `StockDesk.xcodeproj`
+1. 在 `ios/` 运行 `xcodegen generate`，再用 Xcode 打开生成的 `StockDesk.xcodeproj`
 2. 选中 `StockDesk` target → Signing & Capabilities → Team 选择你的 Apple ID（没有就 Add Account）
 3. Bundle Identifier 改成唯一值（如 `com.你的名字.stockdesk`）
 4. 连上 iPhone，选中设备，⌘R 运行
@@ -134,10 +130,13 @@ StockDesk/
 │   ├── AppStore.swift        # 本地持久化 + 状态编排
 │   ├── PortfolioEngine.swift # 移动平均成本、净值、回撤、FIFO 统计
 │   ├── BacktestEngine.swift  # 5 种策略 + 指标 + 回测撮合
-│   ├── ScreenerEngine.swift  # 多因子筛选与评分
+│   ├── FactorEngine.swift    # 横截面因子筛选（离线行情）
+│   ├── ScreenerEngine.swift  # 形态/量价选股评分
 │   └── Theme.swift           # 亮色设计系统
 └── Views/                    # SwiftUI 页面与组件（Swift Charts）
-    └── DecisionView.swift    # 交易决策：市场预测 + 持仓好坏判断
+    ├── DecisionView.swift    # 交易决策：市场预测 + 持仓好坏判断
+    ├── ForecastView.swift    # 独立市场预测
+    └── FactorsView.swift     # 独立因子筛选
 ```
 
 ## 重新构建
@@ -148,7 +147,7 @@ cd ios
 ./build_ios.sh               # 模拟器 App + 未签名真机 IPA
 ```
 
-产物在 `ios/dist/`；真机安装最稳妥的方式仍是打开 `StockDesk.xcodeproj`，选择 Team 后 ⌘R；或 Product → Archive 导出。
+产物在 `ios/dist/`；真机安装最稳妥的方式是先在 `ios/` 运行 `xcodegen generate`，再打开生成的 `StockDesk.xcodeproj`，选择 Team 后 ⌘R；或 Product → Archive 导出。
 
 依赖：Xcode 15+、XcodeGen（`brew install xcodegen`）。工程版本由 `project.yml` 的 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` 决定，当前 4.1.2 (36)；HUD 与交易决策页的版本号从 Info.plist 读取，不再手写。
 
@@ -173,19 +172,19 @@ cd ios
 StockDesk for iOS is a fully standalone SwiftUI app, now at **4.1.2 (36)**. It does **not** require the Mac backend: quotes, candles, fundamentals, portfolio, review, backtest, screening and alerts all run on the iPhone.
 
 - SwiftUI + Swift Charts
-- HUB home with three left actions and six right modules (Decision, Backtest, Regions, Index Analysis, Quant Models); the central disc opens Portfolio directly
+- HUB home with three left actions and seven right modules (Decision, Forecast, Backtest, Factors, Regions, Index Analysis, Quant Models); the central disc opens Portfolio directly
 - Daily Plan: three-column main-force flow (inflow / outflow / industry), a model-conclusion card (temperature + MA20 + TD) and a TD Sequential card
 - Portfolio: asset-analysis and advice shortcuts at the top, plus positions and trade history
 - Index Analysis for A-share broad indices and overseas markets; the legacy `industry-news` route resolves to the same screen
 - 100% / 120% / 150% font scaling; 150% uses a single-column HUB
 - Built-in Chinese / English switch in Settings
 - Full-page image sharing via the system share sheet (WeChat, Notes, Files)
-- HMM, percolation and TD models with per-stock position guidance and a transparent composite score (model registry v2.5.0)
+- HMM, percolation and TD models with per-stock position guidance and a transparent composite score (model registry v2.2.0)
 - Local-only storage; no login and no uploads
 
 ### Install
 
-1. Open `StockDesk.xcodeproj`
+1. Run `xcodegen generate` in `ios/`, then open the generated `StockDesk.xcodeproj`
 2. Select your team under Signing & Capabilities
 3. Run on a simulator or a device
 

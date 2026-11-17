@@ -130,13 +130,13 @@ The UI reads `/api/models/meta`, so a model upgrade does not require a page rewr
 
 Daily log returns of the Shanghai Composite, CSI 300, ChiNext, Shenzhen Component and STAR 50, 420 bars, at least 60 samples. Three deterministic starts run Baum-Welch; the best log-likelihood wins. States are sorted by mean into weak → range → strong, so names mean the same thing across dates and indices.
 
-New in 2.1.0: filtered online state (`filtered`), state quality/separation (`quality`, `state_separation`, `separation_label`), risk score and suggested exposure. New in 2.0.0: posterior confidence, normalised entropy, regime age, average duration, next-day flip risk, per-state daily mean / annualised volatility / Sharpe / win rate, and a plain-language summary. The HMM sets total exposure; below 60% confidence treat the regime as ranging. When separation is below 0.4 the states overlap and the label is only a weak reference.
+Outputs: filtered online state (`filtered`), state quality/separation (`quality`, `state_separation`, `separation_label`), risk score, suggested exposure, posterior confidence, normalised entropy, regime age, average duration, next-day flip risk, per-state daily mean / annualised volatility / Sharpe / win rate, and a plain-language summary. The HMM sets total exposure; below 60% confidence treat the regime as ranging. When separation is below 0.4 the states overlap and the label is only a weak reference.
 
 ### Percolation 2.1.0
 
 About 5,500 A-shares (suspended, delisted and ST names removed) are placed on a 2-D lattice in `crc32(code)` order. Listing order makes neighbouring sites correlated and inflates clusters; the stable hash keeps the result reproducible and spreads codes out. The largest four-neighbour cluster divided by advancing names is `giant_occupied`; 0.592746 is the 2-D square-site threshold.
 
-New in 2.1.0: a 12-run bootstrap interval and stability score, plus `trend` / `history_delta` versus the previous snapshot. New in 2.0.0: `spanning` (does the giant touch all four edges), `susceptibility`, a random-layout baseline with a p-value over three shuffles, a 50×50 block grid that keeps every stock in the picture, and industry groups with breadth, giant share and leaders. When more than 60% of rows lack an industry field, grouping falls back to market and the response says so.
+Outputs: a 12-run bootstrap interval and stability score, `trend` / `history_delta`, `spanning`, `susceptibility`, a random-layout baseline with a p-value over three shuffles, a 50×50 block grid, and industry groups with breadth, giant share and leaders. When more than 60% of rows lack an industry field, grouping falls back to market and the response says so.
 
 ### TD Sequential 1.1.0
 

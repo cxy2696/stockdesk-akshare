@@ -102,7 +102,7 @@ cd ios
 ```
 
 产物在 `ios/dist/`：`StockDesk-simulator.app`、`StockDesk-iOS-<版本>-unsigned.ipa`。
-真机安装：用 Xcode 打开 `StockDesk.xcodeproj`，在 Signing & Capabilities 选择自己的 Team 后运行；或用 Sideloadly / AltStore 重签 IPA。免费 Apple ID 签名 7 天有效。
+真机安装：在 `ios/` 运行 `xcodegen generate`，用 Xcode 打开生成的 `StockDesk.xcodeproj`，在 Signing & Capabilities 选择自己的 Team 后运行；或用 Sideloadly / AltStore 重签 IPA。免费 Apple ID 签名 7 天有效。
 
 ### 测试与冒烟
 
@@ -211,7 +211,7 @@ cd ios
 ```
 
 Outputs live in `ios/dist/`: `StockDesk-simulator.app` and `StockDesk-iOS-<version>-unsigned.ipa`.
-For a device, open `StockDesk.xcodeproj`, pick your team in Signing & Capabilities, then run; or re-sign the IPA with Sideloadly / AltStore. Free Apple ID signatures expire after 7 days.
+For a device, run `xcodegen generate` in `ios/`, open the generated `StockDesk.xcodeproj`, pick your team in Signing & Capabilities, then run; or re-sign the IPA with Sideloadly / AltStore. Free Apple ID signatures expire after 7 days.
 
 ### Tests and smoke
 
