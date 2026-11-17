@@ -3,7 +3,7 @@
 import os
 import re
 import sys
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_dynamic_libs
 
 block_cipher = None
 ROOT = os.path.abspath(os.getcwd())
@@ -27,12 +27,25 @@ datas = [
     (os.path.join(ROOT, "frontend", "dist"), "frontend_dist"),
     (os.path.join(ROOT, "backend", "data"), "backend/data"),
 ] + collect_data_files("akshare")
-hiddenimports = collect_submodules("uvicorn") + collect_submodules("akshare") + ["backend._native", "backend.native", "webview", "webview.platforms.cocoa"]
+binaries = []
+hiddenimports = collect_submodules("uvicorn") + collect_submodules("akshare") + [
+    "backend._native", "backend.native", "webview", "webview.platforms.cocoa",
+]
+
+# Optional rflux HMM backend. It is not a hard dependency: if the package or
+# its dylib is missing, StockDesk's native/NumPy path is used instead.
+try:
+    import rflux  # noqa: F401
+    datas += collect_data_files("rflux")
+    binaries += collect_dynamic_libs("rflux")
+    hiddenimports += collect_submodules("rflux")
+except Exception:
+    pass
 
 a = Analysis(
     ["main.py"],
     pathex=[ROOT],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

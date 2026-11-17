@@ -16,7 +16,8 @@ MODELS = {
         "params": {"states": 3, "iterations": 80, "lookback": 420, "min_samples": 60, "restarts": 3},
         "description": (
             "Three-state Gaussian HMM on daily log returns of five A-share indices. "
-            "Multi-start Baum-Welch, ordered weak→range→strong, with posterior "
+            "Multi-start Baum-Welch (rflux C++ trainer when installed, StockDesk native/NumPy fallback), "
+            "ordered weak→range→strong, with posterior "
             "confidence, filtered (online) state, regime age, state quality, risk score "
             "and per-state return/volatility/Sharpe/win-rate statistics."
         ),

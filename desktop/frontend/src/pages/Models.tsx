@@ -842,7 +842,7 @@ export default function Models() {
         extra={
           hmmList.length ? (
             <span className="muted" style={{ fontSize: 10.5 }}>
-              {hmmList.length} 个指数 · 样本 {hmm?.samples ?? '--'} 日 · {hmm?.converged ? '已收敛' : '未完全收敛'}
+              {hmmList.length} 个指数 · 样本 {hmm?.samples ?? '--'} 日 · {hmm?.converged ? '已收敛' : '未完全收敛'} · {hmm?.engine ?? '--'}
             </span>
           ) : null
         }

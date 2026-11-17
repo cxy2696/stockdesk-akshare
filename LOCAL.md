@@ -29,6 +29,11 @@
 - 持仓表在 1100px 窗口收起“今日盈亏 / 累计盈亏 / 持有”，股票名称不换行。
 - iPad HUD 放大中枢，增加指数/涨跌状态条；iPhone 布局不变。
 
+**rflux 参考接入**
+- HMM 优先使用本地 rflux 0.7.0 的 C++ 多起点训练器；适配层只取参数、平滑概率和因果过滤概率，保留 StockDesk 自己的状态排序、质量、风险和仓位口径。
+- rflux 未安装、dylib 加载失败或拟合异常时，自动回退 StockDesk C++/NumPy，不改变接口。
+- `/api/health` 和设置页显示当前 HMM 引擎；模型页 HMM 明细显示引擎版本。
+
 **后端与构建**
 - SQLite 连接改为显式关闭，启用 WAL 和 busy timeout；缓存写入对 NaN/Infinity 做了兜底。
 - FastAPI 启动统一到 lifespan。
@@ -39,7 +44,7 @@
 
 | 项目 | 结果 |
 | --- | --- |
-| `pytest -q tests` | 55 passed |
+| `pytest -q tests` | 58 passed |
 | `ruff check desktop/backend us tests --select F,E9` | 通过 |
 | `python scripts/api_smoke.py http://127.0.0.1:8765` | 47 个只读 + 3 个写接口 + SPA 通过 |
 | `python scripts/coverage_check.py http://127.0.0.1:8765` | 正常行情源下 5,581/5,581，missing=0，duplicates=0；限流时 data_complete=false |

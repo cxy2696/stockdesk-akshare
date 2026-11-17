@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
-from . import db, market, model_registry, native, td
+from . import db, market, model_registry, native, rflux_engine, td
 
 PERC_THRESHOLD = float(model_registry.MODELS["percolation"]["params"]["threshold"])
 STATE_LABELS = ["弱势", "震荡", "强势"]
@@ -56,6 +56,7 @@ def _baum_welch(x: np.ndarray, mu: np.ndarray, var: np.ndarray, pi: np.ndarray,
                 "loglik": float(raw["loglik"]),
                 "iterations": int(raw["iterations"]),
                 "converged": bool(raw.get("converged", False)),
+                "engine": "StockDesk C++",
             }
         except Exception:
             pass
@@ -103,7 +104,8 @@ def _baum_welch(x: np.ndarray, mu: np.ndarray, var: np.ndarray, pi: np.ndarray,
 
     return {"mu": mu, "var": var, "pi": pi, "A": A, "gamma": gamma,
             "loglik": loglik if loglik is not None else -1e18,
-            "iterations": used, "converged": converged}
+            "iterations": used, "converged": converged,
+            "engine": "StockDesk C++" if native.NATIVE else "NumPy"}
 
 
 def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["states"]),
@@ -121,22 +123,37 @@ def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["sta
     x = np.asarray(x, dtype=float)
     var_floor = max(float(np.var(x)), 1e-6)
 
-    starts = []
-    for qs in ([0.2, 0.5, 0.8], [0.12, 0.5, 0.88]):
-        mu0 = np.quantile(x, qs[:k]).astype(float) if k == 3 else np.linspace(x.min(), x.max(), k)
-        starts.append(mu0)
-    starts.append(np.sort(x)[[int((i + 0.5) * n / k) for i in range(k)]])
+    # Prefer rflux's C++ multi-start trainer when the optional package is
+    # installed.  Its diagnostics and causal filter are the same contract used
+    # below; the local native/NumPy path remains the fallback.
+    rfit = rflux_engine.fit_hmm(x, k, restarts=3, iters=iters)
+    filtered_last = None
+    if rfit is not None:
+        mu, var, A, gamma = rfit["mu"], rfit["var"], rfit["A"], rfit["gamma"]
+        loglik = rfit["loglik"]
+        filtered_last = rfit["filtered"]
+        best = {
+            "iterations": rfit["iterations"],
+            "converged": rfit["converged"],
+            "engine": rfit["engine"],
+        }
+    else:
+        starts = []
+        for qs in ([0.2, 0.5, 0.8], [0.12, 0.5, 0.88]):
+            mu0 = np.quantile(x, qs[:k]).astype(float) if k == 3 else np.linspace(x.min(), x.max(), k)
+            starts.append(mu0)
+        starts.append(np.sort(x)[[int((i + 0.5) * n / k) for i in range(k)]])
 
-    best = None
-    for mu0 in starts:
-        A0 = np.full((k, k), 0.12 / max(k - 1, 1))
-        np.fill_diagonal(A0, 0.88)
-        fit = _baum_welch(x, np.array(mu0, dtype=float), np.full(k, var_floor),
-                          np.full(k, 1.0 / k), A0, iters)
-        if best is None or fit["loglik"] > best["loglik"]:
-            best = fit
-    mu, var, A, gamma = best["mu"], best["var"], best["A"], best["gamma"]
-    loglik = best["loglik"]
+        best = None
+        for mu0 in starts:
+            A0 = np.full((k, k), 0.12 / max(k - 1, 1))
+            np.fill_diagonal(A0, 0.88)
+            fit = _baum_welch(x, np.array(mu0, dtype=float), np.full(k, var_floor),
+                              np.full(k, 1.0 / k), A0, iters)
+            if best is None or fit["loglik"] > best["loglik"]:
+                best = fit
+        mu, var, A, gamma = best["mu"], best["var"], best["A"], best["gamma"]
+        loglik = best["loglik"]
 
     # Order states by mean return: weak → range → strong.
     order = np.argsort(mu)
@@ -183,16 +200,20 @@ def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["sta
     history = [int(h) for h in hard[-60:]]
 
     # Online (filtered) probability: what the model would have said today
-    # without peeking at future bars.  Useful to show whether the smoothed
-    # posterior is confirmed by the live filter.
-    B = np.exp(-0.5 * (np.log(2 * math.pi * var) + (x[:, None] - mu) ** 2 / var)) + 1e-300
-    alpha = np.zeros((n, k))
-    alpha[0] = np.maximum(gamma[0], 1e-9) * B[0]
-    alpha[0] /= max(alpha[0].sum(), 1e-300)
-    for t in range(1, n):
-        alpha[t] = (alpha[t - 1] @ A) * B[t]
-        alpha[t] /= max(alpha[t].sum(), 1e-300)
-    filtered = alpha[-1] / max(alpha[-1].sum(), 1e-300)
+    # without peeking at future bars.  rflux already returns a causal filter;
+    # the local path recomputes it from the smoothed posterior.
+    if filtered_last is not None:
+        filtered = np.asarray(filtered_last, dtype=float)[order]
+        filtered /= max(filtered.sum(), 1e-300)
+    else:
+        B = np.exp(-0.5 * (np.log(2 * math.pi * var) + (x[:, None] - mu) ** 2 / var)) + 1e-300
+        alpha = np.zeros((n, k))
+        alpha[0] = np.maximum(gamma[0], 1e-9) * B[0]
+        alpha[0] /= max(alpha[0].sum(), 1e-300)
+        for t in range(1, n):
+            alpha[t] = (alpha[t - 1] @ A) * B[t]
+            alpha[t] /= max(alpha[t].sum(), 1e-300)
+        filtered = alpha[-1] / max(alpha[-1].sum(), 1e-300)
     filtered_state = int(np.argmax(filtered))
 
     # How separated are the fitted states?  A tiny separation means the label
@@ -252,6 +273,7 @@ def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["sta
         "bic": round((k * k + 3 * k - 1) * math.log(n) - 2 * loglik, 1),
         "iterations": best["iterations"],
         "converged": best["converged"],
+        "engine": best.get("engine") or ("StockDesk C++" if native.NATIVE else "NumPy"),
         "samples": n,
         "feature": "日对数收益率",
         "interpretation": interpretation,

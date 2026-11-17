@@ -341,8 +341,12 @@ export default function SettingsPage() {
             <Descriptions.Item label="技术栈">FastAPI + React + ECharts</Descriptions.Item>
             <Descriptions.Item label="数据存储">SQLite（本地 data 目录）</Descriptions.Item>
             <Descriptions.Item label="覆盖市场">A 股（沪深主板 / 创业板 / 科创板 / 北交所）</Descriptions.Item>
-            <Descriptions.Item label="全 A 覆盖">全市场 5,580（沪深 5,225 + 北交 355）；实时审计缺失 0</Descriptions.Item>
-            <Descriptions.Item label="模型核心">C++（渗流 + HMM）· NumPy 自动回退</Descriptions.Item>
+            <Descriptions.Item label="全 A 覆盖">全市场 5,581（沪深 5,225 + 北交 356）；实时审计缺失 0</Descriptions.Item>
+            <Descriptions.Item label="模型核心">
+              {health?.hmm_engine?.backend
+                ? `${health.hmm_engine.backend} · StockDesk C++/NumPy 回退`
+                : 'StockDesk C++/NumPy 自动回退'}
+            </Descriptions.Item>
           </Descriptions>
         </Card>
       </div>
