@@ -1,38 +1,38 @@
-# Python
 __pycache__/
-*.py[cod]
+*.pyc
 .venv/
-.pytest_cache/
-.ruff_cache/
-
-# Node
-frontend/node_modules/
-frontend/.vite/
-frontend/tsconfig.tsbuildinfo
-*.log
-
-# Build output / artifacts
+node_modules/
+frontend/dist/
 build/
 dist/
-StockDesk.app/
-StockDesk-*.app/
-stockdesk-mac/StockDesk.app/
-stockdesk-win/StockDesk.exe
-stockdesk-ios/build/
-stockdesk-ios/dist/
-stockdesk-ios/StockDesk.xcodeproj/xcuserdata/
-stockdesk-ios/StockDesk.xcodeproj/project.xcworkspace/xcuserdata/
-
-# Local data
+*.app/
+*.exe
+*.ipa
 data/
-backend/data/
 *.db
-*.sqlite
-
-# macOS
 .DS_Store
-.Rhistory
 
-# iOS signing
-*.mobileprovision
-*.p12
+# frontend build inputs/outputs
+node_modules/
+*.tsbuildinfo
+desktop/frontend/dist/
+
+# iOS generated build artifacts
+ios/build/
+ios/build-device/
+ios/build-sim/
+.cache/
+ios/StockDesk.xcodeproj/
+
+!desktop/backend/data/
+!desktop/backend/data/all_symbols.json
+
+# release packages
+desktop/release/
+desktop/backend/_native*.so
+desktop/backend/_native*.pyd
+desktop/build/
+
+# local deliverables
+/release/
+*.tar.gz

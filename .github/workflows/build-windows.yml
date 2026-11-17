@@ -1,0 +1,79 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: 'x64'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r desktop/requirements.txt
+          pip install "numpy==1.26.4" "pandas==2.2.3"
+          pip install pyinstaller==6.10.0
+      - name: Build exe (slim, excludes unused heavy packages)
+        shell: pwsh
+        working-directory: desktop
+        run: powershell -ExecutionPolicy Bypass -File .\build_win.ps1
+      - name: Smoke test the packaged exe
+        shell: pwsh
+        run: |
+          $env:STOCKDESK_DATA = "$pwd\testdata"
+          $p = Start-Process -FilePath ".\desktop\dist\StockDesk.exe" -ArgumentList "--headless","--port","8899" -PassThru
+          $ok = $false
+          for ($i=0; $i -lt 40; $i++) {
+            Start-Sleep -Seconds 2
+            try { $r = Invoke-WebRequest "http://127.0.0.1:8899/api/health" -UseBasicParsing -TimeoutSec 3; if ($r.StatusCode -eq 200) { $ok=$true; break } } catch {}
+          }
+          if (-not $ok) {
+            Write-Host "---- stockdesk log ----"
+            Get-Content "$env:LOCALAPPDATA\StockDesk\stockdesk.log" -Tail 120 -ErrorAction SilentlyContinue
+            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+            throw "exe failed health check"
+          }
+          $health = Invoke-RestMethod "http://127.0.0.1:8899/api/health" -TimeoutSec 10
+          Write-Host "health:" $health.data.version "engine:" $health.data.engine.backend
+          if ($health.data.engine.backend -ne "C++") { throw "C++ engine missing from packaged exe" }
+          # The packaged UI must be present, not just the API.
+          $html = (Invoke-WebRequest "http://127.0.0.1:8899/" -UseBasicParsing -TimeoutSec 10).Content
+          if ($html -notmatch "StockDesk") { throw "frontend index missing" }
+          $asset = [regex]::Match($html, 'assets/index-[^"'']+').Value
+          if (-not $asset) { throw "frontend asset reference missing" }
+          $assetStatus = (Invoke-WebRequest "http://127.0.0.1:8899/$asset" -UseBasicParsing -TimeoutSec 30).StatusCode
+          if ($assetStatus -ne 200) { throw "frontend asset failed: $assetStatus" }
+          Write-Host "frontend asset:" $asset $assetStatus
+          $meta = Invoke-RestMethod "http://127.0.0.1:8899/api/models/meta" -TimeoutSec 30
+          if (-not $meta.ok) { throw "models meta endpoint failed" }
+          if ($meta.data.models.PSObject.Properties.Name -contains "kdj") { throw "KDJ must be removed from registry" }
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+      - name: Report size
+        shell: pwsh
+        run: |
+          $f = Get-Item ".\desktop\dist\StockDesk.exe"
+          Write-Host ("StockDesk.exe: {0:N1} MB" -f ($f.Length / 1MB))
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StockDesk-Windows
+          path: desktop/dist/StockDesk.exe
+      - name: Publish to release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Select-String -Path desktop/backend/config.py -Pattern 'APP_VERSION = "([^"]+)"').Matches[0].Groups[1].Value
+          Write-Host "Publishing StockDesk.exe to v$version"
+          gh release upload "v$version" desktop/dist/StockDesk.exe --clobber
