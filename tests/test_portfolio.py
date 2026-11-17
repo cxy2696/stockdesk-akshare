@@ -74,3 +74,17 @@ def test_cash_flow(temp_db, no_network):
     assert flow["sell_total"] == pytest.approx(1198.0)
     assert flow["fees"] == pytest.approx(7.0)
     assert flow["net_invested"] == pytest.approx(-193.0)
+
+
+def test_first_day_equity_curve_trend_and_series(temp_db, no_network, monkeypatch):
+    monkeypatch.setattr(portfolio, "_today", lambda: "2026-11-17")
+    monkeypatch.setattr(portfolio, "account_assets", lambda: 500000.0)
+    monkeypatch.setattr(portfolio, "_daily_closes", lambda codes, start: {"600519": {"2026-11-17": 11.0}})
+    monkeypatch.setattr(market, "klines", lambda *args, **kwargs: [])
+    portfolio.add_trade("600519", "buy", 10.0, 100, "2026-11-17", name="贵州茅台")
+    data = portfolio.equity_curve()
+    assert data["empty"] is False
+    assert len(data["series"]) == 1
+    assert data["trend"]["days"] == 1
+    assert data["trend"]["sample_sufficient"] is False
+    assert "首日" in data["trend"]["label"]

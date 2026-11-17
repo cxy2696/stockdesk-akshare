@@ -28,8 +28,8 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML,
 SPOT_FIELDS = "f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f22,f23,f24,f25,f11,f62,f100"
 # f62 = 主力净流入(元) on the quote API
 FS_A = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
-SPOT_KEY = "spot:v6"
-SPOT_SCHEMA = 6
+SPOT_KEY = "spot:v7"
+SPOT_SCHEMA = 7
 UNIVERSE_EXTRA_KEY = "universe:extras:v1"
 
 _spot_lock = __import__("threading").Lock()
@@ -199,9 +199,14 @@ def _fund_flow(top: int = 900) -> dict[str, dict]:
                 "MoneyFlow.ssl_bkzj_ssggzj?page=1&num={num}&sort=netamount&asc={asc}")
 
         def fetch(asc: int):
-            url = base.format(num=max(100, top), asc=asc)
-            req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
-            return json.loads(urllib.request.urlopen(req, timeout=10).read().decode("utf-8", "ignore"))
+            try:
+                url = base.format(num=max(100, top), asc=asc)
+                req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
+                return json.loads(urllib.request.urlopen(req, timeout=10).read().decode("utf-8", "ignore"))
+            except Exception:
+                # A blocked flow endpoint must not take down the whole
+                # snapshot; flow is optional enrichment, not coverage.
+                return []
 
         rows = []
         with ThreadPoolExecutor(max_workers=2) as ex:
@@ -255,19 +260,34 @@ def _prefix_for(code: str) -> str:
     return "sz"
 
 
-def _sina_batch(codes: list[str]) -> dict[str, dict]:
-    out: dict[str, dict] = {}
-    for start in range(0, len(codes), 80):
-        chunk = codes[start:start + 80]
+def _sina_batch(codes: list[str], deadline: float | None = None) -> dict[str, dict]:
+    """Fetch Sina batch quotes with a bounded wall-clock budget.
+
+    A full-market repair can need ~70 chunks. Sequential 10 s timeouts could
+    block a fallback for minutes; run chunks concurrently and stop at the
+    deadline, returning whatever arrived. The caller still keeps static rows
+    for codes that did not come back, so a partial repair never loses stocks.
+    """
+    if not codes:
+        return {}
+    if deadline is None:
+        deadline = time.monotonic() + 20.0
+    chunks = [codes[i:i + 80] for i in range(0, len(codes), 80)]
+
+    def fetch(chunk: list[str]) -> dict[str, dict]:
+        left = deadline - time.monotonic()
+        if left <= 0:
+            return {}
         symbols = ",".join(f"{_prefix_for(c)}{c}" for c in chunk)
         try:
             req = urllib.request.Request(
                 f"https://hq.sinajs.cn/list={symbols}",
                 headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"},
             )
-            text = urllib.request.urlopen(req, timeout=10).read().decode("gbk", "ignore")
+            text = urllib.request.urlopen(req, timeout=max(1.0, min(8.0, left))).read().decode("gbk", "ignore")
         except Exception:
-            continue
+            return {}
+        rows: dict[str, dict] = {}
         for line in text.splitlines():
             if '="' not in line:
                 continue
@@ -278,7 +298,7 @@ def _sina_batch(codes: list[str]) -> dict[str, dict]:
                 price, prev = _num(p[3]), _num(p[2])
                 if not price or not prev:
                     continue
-                out[code] = {
+                rows[code] = {
                     "price": price, "high": _num(p[4]), "low": _num(p[5]),
                     "open": _num(p[1]), "volume": _num(p[8]), "amount": _num(p[9]),
                     "prev_close": prev, "pct": round((price / prev - 1) * 100, 2),
@@ -286,10 +306,23 @@ def _sina_batch(codes: list[str]) -> dict[str, dict]:
                 }
             except Exception:
                 continue
+        return rows
+
+    out: dict[str, dict] = {}
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futures = [ex.submit(fetch, c) for c in chunks]
+        try:
+            for fut in as_completed(futures, timeout=max(0.1, deadline - time.monotonic())):
+                out.update(fut.result())
+        except TimeoutError:
+            pass
+        finally:
+            for fut in futures:
+                fut.cancel()
     return out
 
 
-def _sina_market_center() -> dict[str, dict]:
+def _sina_market_center(deadline: float | None = None) -> dict[str, dict]:
     """Rich Sina spot snapshot (code, name, price, PE/PB, cap, turnover).
 
     The Market_Center JSON pages are small and can be fetched concurrently, so
@@ -300,20 +333,33 @@ def _sina_market_center() -> dict[str, dict]:
     UA_SINA = {"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"}
 
     def page(n: int) -> list[dict]:
+        left = deadline - time.monotonic()
+        if left <= 0:
+            return []
         url = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
                f"Market_Center.getHQNodeData?page={n}&num=100&sort=amount&asc=0&node=hs_a&symbol=&_s_r_a=page")
         try:
             req = urllib.request.Request(url, headers=UA_SINA)
-            with urllib.request.urlopen(req, timeout=12) as r:
+            with urllib.request.urlopen(req, timeout=max(1.0, min(8.0, left))) as r:
                 data = json.loads(r.read().decode("utf-8", "ignore"))
             return data if isinstance(data, list) else []
         except Exception:
             return []
 
+    if deadline is None:
+        deadline = time.monotonic() + 20.0
     out: dict[str, dict] = {}
     try:
         with ThreadPoolExecutor(max_workers=8) as ex:
-            for chunk in ex.map(page, range(1, 71)):
+            futures = [ex.submit(page, n) for n in range(1, 71)]
+            try:
+                results = [f.result() for f in as_completed(futures, timeout=max(0.1, deadline - time.monotonic()))]
+            except TimeoutError:
+                results = []
+            finally:
+                for fut in futures:
+                    fut.cancel()
+            for chunk in results:
                 for r in chunk:
                     code = str(r.get("code") or "")[-6:]
                     if not code.isdigit():
@@ -454,7 +500,8 @@ def _assemble_snapshot(seen: dict[str, dict], expected: list[tuple[str, str]],
                        quotes: dict[str, dict] | None = None,
                        flow: dict[str, dict] | None = None, *,
                        em_total: int = 0, pages_failed: int = 0,
-                       sources: list[str] | None = None) -> dict:
+                       sources: list[str] | None = None,
+                       classify_suspended: bool = False) -> dict:
     """Build a lossless snapshot: every expected and discovered code gets a row.
 
     Missing quotes remain rows with quote_status=missing/suspended, so counts,
@@ -493,6 +540,26 @@ def _assemble_snapshot(seen: dict[str, dict], expected: list[tuple[str, str]],
             row["quote_status"] = "missing"
         rows.append(row)
 
+    # A suspended stock often disappears from the quote feed entirely. Its
+    # last K-line is older than the current session, which lets us preserve
+    # the legitimate suspension state instead of calling it a missing quote.
+    # Only probe a small number of rows; a broad outage stays "missing" and
+    # keeps data_complete=false rather than hiding the problem.
+    if classify_suspended:
+        session = clock.last_session_date()
+        missing_rows = [r for r in rows if r.get("quote_status") == "missing"]
+        # Only a handful of legitimate suspensions should trigger a probe; a
+        # broad feed outage must not fan out into hundreds of K-line calls.
+        for row in (missing_rows if len(missing_rows) <= 8 else []):
+            try:
+                kl = klines(row["code"], limit=5, adjust="")
+                if kl and str(kl[-1].get("date") or "") < session:
+                    row["quote_status"] = "suspended"
+                    row["prev_close"] = kl[-1].get("close")
+                    row["volume"] = 0
+            except Exception:
+                continue
+
     row_codes = {r["code"] for r in rows}
     expected_codes = sorted(expected_map.keys())
     missing = sorted(set(expected_codes) - row_codes)
@@ -506,6 +573,7 @@ def _assemble_snapshot(seen: dict[str, dict], expected: list[tuple[str, str]],
         for field in ("price", "pct", "amount", "mcap", "industry", "main_inflow")
     }
     complete = not missing and pages_failed == 0
+    data_complete = not missing and not unpriced
     source_names = list(dict.fromkeys(sources or ["universe"]))
     return {
         "schema": SPOT_SCHEMA,
@@ -525,10 +593,11 @@ def _assemble_snapshot(seen: dict[str, dict], expected: list[tuple[str, str]],
         "status_counts": status_counts,
         "field_missing": field_missing,
         "complete": complete,
-        # complete = every expected row is represented; fully_quoted = every
-        # row also has a live price (legitimate suspensions can make it false).
-        "data_complete": complete,
-        "fully_quoted": complete and not unpriced and not suspended,
+        # complete = every expected row is represented and no page failed.
+        # data_complete additionally requires every non-suspended row to have
+        # a quote; fully_quoted means even suspended rows have a price.
+        "data_complete": data_complete,
+        "fully_quoted": data_complete and not suspended,
         "em_total": em_total,
         "pages_failed": pages_failed,
         "sources": source_names,
@@ -551,7 +620,8 @@ def _akshare_spot() -> dict:
         source = "sina-batch"
     flow = _fund_flow()
     out = _assemble_snapshot({}, universe, quotes, flow,
-                             em_total=0, pages_failed=0, sources=[source, "universe"])
+                             em_total=0, pages_failed=0, sources=[source, "universe"],
+                             classify_suspended=True)
     if out["rows"]:
         db.cache_set("spot:ak", out)
         db.cache_set(SPOT_KEY, out)
@@ -595,6 +665,11 @@ def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
 
 
 def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
+    # A blocked quote host must not hold the first page for minutes: three
+    # retries on every one of ~56 pages is a worst case of several minutes.
+    # Bound the whole page sweep and let the Sina/static fallback repair what
+    # did not arrive; coverage metadata then tells the caller it was partial.
+    deadline = time.monotonic() + 35.0
     base = (
         f"{EM_LIST}?po=1&np=1&fltt=2&invt=2&fid=f12&fs={urllib.parse.quote(FS_A)}"
         f"&fields={SPOT_FIELDS}"
@@ -602,11 +677,14 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
 
     def fetch_page(page: int):
         for attempt in range(3):
+            left = deadline - time.monotonic()
+            if left <= 0:
+                return None
             try:
-                return _http_json(f"{base}&pn={page}&pz=100")
+                return _http_json(f"{base}&pn={page}&pz=100", timeout=max(1.0, min(6.0, left)))
             except Exception:
                 if attempt < 2:
-                    time.sleep(0.12 * (attempt + 1))
+                    time.sleep(min(0.24, max(0.0, deadline - time.monotonic())))
         return None
 
     first = fetch_page(1)
@@ -620,8 +698,14 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
     pages: dict[int, dict | None] = {1: first}
     with ThreadPoolExecutor(max_workers=6) as ex:
         futures = {ex.submit(fetch_page, p): p for p in range(2, page_count + 1)}
-        for fut in as_completed(futures):
-            pages[futures[fut]] = fut.result()
+        try:
+            for fut in as_completed(futures, timeout=max(0.1, deadline - time.monotonic())):
+                pages[futures[fut]] = fut.result()
+        except TimeoutError:
+            pass
+        finally:
+            for fut in futures:
+                fut.cancel()
 
     seen: dict[str, dict] = {}
 
@@ -671,7 +755,7 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
     flow = _fund_flow() if any((row.get("main_inflow") is None) for row in seen.values()) or need else {}
     out = _assemble_snapshot(seen, list(expected_map.items()), quotes, flow,
                              em_total=total, pages_failed=pages_failed,
-                             sources=sources)
+                             sources=sources, classify_suspended=True)
     if progress:
         progress(100)
     if out["rows"]:

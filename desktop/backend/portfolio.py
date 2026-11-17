@@ -427,16 +427,24 @@ def equity_curve(benchmark: str = "000300") -> dict:
     dd_now = dd_series[-1]["dd"] if dd_series else 0
     pos_now = nav[-1].get("pos_pct", 0) if nav else 0
     bench20 = (bench_series[-1]["bench"] / bench_series[-21]["bench"] - 1) * 100 if len(bench_series) > 21 else None
-    if nav_ma20 and nav_ma60:
-        if last_nav > nav_ma20 > nav_ma60:
-            trend_label = "净值处于上升趋势"
-        elif last_nav < nav_ma20 < nav_ma60:
-            trend_label = "净值处于回撤趋势"
-        else:
-            trend_label = "净值处于震荡整理"
+    sample_days = len(nav_vals)
+    if sample_days <= 1:
+        trend_label = "首日建仓，趋势样本 1/20，暂不判断方向"
+    elif not nav_ma20:
+        trend_label = f"样本不足（{sample_days}/20 个交易日），暂不判断趋势"
+    elif not nav_ma60:
+        trend_label = f"短期均线可用，长期趋势待确认（{sample_days}/60）"
+    elif last_nav > nav_ma20 > nav_ma60:
+        trend_label = "净值处于上升趋势"
+    elif last_nav < nav_ma20 < nav_ma60:
+        trend_label = "净值处于回撤趋势"
     else:
-        trend_label = "样本不足，暂不判断趋势"
+        trend_label = "净值处于震荡整理"
     trend = {
+        "days": sample_days,
+        "ma20_ready": nav_ma20 is not None,
+        "ma60_ready": nav_ma60 is not None,
+        "sample_sufficient": nav_ma20 is not None,
         "nav_ma20": round(nav_ma20, 4) if nav_ma20 else None,
         "nav_ma60": round(nav_ma60, 4) if nav_ma60 else None,
         "last_nav": round(last_nav, 4),

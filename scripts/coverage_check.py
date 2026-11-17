@@ -5,9 +5,9 @@ Usage:
     python scripts/coverage_check.py http://127.0.0.1:8765
     STOCKDESK_BASE=http://127.0.0.1:8765 python scripts/coverage_check.py
 
-Exit code is 0 only when every expected A-share has a row and there are no
-duplicate codes. Suspended/no-quote rows are reported but do not fail the gate:
-they are legitimate market states, not data loss.
+Exit code is 0 only when every expected A-share has a row, no duplicate codes,
+and every non-suspended row has a quote. Legitimate suspensions are reported
+but do not fail the gate; a broad missing/stale batch does.
 """
 from __future__ import annotations
 
@@ -37,7 +37,8 @@ def main() -> int:
         print(f"market coverage: {data.get('present')}/{data.get('expected')} rows, "
               f"missing={data.get('missing')}, duplicates={data.get('duplicates')}, "
               f"suspended={data.get('suspended')}, unpriced={data.get('unpriced')}, "
-              f"complete={data.get('complete')}, fully_quoted={data.get('fully_quoted')}")
+              f"complete={data.get('complete')}, data_complete={data.get('data_complete')}, "
+              f"fully_quoted={data.get('fully_quoted')}")
         if data.get("missing_sample"):
             print("missing sample:", data["missing_sample"])
         print("boards:", data.get("boards"), "sources:", data.get("sources"))
@@ -50,8 +51,8 @@ def main() -> int:
         problems.append(f"duplicates={data.get('duplicates')}")
     if int(data.get("present") or 0) < int(data.get("expected") or 0):
         problems.append("present < expected")
-    if not data.get("complete"):
-        problems.append("snapshot marked incomplete")
+    if not data.get("data_complete"):
+        problems.append("some non-suspended rows have no quote")
     if problems:
         print("coverage gate FAILED:", ", ".join(problems), file=sys.stderr)
         return 1

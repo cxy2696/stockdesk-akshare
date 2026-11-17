@@ -472,6 +472,18 @@ export default function Models() {
   const stanceColor = stanceTone(conclusion?.stance)
 
   const tdCounts = td?.counts ?? {}
+  const tdIndexRows = [...(td?.indices ?? [])]
+    .filter((x: any) => x.td)
+    .sort((a: any, b: any) => Number(b.td?.score ?? 0) - Number(a.td?.score ?? 0))
+    .slice(0, 3)
+  const tdStockRows = [...(td?.portfolio ?? []), ...(td?.leaders ?? [])]
+    .filter((x: any) => x.td)
+    .sort((a: any, b: any) => Number(b.td?.score ?? 0) - Number(a.td?.score ?? 0))
+    .slice(0, 2)
+  const tdSummaryRows = [
+    ...tdIndexRows.map((x: any) => ({ ...x, kind: '指数' })),
+    ...tdStockRows.map((x: any) => ({ ...x, kind: x.industry ? '龙头' : '持仓' })),
+  ]
   const targetPct = Math.round(
     posRange?.mid ??
       (stance === '进攻' ? 70 : stance === '均衡偏多' ? 55 : stance === '均衡偏防守' ? 35 : stance === '防守' ? 10 : 45),
@@ -722,6 +734,103 @@ export default function Models() {
         </div>
       </div>
 
+      <div className="model-plain">
+        <b>怎么读：</b>
+        HMM 先判断市场处在强势、震荡还是弱势，决定总仓位；渗流再看上涨股是否连成片，决定行业方向；九转最后看具体标的的动能是否衰竭，决定买卖时点。三者方向一致时再执行，不一致就降仓等确认。
+      </div>
+
+      <div className="grid-2" style={{ marginTop: 14, alignItems: 'start' }}>
+        <Card
+          title="九转分析"
+          desc="9 根建仓结构 + 13 根倒计时，量的是动能衰竭，不是点位预测"
+          extra={
+            <span className="muted" style={{ fontSize: 10.5 }}>
+              买 {tdCounts.buy ?? 0} · 卖 {tdCounts.sell ?? 0} · 观察 {(tdCounts.watch_buy ?? 0) + (tdCounts.watch_sell ?? 0)}
+            </span>
+          }
+        >
+          {td ? (
+            <>
+              <div className="small" style={{ color: 'var(--text-sub)', lineHeight: 1.8, marginBottom: 10 }}>
+                {td.text ?? '九转结构已计算，暂无汇总说明。'}
+              </div>
+              <div className="td-summary-list">
+                {tdSummaryRows.map((x: any, i: number) => (
+                  <div key={`${x.code}-${i}`} className="td-summary-row">
+                    <span className="td-summary-name">
+                      <b>{x.name ?? x.code}</b>
+                      <em>{x.kind ?? '个股'}</em>
+                    </span>
+                    <span className={`chip ${x.td?.bias === '偏多' ? 'up' : x.td?.bias === '偏空' ? 'down' : ''}`}>
+                      {x.td?.label ?? '无结构'}
+                    </span>
+                    <span className="small muted">{x.td?.quality ?? '--'} · {x.td?.freshness ?? '--'}</span>
+                    <b className="num" style={{ color: biasTone(x.td?.bias) }}>{x.td?.score ?? '--'}</b>
+                  </div>
+                ))}
+              </div>
+              {!(td.indices ?? []).length && !(td.portfolio ?? []).length && !(td.leaders ?? []).length && (
+                <InlineEmpty text="九转结构还没算出来，等指数或持仓日线数据回来。" />
+              )}
+              <div className="muted small" style={{ marginTop: 8, lineHeight: 1.7 }}>
+                完整指数、持仓和临界行业龙头结构在下方“模型明细与诊断 → 九转”里。
+              </div>
+            </>
+          ) : (
+            <InlineEmpty text={loading ? '正在计算九转结构…' : '这次没有返回九转数据。'} />
+          )}
+        </Card>
+
+        <Card
+          title="行业与个股关注"
+          desc="渗流广度靠前的行业，以及值得盯的龙头"
+          extra={<span className="muted" style={{ fontSize: 10.5 }}>{focus.length ? `${focus.length} 个行业` : '暂无'}</span>}
+        >
+          {focus.length ? (
+            <div className="industry-glance">
+              {focus.slice(0, 4).map((x: any) => {
+                const tone = percTone(x.status)
+                const leaders = (x.leaders ?? []).filter((s: any) => s.code).slice(0, 3)
+                return (
+                  <div key={x.name} className="industry-glance-row">
+                    <div className="row-between" style={{ gap: 8 }}>
+                      <b>{x.name}</b>
+                      <span className="chip" style={{ color: tone, borderColor: tint(tone, 30) }}>{x.status ?? '--'}</span>
+                    </div>
+                    <div className="small muted" style={{ marginTop: 2 }}>
+                      上涨 {share(x.ratio)} · 最大簇 {share(x.giant_occupied)} · 资金{' '}
+                      <span className={trendClass(x.flow)}>{x.flow == null ? '--' : fmt.big(x.flow)}</span>
+                    </div>
+                    <div className="small" style={{ marginTop: 4, color: 'var(--text-sub)', lineHeight: 1.65 }}>
+                      {x.focus || `${x.status ?? '--'}；关注广度能否继续扩散。`}
+                    </div>
+                    {leaders.length > 0 && (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 5 }}>
+                        {leaders.map((s: any) => (
+                          <button
+                            key={s.code}
+                            className="btn-ghost"
+                            onClick={() => nav(`/stock/${s.code}`)}
+                            style={{ background: 'var(--card)', borderRadius: 4, padding: '1px 6px', fontSize: 10 }}
+                          >
+                            {s.name} <span className={trendClass(s.pct)}>{fmt.pct(s.pct)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <InlineEmpty text={loading ? '正在汇总行业广度…' : '这次没有行业关注数据。'} />
+          )}
+          <div className="muted small" style={{ marginTop: 8, lineHeight: 1.7 }}>
+            完整行业卡片和个股仓位建议在下方“模型明细与诊断”里。
+          </div>
+        </Card>
+      </div>
+
       <More title="模型明细与诊断" desc="HMM 概率 · 渗流格点 · 九转 · 行业 · 仓位 · 边界">
       <div style={{ marginBottom: 14 }}>
         <OllamaAdvice title="本地模型辅助判断" />
@@ -733,7 +842,7 @@ export default function Models() {
         extra={
           hmmList.length ? (
             <span className="muted" style={{ fontSize: 10.5 }}>
-              {hmmList.length} 个指数 · 切换有滞后，看概率不看单点
+              {hmmList.length} 个指数 · 样本 {hmm?.samples ?? '--'} 日 · {hmm?.converged ? '已收敛' : '未完全收敛'}
             </span>
           ) : null
         }
@@ -1038,7 +1147,7 @@ export default function Models() {
           title={<SectionTitle title="渗流模型 · 上涨广度" desc="全市场格点 · 4 邻接最大连通簇 · 临界值 59.27%" />}
           extra={
             <span className="muted" style={{ fontSize: 10.5 }}>
-              {perc ? perc.status : loading ? '计算中' : '暂不可用'}
+              {perc ? `${perc.status} · 有效 ${perc.total} 只` : loading ? '计算中' : '暂不可用'}
             </span>
           }
         >

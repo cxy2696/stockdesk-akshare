@@ -339,7 +339,9 @@ struct MoreView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("StockDesk").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
                                 Text("v\(AppInfo.version) · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
-                                Text("当前 \(ctx.date.formatted(.dateTime.hour().minute().second())) · 数据更新 \(store.lastRefresh.isEmpty ? "--:--:--" : store.lastRefresh)")
+                                Text(store.lastRefresh.isEmpty
+                                     ? "当前 \(ctx.date.formatted(.dateTime.hour().minute().second())) · 等待首次行情刷新"
+                                     : "当前 \(ctx.date.formatted(.dateTime.hour().minute().second())) · 数据更新 \(store.lastRefresh)")
                                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.textDim)
                             }
                             Spacer()
@@ -357,7 +359,7 @@ struct MoreView: View {
             .background(Theme.bg)
             .task {
                 // The HUB is the launch screen; without this it shows the cached
-                // account snapshot and a blank "数据更新 --:--:--" until the
+                // account snapshot and a "等待首次行情刷新" footer until the
                 // user pulls to refresh somewhere else.
                 if store.lastRefresh.isEmpty {
                     await store.refreshAll()

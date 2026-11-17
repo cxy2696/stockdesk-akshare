@@ -252,6 +252,8 @@ def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["sta
         "bic": round((k * k + 3 * k - 1) * math.log(n) - 2 * loglik, 1),
         "iterations": best["iterations"],
         "converged": best["converged"],
+        "samples": n,
+        "feature": "日对数收益率",
         "interpretation": interpretation,
         "probabilities": [
             {"label": labels[i], "p": round(float(probs[i]), 4),
@@ -378,7 +380,7 @@ def _visual_grid(grid: list[int], cols: int, giant: set[int], out_cols: int = 50
     return out
 
 
-def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True) -> dict:
+def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True, light: bool = False) -> dict:
     rows = [r for r in rows if (r.get("price") or 0) > 0 and (r.get("amount") or 0) > 0
             and "退" not in (r.get("name") or "") and "ST" not in (r.get("name") or "").upper()]
     n = len(rows)
@@ -404,34 +406,44 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True) -> 
               else "亚临界 · 分裂")
     distance = giant_occ - PERC_THRESHOLD
 
-    # Random-layout baseline: how much of the cluster is just luck of ordering?
-    occ_idx = np.flatnonzero(grid[:n])
-    vals = [int(grid[i]) for i in occ_idx]
-    robust = []
-    for seed in (11, 23, 37):
-        random.Random(seed).shuffle(vals)
-        g = np.zeros(cols * cols, dtype=np.uint8)
-        g[occ_idx] = vals
-        comp = _largest_component(g, cols)
-        robust.append(round(len(comp) / max(occ, 1), 4))
-    baseline = sum(robust) / len(robust)
-    p_value = sum(1 for x in robust if x >= giant_occ) / len(robust)
+    # Random-layout baseline and bootstrap answer "is this structure stable?".
+    # Industry sub-groups only need the main cluster/status; running 15 extra
+    # percolations for each of ~20 industries dominated model refresh time and
+    # contributed nothing to their displayed fields. `light=True` skips them.
+    if light:
+        robust = [round(giant_occ, 4)]
+        baseline = giant_occ
+        p_value = 1.0
+        boot_sorted = [giant_occ]
+        ci_low = round(giant_occ, 4)
+        ci_high = round(giant_occ, 4)
+        ci_width = 0.0
+        stability = 1.0
+    else:
+        occ_idx = np.flatnonzero(grid[:n])
+        vals = [int(grid[i]) for i in occ_idx]
+        robust = []
+        for seed in (11, 23, 37):
+            random.Random(seed).shuffle(vals)
+            g = np.zeros(cols * cols, dtype=np.uint8)
+            g[occ_idx] = vals
+            comp = _largest_component(g, cols)
+            robust.append(round(len(comp) / max(occ, 1), 4))
+        baseline = sum(robust) / len(robust)
+        p_value = sum(1 for x in robust if x >= giant_occ) / len(robust)
 
-    # Bootstrap the occupancy itself: with the same up-ratio, how wide is the
-    # giant-cluster distribution?  A narrow interval means today's breadth is
-    # statistically stable, not a one-snapshot accident.
-    boot = []
-    for seed in range(12):
-        rnd = random.Random(1000 + seed)
-        sample = np.zeros(cols * cols, dtype=np.uint8)
-        sample[:n] = rnd.choices([1, 0], weights=[max(occ, 1), max(n - occ, 1)], k=n)
-        comp = _largest_component(sample, cols)
-        boot.append(len(comp) / max(int(sample[:n].sum()), 1))
-    boot_sorted = sorted(boot)
-    ci_low = round(boot_sorted[1], 4)
-    ci_high = round(boot_sorted[-2], 4)
-    ci_width = round(ci_high - ci_low, 4)
-    stability = round(max(0.0, min(1.0, 1 - ci_width / 0.30)), 3)
+        boot = []
+        for seed in range(12):
+            rnd = random.Random(1000 + seed)
+            sample = np.zeros(cols * cols, dtype=np.uint8)
+            sample[:n] = rnd.choices([1, 0], weights=[max(occ, 1), max(n - occ, 1)], k=n)
+            comp = _largest_component(sample, cols)
+            boot.append(len(comp) / max(int(sample[:n].sum()), 1))
+        boot_sorted = sorted(boot)
+        ci_low = round(boot_sorted[1], 4)
+        ci_high = round(boot_sorted[-2], 4)
+        ci_width = round(ci_high - ci_low, 4)
+        stability = round(max(0.0, min(1.0, 1 - ci_width / 0.30)), 3)
 
     if giant_occ >= PERC_THRESHOLD:
         confidence = min(0.95, 0.55 + distance * 2 + (0.2 if spanning else 0))
@@ -491,7 +503,7 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True) -> 
         for name, rr in sorted(groups.items(), key=lambda kv: len(kv[1]), reverse=True)[:20]:
             if len(rr) < 8:
                 continue
-            p = _percolation(rr, min_n=8, with_grid=False)
+            p = _percolation(rr, min_n=8, with_grid=False, light=True)
             if not p:
                 continue
             leaders = sorted(rr, key=lambda r: r.get("pct") or -999, reverse=True)[:3]

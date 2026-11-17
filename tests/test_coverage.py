@@ -39,7 +39,8 @@ def test_assemble_snapshot_is_lossless_and_drops_delisted():
     assert snapshot["expected"] == 3
     assert snapshot["captured"] == 3
     assert snapshot["complete"] is True
-    assert snapshot["fully_quoted"] is False                 # 000002 has no price
+    assert snapshot["data_complete"] is False                # 000002 has no quote
+    assert snapshot["fully_quoted"] is False
     statuses = {r["code"]: r["quote_status"] for r in snapshot["rows"]}
     assert statuses["000001"] == "ok"
     assert statuses["000002"] == "missing"
@@ -149,3 +150,14 @@ def test_c_breadth_census_handles_nan_and_limits():
     assert counts["suspended"] == 1
     assert counts["limit_up"] == 1
     assert counts["limit_down"] == 1
+
+
+def test_missing_row_is_classified_as_suspended_from_old_kline(monkeypatch):
+    monkeypatch.setattr(market, "klines", lambda *args, **kwargs: [{"date": "2026-11-10", "close": 9.5}])
+    snapshot = market._assemble_snapshot(
+        {}, [("000635", "英力特")], {}, {},
+        em_total=1, pages_failed=0, classify_suspended=True)
+    assert snapshot["rows"][0]["quote_status"] == "suspended"
+    assert snapshot["suspended"] == 1
+    assert snapshot["data_complete"] is True
+    assert snapshot["fully_quoted"] is False

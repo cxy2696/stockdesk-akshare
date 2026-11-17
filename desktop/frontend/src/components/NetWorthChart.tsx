@@ -10,8 +10,8 @@ interface Props {
   compact?: boolean
 }
 
-/** 沪深 300 固定用蓝色，避免和主题 accent 混在一起。 */
-const BENCH_COLOR = '#4C8DFF'
+/** 基准固定用洋红虚线；账户线跟随主题 accent，二者在三种主题下都能区分。 */
+const BENCH_COLOR = '#E052A0'
 const EMPTY_SERIES: Props['series'] = []
 const EMPTY_BENCH: NonNullable<Props['benchmark']> = []
 
@@ -103,7 +103,7 @@ export default function NetWorthChart({ series, benchmark = EMPTY_BENCH, height 
       animation: false,
       grid: {
         left: compact ? 4 : 42,
-        right: compact ? 4 : 14,
+        right: compact ? 4 : 24,
         top: compact ? 8 : 30,
         bottom: compact ? 4 : 26,
       },

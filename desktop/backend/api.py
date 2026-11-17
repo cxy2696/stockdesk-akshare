@@ -340,7 +340,7 @@ def market_coverage():
         "suspended": len(suspended),
         "suspended_sample": suspended[:20],
         "complete": bool(spot.get("complete", False)),
-        "data_complete": bool(spot.get("complete", False)),
+        "data_complete": bool(spot.get("data_complete", False)),
         "fully_quoted": bool(spot.get("fully_quoted", False)),
         "pages_failed": int(spot.get("pages_failed", 0)),
         "sources": spot.get("sources") or [],

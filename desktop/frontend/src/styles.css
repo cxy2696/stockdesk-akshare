@@ -3667,6 +3667,67 @@ html, body { overflow-x: hidden; }
   font-size: calc(20px * var(--fs, 1));
 }
 
+.model-plain {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  background: var(--card-2);
+  color: var(--text-sub);
+  font-size: calc(12px * var(--fs, 1));
+  line-height: 1.85;
+}
+.model-plain b {
+  color: var(--text);
+  margin-right: 4px;
+}
+.td-summary-list {
+  display: grid;
+  gap: 5px;
+}
+.td-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 7px 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  background: var(--card-2);
+}
+.td-summary-name {
+  flex: 1 1 130px;
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.td-summary-name b {
+  font-size: calc(12px * var(--fs, 1));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.td-summary-name em {
+  flex: none;
+  font-style: normal;
+  font-size: 9.5px;
+  color: var(--text-dim);
+}
+.industry-glance {
+  display: grid;
+  gap: 8px;
+}
+.industry-glance-row {
+  padding: 9px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  background: var(--card-2);
+}
+.industry-glance-row b {
+  font-size: calc(12.5px * var(--fs, 1));
+}
+
 .ensemble-grid {
   display: grid;
   grid-template-columns: 190px minmax(0, 1.1fr) minmax(0, 1fr);

@@ -94,6 +94,20 @@ export default function Analytics() {
         </Card>
       </div>
 
+      <div style={{ marginTop: 14 }}>
+        <Card
+          title="趋势分析"
+          desc={`净值与 MA20 / MA60 · 样本 ${data.trend?.days ?? data.series?.length ?? 0} 个交易日`}
+          extra={
+            <span className="muted" style={{ fontSize: 10.5 }}>
+              {data.trend?.label ?? '趋势待观察'}
+            </span>
+          }
+        >
+          <TrendChart series={data.series} height={260} />
+        </Card>
+      </div>
+
       <div className="grid-2-even" style={{ marginTop: 14 }}>
         <Card
           title="回撤分析"
@@ -272,16 +286,24 @@ function buildReview(data: any, market: any) {
   const benches = data?.benchmarks ?? []
   const hs = benches.find((b: any) => b.code === '000300')
   const sh = benches.find((b: any) => b.code === '000001')
-  const beat = (m.excess_return ?? 0) >= 0
+  const excess = Number(m.excess_return ?? 0)
+  const tie = Math.abs(excess) < 0.005
+  const beat = excess > 0
+  const cmpOne = (b: any) => {
+    if (Math.abs(Number(b.excess ?? 0)) < 0.005) return `相对${b.name} 基本持平`
+    return `相对${b.name} ${b.excess > 0 ? '跑赢' : '跑输'} ${Math.abs(b.excess).toFixed(2)} 个百分点`
+  }
   const cmpText = benches.length
-    ? benches.map((b: any) => `相对${b.name} ${b.excess >= 0 ? '跑赢' : '跑输'} ${Math.abs(b.excess).toFixed(2)} 个百分点`).join('、')
-    : `${beat ? '跑赢' : '跑输'}沪深300 ${Math.abs(m.excess_return ?? 0).toFixed(2)} 个百分点`
+    ? benches.map(cmpOne).join('、')
+    : tie
+      ? '与沪深300基本持平'
+      : `相对沪深300 ${beat ? '跑赢' : '跑输'} ${Math.abs(excess).toFixed(2)} 个百分点`
   const headline = `账户累计 ${m.total_return?.toFixed(2)}%，${cmpText}；${tr.label ?? '趋势待观察'}。`
 
   const points: string[] = []
   points.push(`收益：年化 ${(m.annual_return ?? 0).toFixed(2)}%，最大回撤 ${(m.max_drawdown ?? 0).toFixed(2)}%，当前回撤 ${(tr.dd_now ?? 0).toFixed(2)}%。`)
   if (hs && sh) {
-    points.push(`基准：沪深300 ${hs.return.toFixed(2)}%（超额 ${hs.excess >= 0 ? '+' : ''}${hs.excess.toFixed(2)}pp），上证指数 ${sh.return.toFixed(2)}%（超额 ${sh.excess >= 0 ? '+' : ''}${sh.excess.toFixed(2)}pp）。`)
+    points.push(`基准：沪深300 ${hs.return.toFixed(2)}%（${Math.abs(hs.excess) < 0.005 ? '持平' : `超额 ${hs.excess > 0 ? '+' : ''}${hs.excess.toFixed(2)}pp`}），上证指数 ${sh.return.toFixed(2)}%（${Math.abs(sh.excess) < 0.005 ? '持平' : `超额 ${sh.excess > 0 ? '+' : ''}${sh.excess.toFixed(2)}pp`}）。`)
   }
   if (st.closed_count) {
     points.push(`交易：平仓 ${st.closed_count} 笔，胜率 ${st.win_rate ?? '--'}%，盈亏比 ${st.profit_factor || '--'}，平均持有 ${st.avg_hold_days ?? '--'} 天。`)
@@ -298,10 +320,12 @@ function buildReview(data: any, market: any) {
   if (verdict) {
     points.push(`市场：当前${verdict}（温度 ${market?.score ?? '--'}），${market?.verdict?.reasons?.[0] ?? ''}。`)
   }
-  const advice = beat
-    ? '策略整体跑赢基准，继续控制单笔回撤与仓位集中度；若市场转弱，优先降低高波动持仓。'
-    : '当前跑输基准，建议复盘亏损交易的买点与止损纪律，并降低弱势环境下的仓位。'
-  return { headline, points, advice, beat }
+  const advice = tie
+    ? '账户与基准基本持平，首日或横盘阶段先按计划执行，等趋势和交易样本足够再评估策略。'
+    : beat
+      ? '策略整体跑赢基准，继续控制单笔回撤与仓位集中度；若市场转弱，优先降低高波动持仓。'
+      : '当前跑输基准，建议复盘亏损交易的买点与止损纪律，并降低弱势环境下的仓位。'
+  return { headline, points, advice, beat, tie }
 }
 
 function ReviewCard({ data, market }: { data: any; market: any }) {
@@ -310,11 +334,11 @@ function ReviewCard({ data, market }: { data: any; market: any }) {
     <Card
       title="复盘总结"
       desc="按账户净值、交易记录与大盘数据汇总"
-      extra={<Tag color={r.beat ? 'red' : 'green'}>{r.beat ? '跑赢基准' : '跑输基准'}</Tag>}
+      extra={<Tag color={r.tie ? 'gold' : r.beat ? 'red' : 'green'}>{r.tie ? '持平基准' : r.beat ? '跑赢基准' : '跑输基准'}</Tag>}
     >
       <div className="review-headline">{r.headline}</div>
       <div className="review-grid">
-        {r.points.slice(0, 2).map((p, i) => (
+        {r.points.slice(0, 4).map((p, i) => (
           <div key={i} className="review-point">{p}</div>
         ))}
       </div>
@@ -345,6 +369,8 @@ function TrendChart({ series, height }: { series: any[]; height: number }) {
     }
     const ma20 = movingAvg(20)
     const ma60 = movingAvg(60)
+    const showMa20 = rows.length >= 20
+    const showMa60 = rows.length >= 60
 
     const plotted = [...nav, ...ma20, ...ma60].filter((v): v is number => v !== null && Number.isFinite(v))
     const dataLow = plotted.length ? Math.min(...plotted) : 0
@@ -373,7 +399,7 @@ function TrendChart({ series, height }: { series: any[]; height: number }) {
 
     return {
       animation: false,
-      grid: { left: 44, right: 16, top: 32, bottom: 28 },
+      grid: { left: 44, right: 24, top: 32, bottom: 28 },
       legend: {
         top: 0,
         right: 8,
@@ -383,7 +409,7 @@ function TrendChart({ series, height }: { series: any[]; height: number }) {
         selectedMode: true,
         inactiveColor: colors.axis,
         textStyle: { color: colors.textSub, fontSize: 10.5 },
-        data: ['净值', 'MA20', 'MA60'],
+        data: ['净值', ...(showMa20 ? ['MA20'] : []), ...(showMa60 ? ['MA60'] : [])],
       },
       tooltip: {
         trigger: 'axis',
@@ -458,7 +484,7 @@ function TrendChart({ series, height }: { series: any[]; height: number }) {
           },
           z: 3,
         },
-        {
+        ...(showMa20 ? [{
           name: 'MA20',
           type: 'line',
           data: ma20,
@@ -468,8 +494,8 @@ function TrendChart({ series, height }: { series: any[]; height: number }) {
           itemStyle: { color: '#2EC4B6' },
           lineStyle: { width: 1.4, color: '#2EC4B6' },
           z: 2,
-        },
-        {
+        }] : []),
+        ...(showMa60 ? [{
           name: 'MA60',
           type: 'line',
           data: ma60,
@@ -479,7 +505,7 @@ function TrendChart({ series, height }: { series: any[]; height: number }) {
           itemStyle: { color: '#B08CFF' },
           lineStyle: { width: 1.2, color: '#B08CFF', type: 'dashed' },
           z: 2,
-        },
+        }] : []),
       ],
     }
   }, [rows, colors])
@@ -489,8 +515,16 @@ function TrendChart({ series, height }: { series: any[]; height: number }) {
   return (
     <div>
       <EChart option={option} height={height} />
-      {rows.length === 1 && (
-        <ChartNote text="只有 1 个交易日的数据，曲线会在第二个交易日后展开；MA20 / MA60 需要至少 20 / 60 个交易日才会出现。" color={colors.textSub} />
+      {rows.length < 20 && (
+        <ChartNote
+          text={rows.length <= 1
+            ? '首日建仓：当前只有净值起点，第二个交易日后曲线才会展开；MA20 需要 20 个交易日，MA60 需要 60 个。'
+            : `已记录 ${rows.length} 个交易日；MA20 还需要 ${20 - rows.length} 个交易日，MA60 还需要 ${60 - rows.length} 个。`}
+          color={colors.textSub}
+        />
+      )}
+      {rows.length >= 20 && rows.length < 60 && (
+        <ChartNote text={`短期趋势已可用，MA60 还需要 ${60 - rows.length} 个交易日。`} color={colors.textSub} />
       )}
     </div>
   )
@@ -620,6 +654,7 @@ function shortMoney(v?: number | null) {
 function PositionChart({ series, height }: { series: any[]; height: number }) {
   const { colors } = useTheme()
   const rows = Array.isArray(series) ? series : []
+  const CASH_COLOR = '#5AC8FA'
   const option = useMemo<any>(() => {
     const dates = rows.map((s) => s.date)
     const pos = rows.map((s) => (s.total ? +((s.mv / s.total) * 100).toFixed(2) : 0))
@@ -627,7 +662,7 @@ function PositionChart({ series, height }: { series: any[]; height: number }) {
     const fewPoints = dates.length <= 2
     return {
       animation: false,
-      grid: { left: 44, right: 16, top: 32, bottom: 28 },
+      grid: { left: 44, right: 24, top: 32, bottom: 28 },
       legend: {
         top: 0,
         right: 8,
@@ -654,7 +689,7 @@ function PositionChart({ series, height }: { series: any[]; height: number }) {
           }
           return `<div style="font-size:10px;color:${colors.axis};margin-bottom:4px">${list[0]?.axisValue ?? ''}</div>
             <div style="display:flex;gap:18px;justify-content:space-between"><span>持仓</span><b style="color:${colors.accent}">${val('持仓')}</b></div>
-            <div style="display:flex;gap:18px;justify-content:space-between"><span>现金</span><b style="color:${colors.amber}">${val('现金')}</b></div>`
+            <div style="display:flex;gap:18px;justify-content:space-between"><span>现金</span><b style="color:${CASH_COLOR}">${val('现金')}</b></div>`
         },
       },
       xAxis: {
@@ -706,8 +741,8 @@ function PositionChart({ series, height }: { series: any[]; height: number }) {
           symbolSize: 4,
           showSymbol: fewPoints,
           smooth: fewPoints ? false : 0.1,
-          itemStyle: { color: colors.amber },
-          lineStyle: { width: 1.4, color: colors.amber, type: 'dashed' },
+          itemStyle: { color: CASH_COLOR },
+          lineStyle: { width: 1.4, color: CASH_COLOR, type: 'dashed' },
           z: 2,
         },
       ],

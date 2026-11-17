@@ -7,11 +7,11 @@
 ## 本地改动
 
 **全市场数据**
-- 行情快照从 schema 5 升到 schema 6，股票池由静态列表加运行期发现的新上市组成。
+- 行情快照从 schema 5 升到 schema 7，股票池由静态列表加运行期发现的新上市组成。
 - 每只预期股票都会保留一行，哪怕是停牌或无行情；行上带有 `quote_status`，不会静默丢数据。
 - 东财分页并发抓取，单页失败重试，仍失败时用新浪数据补缺；旧版快照缓存不再命中。
 - `/api/market/coverage` 返回覆盖率、缺失、重复、停牌、无行情和字段级缺失统计。
-- 当前实测：5,581/5,581，`missing=0`，`duplicates=0`，停牌 2 只。
+- 正常行情源下实测：5,581/5,581，`missing=0`，`duplicates=0`，停牌 2 只；上游限流时 `data_complete=false`，不会把部分快照当完整。
 
 **C++ 核心**
 - `backend/native.cpp` 原为单文件，现拆成 `backend/native_core/`：
@@ -39,11 +39,11 @@
 
 | 项目 | 结果 |
 | --- | --- |
-| `pytest -q tests` | 52 passed |
+| `pytest -q tests` | 55 passed |
 | `ruff check desktop/backend us tests --select F,E9` | 通过 |
 | `python scripts/api_smoke.py http://127.0.0.1:8765` | 47 个只读 + 3 个写接口 + SPA 通过 |
-| `python scripts/coverage_check.py http://127.0.0.1:8765` | 5,581/5,581，missing=0，duplicates=0 |
-| macOS DMG 启动 | 1.17.0，C++ 1.2.1，模型 2.7.0，覆盖率门禁通过 |
+| `python scripts/coverage_check.py http://127.0.0.1:8765` | 正常行情源下 5,581/5,581，missing=0，duplicates=0；限流时 data_complete=false |
+| macOS DMG 启动 | 1.17.0，C++ 1.2.1，模型 2.7.0，页面与首日复盘验证通过 |
 | iOS 模拟器 | `build_ios.sh` 构建成功，iPhone/iPad 页面已验证 |
 | Windows | 官方 1.17.0 CI 产物，SHA-256 与官方一致 |
 
