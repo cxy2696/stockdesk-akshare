@@ -98,6 +98,11 @@ export default function Factors() {
       >
         <div className="muted small" style={{ lineHeight: 1.8, marginBottom: 10 }}>
           {data.note} 当前入选 {selected.length} 个因子；未入选因子在下方逐条列出原因。
+          {data.trace && (
+            <span className="mono" style={{ display: 'block', marginTop: 2, fontSize: 10 }}>
+              算法 {data.trace.algorithm} · 快照 {data.trace.snapshot_date} · {data.trace.rows} 行 / {data.trace.candidates} 只候选 · 缺失按类别中性处理
+            </span>
+          )}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(7, Math.max(3, catGroups.length))}, minmax(0, 1fr))`, gap: 8, marginBottom: 12 }}>
           {CATEGORY_ORDER.filter((k) => catGroups.some((g: any) => g.key === k)).map((key) => {
@@ -180,6 +185,7 @@ export default function Factors() {
           rowKey="code"
           dataSource={filteredStocks}
           pagination={{ pageSize: 15, size: 'small', showSizeChanger: false }}
+          scroll={{ x: 1180 }}
           onRow={(r) => ({ onClick: () => nav(`/stock/${r.code}`), style: { cursor: 'pointer' } })}
           columns={[
             {
@@ -193,6 +199,15 @@ export default function Factors() {
             { title: '价格', dataIndex: 'price', align: 'right', render: (v: number) => <span className="num">{fmt.price(v)}</span> },
             { title: '涨跌', dataIndex: 'pct', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
             { title: '因子分', dataIndex: 'score', align: 'right', render: (v: number) => <b className="num" style={{ color: (v ?? 0) >= 80 ? 'var(--up)' : undefined }}>{fmtScore(v)}</b> },
+            {
+              title: '数据覆盖', dataIndex: 'coverage', align: 'right',
+              render: (v: number, r: any) => (
+                <div>
+                  <Tag color={coverageTone(v)}>{`${Math.round((v ?? 0) * 100)}%`}</Tag>
+                  <div className="muted" style={{ fontSize: 9 }}>{r.factor_hits}/{r.factor_total} 因子</div>
+                </div>
+              ),
+            },
             ...CATEGORY_ORDER.map((key) => ({
               title: catGroups.find((g: any) => g.key === key)?.label ?? key,
               dataIndex: ['scores', key],

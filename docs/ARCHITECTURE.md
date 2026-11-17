@@ -79,7 +79,7 @@ HMM 的输入是五个 A 股指数的日对数收益，输出弱势 / 震荡 / �
 | `hmm.cpp` | 单变量 Gaussian HMM 的缩放前向/后向 Baum-Welch；输入归一化、方差下限、收敛判定与有限值检查 |
 | `bindings.cpp` | 唯一接触 Python 的层：numpy 维度/形状/类型校验，输出固定 shape 的 numpy 数组 |
 
-`backend/native.py` 只报告 `C++ / NumPy fallback` 状态；`models.py` 在原生调用抛异常时自动回退到 NumPy，并读取真实的 `converged` 字段，而不是假报 `True`。pybind 绑定在纯计算期间释放 GIL，渗流格点全程使用 uint8 numpy 连续内存，Monte-Carlo 重排/自助抽样通过 `grid_batch` 一次进入 C++，批量路径复用 union-find 工作区，5 个指数的 HMM 并行拟合。模型快照带 `trace`（算法/引擎/种子/规模/格点摘要/HMM 收敛诊断），用于复现和对账。回归测试 `tests/test_native.py` 覆盖 C++/NumPy parity、空/满/非方形格点、NaN/坏矩阵/坏迭代次数、线程安全和回退契约。
+`backend/native.py` 只报告 `C++ / NumPy fallback` 状态；`models.py` 在原生调用抛异常时自动回退到 NumPy，并读取真实的 `converged` 字段，而不是假报 `True`。pybind 绑定在纯计算期间释放 GIL，渗流格点全程使用 uint8 numpy 连续内存，Monte-Carlo 重排/自助抽样通过 `grid_batch` 一次进入 C++，批量路径复用 union-find 工作区，5 个指数的 HMM 并行拟合。模型快照带 `trace`（算法/引擎/种子/规模/格点摘要/HMM 收敛诊断），用于复现和对账。因子筛选输出 `cross-sectional-factor-v2` trace、类别/因子覆盖率；缺失类别按可用类别权重重新归一，不把缺失值当作 0 分。回归测试 `tests/test_native.py` 覆盖 C++/NumPy parity、空/满/非方形格点、NaN/坏矩阵/坏迭代次数、线程安全和回退契约。
 
 ### 全市场覆盖契约
 

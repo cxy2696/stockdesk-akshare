@@ -15,6 +15,7 @@ can be extended later by persisting daily snapshots.
 from __future__ import annotations
 
 import math
+from functools import lru_cache
 from statistics import NormalDist, median, pstdev
 
 from . import db, market
@@ -30,6 +31,17 @@ CATEGORY_LABELS = {
 }
 
 DIRECTION_LABELS = {1: "正向", -1: "反向"}
+_NORMAL = NormalDist()
+
+
+@lru_cache(maxsize=65536)
+def _normal_z(p: float) -> float:
+    """Cached inverse normal CDF.
+
+    The same percentile grid repeats across factors; caching turns ~66k calls
+    per snapshot into ~5k unique evaluations without changing any z-score.
+    """
+    return _NORMAL.inv_cdf(p)
 
 FACTOR_SPECS = [
     {"name": "mom60", "label": "60日动量", "category": "momentum", "direction": 1,
@@ -132,10 +144,9 @@ def _rank_normal(values: list[float | None]) -> list[float]:
     out = [0.0] * len(values)
     if n < 5:
         return out
-    norm = NormalDist()
     for rank, (_, i) in enumerate(valid):
         pct = (rank + 1) / (n + 1)
-        out[i] = max(-3.5, min(3.5, norm.inv_cdf(pct)))
+        out[i] = max(-3.5, min(3.5, _normal_z(pct)))
     return out
 
 
@@ -244,27 +255,38 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
         dirn = int(f.get("direction") or 1)
         z_by_name[f["name"]] = [z * dirn for z in _rank_normal(f["values"])]
     state, weights = _regime()
-    cat_z: dict[str, list[float]] = {}
+    cat_z: dict[str, list[float | None]] = {}
     for cat in CATEGORY_LABELS:
         factors = [f for f in selected if f["category"] == cat]
         if not factors:
             continue
-        cat_z[cat] = [sum(z_by_name[f["name"]][i] for f in factors) / len(factors)
-                      for i in range(len(rows))]
-    total_w = sum(weights.get(c, 0.0) for c in cat_z) or 1.0
-    composite = [
-        sum(cat_z[c][i] * weights.get(c, 0.0) for c in cat_z) / total_w
-        for i in range(len(rows))
-    ]
-    # Cross-sectional percentile -> 0-100 score.
-    order = sorted(range(len(composite)), key=lambda i: composite[i])
-    pct = [0.0] * len(composite)
+        cat_z[cat] = []
+        for i in range(len(rows)):
+            vals = [z_by_name[f["name"]][i] for f in factors
+                    if f["values"][i] is not None]
+            cat_z[cat].append(sum(vals) / len(vals) if vals else None)
+    composite: list[float | None] = []
+    category_hits: list[int] = []
+    for i in range(len(rows)):
+        available = [(c, cat_z[c][i]) for c in cat_z if cat_z[c][i] is not None]
+        category_hits.append(len(available))
+        if not available:
+            composite.append(None)
+            continue
+        denom = sum(weights.get(c, 0.0) for c, _ in available)
+        composite.append(sum(v * weights.get(c, 0.0) for c, v in available) / (denom or 1.0))
+    # Cross-sectional percentile -> 0-100 score, calculated only over stocks
+    # that have at least one complete factor category.
+    valid_indices = [i for i, v in enumerate(composite) if v is not None]
+    order = sorted(valid_indices, key=lambda i: composite[i])
+    pct: list[float | None] = [None] * len(composite)
     for rank, i in enumerate(order):
         pct[i] = (rank + 0.5) / max(1, len(order))
+    selected_names = [f["name"] for f in selected]
     stocks = []
     for i, row in enumerate(rows):
         price = _num(row.get("price"))
-        if not price or price <= 0:
+        if not price or price <= 0 or composite[i] is None:
             continue
         amount = _num(row.get("amount")) or 0
         if amount < min_amount:
@@ -272,7 +294,8 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
         name = str(row.get("name") or "")
         if exclude_st and ("ST" in name.upper() or "退" in name):
             continue
-        scores = {c: round(cat_z[c][i], 3) for c in cat_z}
+        scores = {c: round(cat_z[c][i], 3) for c in cat_z if cat_z[c][i] is not None}
+        factor_hits = sum(1 for f in selected if f["values"][i] is not None)
         stocks.append({
             "code": row.get("code"), "name": name,
             "price": round(price, 2), "pct": _num(row.get("pct")),
@@ -280,7 +303,11 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
             "pe": _num(row.get("pe")), "pb": _num(row.get("pb")),
             "turnover": _num(row.get("turnover")), "amount": amount,
             "main_inflow": _num(row.get("main_inflow")),
-            "percentile": round(pct[i], 4), "score": round(pct[i] * 100, 1),
+            "percentile": round(float(pct[i]), 4), "score": round(float(pct[i]) * 100, 1),
+            "coverage": round(category_hits[i] / max(len(cat_z), 1), 3),
+            "factor_coverage": round(factor_hits / max(len(selected_names), 1), 3),
+            "factor_hits": factor_hits,
+            "factor_total": len(selected_names),
             "scores": scores,
         })
     stocks.sort(key=lambda r: r["score"], reverse=True)
@@ -308,5 +335,19 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
         "factors": factor_rows,
         "screening": screening_out,
         "stocks": stocks[: max(1, min(limit, 500))],
-        "note": "横截面因子筛选；部分行情源不提供 60 日动量/量比字段，覆盖率会显示并自动剔除；历史 IC 需持久化每日快照后计算，本页不伪造 IC。",
+        "trace": {
+            "algorithm": "cross-sectional-factor-v2",
+            "snapshot_ts": spot.get("ts"),
+            "snapshot_date": spot.get("date"),
+            "rows": len(rows),
+            "candidates": len(stocks),
+            "selected_factors": selected_names,
+            "regime": state,
+            "category_weights": weights,
+            "rank_transform": "normal-inverse-cdf",
+            "missing_policy": "category-neutral-with-coverage",
+            "min_amount": min_amount,
+            "exclude_st": bool(exclude_st),
+        },
+        "note": "横截面因子筛选；按类别计算可用因子均值，缺失类别不强行补 0；每只候选显示类别/因子覆盖率。历史 IC 需持久化每日快照后计算，本页不伪造 IC。",
     }
