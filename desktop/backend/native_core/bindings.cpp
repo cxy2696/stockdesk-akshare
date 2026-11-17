@@ -61,6 +61,24 @@ py::dict grid_largest(py::array_t<std::uint8_t, py::array::c_style | py::array::
     return out;
 }
 
+py::dict grid_batch(py::array_t<std::uint8_t, py::array::c_style | py::array::forcecast> grids,
+                    std::size_t cols) {
+    const py::buffer_info info = grids.request();
+    if (info.ndim != 2) throw std::invalid_argument("grids must be 2-D");
+    const std::size_t n_grids = static_cast<std::size_t>(info.shape[0]);
+    const std::size_t n = static_cast<std::size_t>(info.shape[1]);
+    stockdesk::native::GridBatchResult result;
+    {
+        py::gil_scoped_release release;
+        result = stockdesk::native::analyze_grid_batch(
+            static_cast<const std::uint8_t *>(info.ptr), n_grids, n, cols);
+    }
+    py::dict out;
+    out["largest_size"] = result.largest_size;
+    out["spanning"] = result.spanning;
+    return out;
+}
+
 py::dict breadth_census(py::array_t<double, py::array::c_style | py::array::forcecast> pct,
                         py::array_t<double, py::array::c_style | py::array::forcecast> price,
                         py::array_t<double, py::array::c_style | py::array::forcecast> limit_pct) {
@@ -146,9 +164,11 @@ py::dict baum_welch(py::array_t<double, py::array::c_style | py::array::forcecas
 
 PYBIND11_MODULE(_native, m) {
     m.doc() = "StockDesk C++ model core: lattice percolation + univariate Gaussian HMM";
-    m.attr("__version__") = "1.2.1";
+    m.attr("__version__") = "1.2.2";
     m.def("grid_largest", &grid_largest, py::arg("grid"), py::arg("cols"),
           "Largest four-neighbour lattice component (union-find).");
+    m.def("grid_batch", &grid_batch, py::arg("grids"), py::arg("cols"),
+          "Batched largest-component summaries for Monte-Carlo lattices.");
     m.def("breadth_census", &breadth_census, py::arg("pct"), py::arg("price"), py::arg("limit_pct"),
           "Census every row once: traded/suspended/missing and board-specific limit hits.");
     m.def("coverage_audit", &coverage_audit, py::arg("codes"), py::arg("expected"),

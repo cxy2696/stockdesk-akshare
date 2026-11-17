@@ -26,7 +26,7 @@ ext = Pybind11Extension(
 )
 setup(
     name="stockdesk-native",
-    version="1.2.1",
+    version="1.2.2",
     ext_modules=[ext],
     cmdclass={"build_ext": build_ext},
 )

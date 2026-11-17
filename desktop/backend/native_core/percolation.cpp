@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <climits>
 #include <functional>
+#include <limits>
 #include <numeric>
 #include <stdexcept>
 #include <vector>
@@ -115,6 +116,25 @@ GridResult analyze_grid(const std::uint8_t *grid, std::size_t n, std::size_t col
         if (sizes[i] > 0) result.sizes.push_back(static_cast<int>(sizes[i]));
     }
     std::sort(result.sizes.begin(), result.sizes.end(), std::greater<int>());
+    return result;
+}
+
+GridBatchResult analyze_grid_batch(const std::uint8_t *grids, std::size_t n_grids,
+                                   std::size_t n, std::size_t cols) {
+    if (n_grids == 0) return {};
+    if (grids == nullptr) throw std::invalid_argument("grid batch pointer is null");
+    if (cols == 0 || n == 0) throw std::invalid_argument("grid batch dimensions must be > 0");
+    if (n_grids > std::numeric_limits<std::size_t>::max() / n) {
+        throw std::invalid_argument("grid batch is too large");
+    }
+    GridBatchResult result;
+    result.largest_size.reserve(n_grids);
+    result.spanning.reserve(n_grids);
+    for (std::size_t i = 0; i < n_grids; ++i) {
+        const GridResult one = analyze_grid(grids + i * n, n, cols);
+        result.largest_size.push_back(static_cast<int>(one.largest.size()));
+        result.spanning.push_back(one.spanning ? 1U : 0U);
+    }
     return result;
 }
 

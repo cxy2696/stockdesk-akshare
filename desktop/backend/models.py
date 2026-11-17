@@ -368,6 +368,27 @@ def _largest_component(grid: list[int], cols: int, collect_all: bool = False):
     return largest
 
 
+def _largest_component_batch(grids: np.ndarray, cols: int) -> tuple[list[int], list[bool]]:
+    """Largest-component sizes for many lattices in one native call."""
+    batch = np.ascontiguousarray(grids, dtype=np.uint8)
+    if batch.ndim != 2:
+        raise ValueError("grids must be 2-D")
+    if native.NATIVE:
+        try:
+            raw = native.native.grid_batch(batch, int(cols))
+            return ([int(v) for v in raw["largest_size"]],
+                    [bool(v) for v in raw["spanning"]])
+        except Exception:
+            pass
+    sizes: list[int] = []
+    spans: list[bool] = []
+    for grid in batch:
+        largest = _largest_component(grid, cols)
+        sizes.append(len(largest))
+        spans.append(False)
+    return sizes, spans
+
+
 def _stable_order(rows: list[dict]) -> list[dict]:
     """Deterministic pseudo-random order.
 
@@ -444,23 +465,24 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True, lig
     else:
         occ_idx = np.flatnonzero(grid[:n])
         vals = [int(grid[i]) for i in occ_idx]
-        robust = []
-        for seed in (11, 23, 37):
+        robust_grids = np.zeros((3, cols * cols), dtype=np.uint8)
+        for i, seed in enumerate((11, 23, 37)):
             random.Random(seed).shuffle(vals)
-            g = np.zeros(cols * cols, dtype=np.uint8)
-            g[occ_idx] = vals
-            comp = _largest_component(g, cols)
-            robust.append(round(len(comp) / max(occ, 1), 4))
+            robust_grids[i, occ_idx] = vals
+        robust_sizes, _ = _largest_component_batch(robust_grids, cols)
+        robust = [round(size / max(occ, 1), 4) for size in robust_sizes]
         baseline = sum(robust) / len(robust)
         p_value = sum(1 for x in robust if x >= giant_occ) / len(robust)
 
-        boot = []
-        for seed in range(12):
+        boot_grids = np.zeros((12, cols * cols), dtype=np.uint8)
+        boot_occ = []
+        for i, seed in enumerate(range(12)):
             rnd = random.Random(1000 + seed)
-            sample = np.zeros(cols * cols, dtype=np.uint8)
-            sample[:n] = rnd.choices([1, 0], weights=[max(occ, 1), max(n - occ, 1)], k=n)
-            comp = _largest_component(sample, cols)
-            boot.append(len(comp) / max(int(sample[:n].sum()), 1))
+            sample = rnd.choices([1, 0], weights=[max(occ, 1), max(n - occ, 1)], k=n)
+            boot_grids[i, :n] = sample
+            boot_occ.append(max(sum(sample), 1))
+        boot_sizes, _ = _largest_component_batch(boot_grids, cols)
+        boot = [size / boot_occ[i] for i, size in enumerate(boot_sizes)]
         boot_sorted = sorted(boot)
         ci_low = round(boot_sorted[1], 4)
         ci_high = round(boot_sorted[-2], 4)
@@ -851,21 +873,33 @@ def _compute_model_snapshot() -> dict:
     with ThreadPoolExecutor(max_workers=5) as ex:
         loaded = list(ex.map(load, A_INDICES))
 
-    for code, name, kl in loaded:
+    def fit_one(item):
+        code, name, kl = item
         if not kl:
-            continue
-        kl_map[code] = kl
+            return None
         closes = [r["close"] for r in kl]
         rets = np.diff(np.log(np.array(closes, dtype=float))) * 100
         h = _hmm(rets)
-        if h:
-            h["code"] = code
-            h["name"] = name
-            h["price"] = closes[-1]
-            h["pct"] = kl[-1].get("pct")
-            hmm_indices.append(h)
-            if code == "000300":
-                hmm = h
+        if not h:
+            return None
+        h["code"] = code
+        h["name"] = name
+        h["price"] = closes[-1]
+        h["pct"] = kl[-1].get("pct")
+        return code, kl, h
+
+    # HMM fits are independent; rflux/native release the GIL, so fitting the
+    # five indices concurrently shortens the cold model snapshot.
+    with ThreadPoolExecutor(max_workers=min(5, max(1, len(loaded)))) as ex:
+        fitted = list(ex.map(fit_one, loaded))
+    for item in fitted:
+        if item is None:
+            continue
+        code, kl, h = item
+        kl_map[code] = kl
+        hmm_indices.append(h)
+        if code == "000300":
+            hmm = h
 
     states = [x.get("state") for x in hmm_indices]
     counts = {s: states.count(s) for s in STATE_LABELS}

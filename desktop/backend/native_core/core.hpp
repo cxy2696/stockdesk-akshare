@@ -17,6 +17,11 @@ struct GridResult {
     bool spanning = false;      // largest cluster touches all four borders
 };
 
+struct GridBatchResult {
+    std::vector<int> largest_size;      // largest component size per grid
+    std::vector<std::uint8_t> spanning; // whether that component touches all borders
+};
+
 struct BreadthResult {
     std::size_t total = 0;
     std::size_t traded = 0;
@@ -55,6 +60,11 @@ struct HmmResult {
 /// deterministic and ties resolve to the component discovered first in scan
 /// order. Throws std::invalid_argument on invalid dimensions/pointers.
 GridResult analyze_grid(const std::uint8_t *grid, std::size_t n, std::size_t cols);
+
+/// Batched summary for Monte-Carlo lattice runs. `grids` is row-major
+/// n_grids * n bytes; only the largest size and spanning flag are returned.
+GridBatchResult analyze_grid_batch(const std::uint8_t *grids, std::size_t n_grids,
+                                   std::size_t n, std::size_t cols);
 
 /// Census every row exactly once: traded / suspended / missing and limit hits.
 /// `pct`, `price` and `limit_pct` are row-aligned; NaN means unknown. The limit

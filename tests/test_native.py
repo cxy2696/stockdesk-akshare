@@ -53,7 +53,7 @@ def reference_component(grid: list[int], cols: int):
 
 def test_version_and_status():
     assert native.status()["backend"] == "C++"
-    assert native.native.__version__ == "1.2.1"
+    assert native.native.__version__ == "1.2.2"
 
 
 @pytest.mark.parametrize("cols", [1, 2, 3, 4, 5, 7, 12])
@@ -192,3 +192,13 @@ def test_native_is_thread_safe():
     for result in results:
         np.testing.assert_allclose(np.asarray(result["mu"]), np.asarray(expected["mu"]), rtol=1e-12)
         assert result["loglik"] == expected["loglik"]
+
+
+def test_grid_batch_matches_individual_calls():
+    rng = np.random.default_rng(17)
+    grids = (rng.random((6, 75 * 75)) < 0.5).astype(np.uint8)
+    batch = native.native.grid_batch(grids, 75)
+    for i, grid in enumerate(grids):
+        single = native.native.grid_largest(grid, 75)
+        assert batch["largest_size"][i] == len(single["largest"])
+        assert bool(batch["spanning"][i]) is bool(single["spanning"])
