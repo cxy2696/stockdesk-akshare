@@ -35,6 +35,10 @@ jobs:
               raise SystemExit(f"missing API paths: {missing}")
           print(f"desktop app ok: {len(schema['paths'])} paths")
           PY
+      - name: Build C++ core
+        working-directory: desktop
+        run: python setup.py build_ext --inplace
+
       - name: Backend tests
         env:
           STOCKDESK_DATA: ${{ runner.temp }}/stockdesk-test

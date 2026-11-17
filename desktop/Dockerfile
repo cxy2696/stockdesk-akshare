@@ -12,7 +12,7 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends g++ \
     && rm -rf /var/lib/apt/lists/*
 COPY desktop/setup.py ./setup.py
-COPY desktop/backend/native.cpp ./backend/native.cpp
+COPY desktop/backend/native_core ./backend/native_core
 RUN pip install --no-cache-dir pybind11 setuptools \
     && python setup.py build_ext --inplace
 

@@ -97,6 +97,7 @@ function buildPositionColumns(openStock: (code: string) => void) {
     {
       title: '股票',
       dataIndex: 'name',
+      width: 150,
       render: (_: any, r: any) => (
         <div className="table-stock" style={{ cursor: 'pointer' }} onClick={() => openStock(r.code)}>
           <div className="stock-avatar">{(r.name || r.code || '?').slice(0, 1)}</div>
@@ -133,6 +134,7 @@ function buildPositionColumns(openStock: (code: string) => void) {
       title: '今日盈亏',
       dataIndex: 'today_pnl',
       align: 'right' as const,
+      responsive: ['xl'],
       render: (v: number | null, r: any) => (
         <div>
           <div className={`num ${trendClass(v)}`}>{v === null ? '--' : fmt.signed(v)}</div>
@@ -156,6 +158,7 @@ function buildPositionColumns(openStock: (code: string) => void) {
       title: '累计盈亏',
       dataIndex: 'total_pnl',
       align: 'right' as const,
+      responsive: ['xl'],
       render: (v: number, r: any) => (
         <Tooltip title={`浮动 ${fmt.signed(r.float_pnl)} + 已实现 ${fmt.signed(r.realized)}`}>
           <div style={{ textAlign: 'right' }}>
@@ -185,7 +188,7 @@ function buildPositionColumns(openStock: (code: string) => void) {
           <span className="muted">--</span>
         ),
     },
-    { title: '持有', dataIndex: 'hold_days', align: 'right' as const, render: (v: number) => <span className="num muted">{v === null || v === undefined ? '--' : `${v} 天`}</span> },
+    { title: '持有', dataIndex: 'hold_days', align: 'right' as const, responsive: ['xl'], render: (v: number) => <span className="num muted">{v === null || v === undefined ? '--' : `${v} 天`}</span> },
   ]
 }
 

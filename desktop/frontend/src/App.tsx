@@ -201,7 +201,7 @@ export default function App() {
               <ArrowLeftOutlined />
             </button>
           )}
-          <div className="page-head">
+          <div className="page-head" title={meta.sub || meta.title}>
             <div className="page-title">{meta.title}</div>
             <div className="page-sub">{meta.sub}</div>
           </div>

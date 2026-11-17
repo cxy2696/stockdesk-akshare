@@ -135,7 +135,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:1.0.2
 
 ### 7. 量化模型
 
-模型注册表 2.5.0：HMM 2.1.0（过滤后状态、状态质量/区分度、风险分、建议暴露）、渗流 2.1.0（12 次 bootstrap 区间、稳定性、广度趋势）、九转 1.1.0（质量、新鲜度、完成度）。顶部「综合评分」把三者按 HMM 42% / 渗流 38% / 九转 20% 合成 0–100 分，并显示分项、一致度和依据；分项不足时按中性 50 分计入，不会因为缺数据把分数拉爆。
+模型注册表 2.6.0：HMM 2.1.0（过滤后状态、状态质量/区分度、风险分、建议暴露）、渗流 2.1.0（12 次 bootstrap 区间、稳定性、广度趋势）、九转 1.1.0（质量、新鲜度、完成度）。顶部「综合评分」把三者按 HMM 42% / 渗流 38% / 九转 20% 合成 0–100 分，并显示分项、一致度和依据；分项不足时按中性 50 分计入，不会因为缺数据把分数拉爆。
 
 ![量化模型](assets/models.png)
 
@@ -399,7 +399,7 @@ The IPA is unsigned. The macOS build is Apple Silicon only; Intel Macs should ru
 - **Portfolio** (`/portfolio`): four tabs — overview, asset analysis, advice, trades. `/asset-analysis` and `/advice-center` redirect to the matching tab.
 - **Review**: NAV, drawdown, exposure, monthly heatmap, FIFO stats. Trend chart separates NAV, MA20 (cyan solid) and MA60 (purple dashed); single-day data shows a point and a note instead of a blank chart.
 - **Index Analysis**: 12 A-share broad indices plus S&P 500, Nasdaq and Dow, with support/resistance and a bias score. `/industry-news` also lands here.
-- **Quant Models**: registry 2.5.0 — HMM 2.1.0 on five indices, percolation 2.1.0 (~5,500 stocks, threshold 0.592746, bootstrap), TD 1.1.0; transparent composite score.
+- **Quant Models**: registry 2.6.0 — HMM 2.1.0 on five indices, percolation 2.1.0 (~5,500 stocks, threshold 0.592746, bootstrap), TD 1.1.0; transparent composite score.
 - **Regions**: 34 province-level divisions with company count, breadth, flow, key industries and leaders; search, previous/next, map click.
 - **Heatmap**: grouped by industry, area = market cap, colour = change; drill down, breadcrumb, search, up/down filters; tiny blocks are hidden.
 

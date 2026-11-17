@@ -6,6 +6,8 @@
 set -e
 cd "$(dirname "$0")"
 
+export PYINSTALLER_CONFIG_DIR="${PYINSTALLER_CONFIG_DIR:-$PWD/build/pyinstaller-cache}"
+
 if [ -z "${VENV:-}" ]; then
   for candidate in .venv ../.venv ../../.venv; do
     if [ -x "$candidate/bin/python" ]; then VENV="$candidate"; break; fi

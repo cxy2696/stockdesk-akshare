@@ -68,6 +68,19 @@ HMM 的输入是五个 A 股指数的日对数收益，输出弱势 / 震荡 / �
 
 三个模型在 `models.model_snapshot()` 里合并，最后由 `_conclusion()` 给出 HMM × 渗流 → 进攻 / 均衡偏多 / 均衡偏防守 / 防守四档策略和总仓位。
 
+### C++ 原生核心
+
+`desktop/backend/native_core/` 分成四层，避免把 pybind11 和模型逻辑混在一个文件里：
+
+| 文件 | 职责 |
+| --- | --- |
+| `core.hpp` | 纯 C++ 类型契约：`GridResult`、`HmmResult`，不依赖 Python |
+| `percolation.cpp` | union-find 四邻接格点分析；支持非正方形/最后一行不满；只把真实矩形边界计为 `spanning` |
+| `hmm.cpp` | 单变量 Gaussian HMM 的缩放前向/后向 Baum-Welch；输入归一化、方差下限、收敛判定与有限值检查 |
+| `bindings.cpp` | 唯一接触 Python 的层：numpy 维度/形状/类型校验，输出固定 shape 的 numpy 数组 |
+
+`backend/native.py` 只报告 `C++ / NumPy fallback` 状态；`models.py` 在原生调用抛异常时自动回退到 NumPy，并读取真实的 `converged` 字段，而不是假报 `True`。回归测试 `tests/test_native.py` 覆盖 C++/NumPy parity、空/满/非方形格点、NaN/坏矩阵/坏迭代次数、线程安全和回退契约。
+
 ### 缓存键与单飞
 
 | 键 | TTL | 内容 |
@@ -195,6 +208,8 @@ The `IndustryNews.tsx` filename is historical; the news feed moved into `Daily.t
 ### Models
 
 The HMM looks at daily log returns of five A-share indices and returns weak / range / strong states, posteriors, entropy, regime age, a transition matrix and per-state risk statistics. In plain terms: it helps decide how much exposure to carry.
+
+The C++ core lives in `desktop/backend/native_core/`: `core.hpp` defines Python-free result contracts, `percolation.cpp` implements union-find percolation, `hmm.cpp` implements the scaled Baum-Welch pass, and `bindings.cpp` is the only pybind11 layer (shape/type validation + fixed-shape numpy outputs). `models.py` reads the real `converged` flag and falls back to NumPy on any native error; `tests/test_native.py` checks parity, edge cases, validation, thread safety and the fallback contract.
 
 The percolation model places about 5,500 stocks on a 2-D lattice in `crc32(code)` order and finds the largest four-neighbour cluster. The number of rising stocks tells you *how many*; the largest cluster tells you whether they are *connected*. 0.592746 is the 2-D square-site threshold; with small samples, treat it as a relative guide. The snapshot also reports spanning, susceptibility, a random-layout baseline and a p-value.
 

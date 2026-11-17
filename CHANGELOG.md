@@ -2,19 +2,28 @@
 
 ## 本地构建优化 / Local hardening（2026-11-17，基于 1.17.0 / iOS 4.1.2）
 
+### C++ 架构
+
+- `backend/native.cpp` 拆为 `native_core/core.hpp`、`percolation.cpp`（union-find）、`hmm.cpp`（scaled Baum-Welch）、`bindings.cpp`（唯一 pybind11 层）。
+- 修复 `cols=0` 除零、HMM 矩阵/方差/有限值未校验、C++ 路径永远报 `converged=True`、非方形格点右边界误判等实质问题。
+- `setup.py` 按平台选择编译参数（MSVC `/O2`，clang/gcc `-O3`），Windows 构建不再因 `-O3` 失败。
+- 新增 20 项原生测试；模型注册表升级到 2.6.0 / native 1.1.0。
+
+### 显示与排版
+
+- 页头副标题在 100% 缩放下恢复单行省略，120%/150% 才换行；1280 宽度页头从 140px 放宽到 200px，避免三行裁切。
+- 持仓表在 1100px 最小窗口隐藏“今日盈亏/累计盈亏/持有”次要列，股票名称不再换行；1280px 以上恢复完整列。
+- 修复桌面 UI 版本号硬编码 `1.16.0`：`HudHome`、设置页、使用指南和版本比对逻辑改为构建时从 `backend/config.py` 注入 `__APP_VERSION__`，与 `/api/health` 的 1.17.0 一致；同时消除首次打开时因版本不一致触发的自动刷新。
+
 ### 稳定性
 
 - 修复 SQLite 连接泄漏：`with sqlite3.connect(...)` 不会关闭连接，行情轮询下会累积文件描述符；新增 `db.session()` 统一提交/回滚/关闭，`portfolio.py`、`repo.py` 全量迁移。
 - 启用 WAL 与 5s busy timeout；缓存写入遇到 `NaN/Infinity` 自动降级为 `null`，不再让整个接口 500。
 - FastAPI 启动迁移到 lifespan，移除重复的 `on_event("startup")`。
 
-### 显示
-
-- 修复桌面 UI 版本号硬编码 `1.16.0`：`HudHome`、设置页、使用指南和版本比对逻辑改为构建时从 `backend/config.py` 注入 `__APP_VERSION__`，与 `/api/health` 的 1.17.0 一致；同时消除首次打开时因版本不一致触发的自动刷新。
-
 ### 质量
 
-- 新增 23 项 pytest：SQLite/TTL/NaN、持仓成本、卖出校验、FIFO 已实现盈亏、全部策略信号、API/SPA。
+- 累计 43 项 pytest（含 20 项 C++/NumPy parity 与边界测试）：SQLite/TTL/NaN、持仓成本、卖出校验、FIFO 已实现盈亏、全部策略信号、API/SPA。
 - 新增 `scripts/api_smoke.py` 和 `scripts/verify_release.py`；CI 增加 pytest 与 ruff F/E9。
 
 ### iOS / iPad

@@ -44,7 +44,7 @@ def _baum_welch(x: np.ndarray, mu: np.ndarray, var: np.ndarray, pi: np.ndarray,
             raw = native.native.baum_welch(
                 np.ascontiguousarray(x, dtype=np.float64),
                 [float(v) for v in mu], [float(v) for v in var],
-                [float(v) for v in pi], [[float(v) for v in row] for row in A],
+                [float(v) for v in pi], [float(v) for v in np.asarray(A).ravel()],
                 int(iters),
             )
             return {
@@ -55,7 +55,7 @@ def _baum_welch(x: np.ndarray, mu: np.ndarray, var: np.ndarray, pi: np.ndarray,
                 "gamma": np.asarray(raw["gamma"], dtype=float).reshape(n, k),
                 "loglik": float(raw["loglik"]),
                 "iterations": int(raw["iterations"]),
-                "converged": True,
+                "converged": bool(raw.get("converged", False)),
             }
         except Exception:
             pass
@@ -316,6 +316,7 @@ def _largest_component(grid: list[int], cols: int, collect_all: bool = False):
     largest: list[int] = []
     sizes: list[int] = []
     spanning = False
+    rows = (len(grid) + cols - 1) // cols
     for i in range(len(grid)):
         if not grid[i] or seen[i]:
             continue
@@ -325,18 +326,19 @@ def _largest_component(grid: list[int], cols: int, collect_all: bool = False):
             v = q.popleft(); comp.append(v)
             r, c = divmod(v, cols)
             touches["top"] |= r == 0
-            touches["bottom"] |= r == cols - 1
+            touches["bottom"] |= r == rows - 1
             touches["left"] |= c == 0
             touches["right"] |= c == cols - 1
             for nr, nc in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)):
-                if 0 <= nr < cols and 0 <= nc < cols:
+                if 0 <= nr < rows and 0 <= nc < cols:
                     w = nr * cols + nc
-                    if grid[w] and not seen[w]:
+                    if w < len(grid) and grid[w] and not seen[w]:
                         seen[w] = 1; q.append(w)
         sizes.append(len(comp))
         if len(comp) > len(largest):
             largest = comp
             spanning = all(touches.values())
+    largest.sort()
     if collect_all:
         return largest, sorted(sizes, reverse=True), spanning
     return largest

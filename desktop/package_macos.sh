@@ -12,6 +12,11 @@
 set -e
 cd "$(dirname "$0")"
 
+# Keep PyInstaller's binary cache inside the project. A shared cache can be
+# left corrupted by an interrupted build and then fails every later build with
+# "Failed to process binary ...".
+export PYINSTALLER_CONFIG_DIR="${PYINSTALLER_CONFIG_DIR:-$PWD/build/pyinstaller-cache}"
+
 VERSION="${VERSION:-$(sed -n 's/^APP_VERSION = "\([^"]*\)".*/\1/p' backend/config.py | head -1)}"
 VERSION="${VERSION:-0.0.0}"
 if [ -z "${VENV:-}" ]; then

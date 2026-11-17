@@ -3,7 +3,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend import market
-from backend.app import create
 
 
 @pytest.fixture()

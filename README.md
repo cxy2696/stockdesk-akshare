@@ -72,7 +72,7 @@ A local-first, single-user equity desk: portfolio, quotes, review, backtests, HM
 
 ## 1.17.0 历史更新 / Previous
 
-- **C++ 模型核心**：新增 `desktop/backend/native.cpp`（C++17 + pybind11）：2D 格点 union-find 渗流 + 单变量 Gaussian HMM Baum-Welch；Python 负责数据、参数和展示，未编译时自动 NumPy 回退。 本机 420 根收益序列的 HMM：C++ 约 2.4 ms，NumPy 回退约 120 ms。
+- **C++ 模型核心**：`desktop/backend/native_core/` 拆为纯算法层（`percolation.cpp` union-find、`hmm.cpp` scaled Baum-Welch）与验证/绑定层（`bindings.cpp`）；输入矩阵、方差、有限值和迭代次数均校验，C++ 与 NumPy 回退保持相同结果与 `converged` 语义。本机 420 根收益序列：C++ HMM 约 0.6 ms，NumPy 回退约 68 ms；5,500 格点渗流约 0.5 ms vs 3.8 ms。`setup.py` 对 MSVC 使用 `/O2`、对 clang/gcc 使用 `-O3`，Windows 构建不再因 `-O3` 失败。
 - **覆盖审计**：全市场 5,580 只 = 沪深 5,225 + 北交所 355，缺失 0；`/api/market/coverage` 实时返回总数、板块分布和缺失代码。
 - **载入**：桌面端按页懒加载；自选/持仓决策并发；iOS 交易决策 K 线并发 + 12 秒超时，弱网先展示已有结果，不再白屏。
 - **引擎可观测**：`/api/health` 返回 `engine.backend = C++`；设置页显示 C++ 核心与全 A 覆盖。

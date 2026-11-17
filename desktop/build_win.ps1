@@ -3,6 +3,12 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
+# Isolate PyInstaller's cache in the project; a corrupted shared cache makes
+# every later build fail while processing a binary from the cache.
+if (-not $env:PYINSTALLER_CONFIG_DIR) {
+  $env:PYINSTALLER_CONFIG_DIR = Join-Path $PSScriptRoot "build\pyinstaller-cache"
+}
+
 if (-not (Test-Path "frontend\node_modules")) {
   Push-Location frontend
   npm ci

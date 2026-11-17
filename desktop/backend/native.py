@@ -20,4 +20,5 @@ def status() -> dict:
         "native": NATIVE,
         "version": VERSION,
         "module": getattr(native, "__file__", None) if NATIVE else None,
+        "error": ERROR or None,
     }

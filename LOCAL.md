@@ -6,6 +6,14 @@
 
 ## 本次本地优化 / What changed locally
 
+### C++ 原生核心 / Native core
+
+- 原 200 行单文件 `backend/native.cpp` 拆为 `backend/native_core/`：`core.hpp`（无 Python 依赖的纯类型契约）、`percolation.cpp`（union-find 四邻接）、`hmm.cpp`（scaled Baum-Welch）、`bindings.cpp`（唯一 pybind11 层，负责 numpy 形状/类型校验）。
+- 修复 `cols=0` 除零、HMM 未校验矩阵/方差/有限值、C++ 路径永远 `converged=True`、非方形格点最后一行被误判为右边界。
+- `setup.py` 按平台选择编译参数：MSVC 用 `/O2 /EHsc`，clang/gcc 用 `-O3`；Windows 不再因 `-O3` 编译失败。
+- 性能（本机 Apple Silicon）：5,500 格点渗流 **0.5 ms vs NumPy 3.8 ms**；420 根收益 HMM **0.6 ms vs NumPy 68 ms**。
+- `tests/test_native.py` 20 项：C++/NumPy parity、空/满/非方形格点、NaN/坏矩阵/坏迭代、线程安全、native 抛错时自动回退。
+
 ### 后端 / Backend
 
 - **SQLite 连接泄漏修复**：`with sqlite3.connect(...)` 只提交/回滚，并不会关闭连接；旧代码在行情轮询下会持续累积文件描述符。新增 `db.session()` / `db._db()`，保证提交、异常回滚、`close()` 三步齐全；`portfolio.py`、`repo.py` 全部改为使用它。
@@ -17,7 +25,7 @@
 
 ### 测试与接口 / Tests & API
 
-- 新增 `tests/`（pytest，23 项）：SQLite 设置/缓存/TTL/NaN/文件描述符、持仓移动成本、卖出校验、FIFO 已实现盈亏、全部回测策略信号、回测结果 JSON 可序列化、账户/交易/自选/回测/SPA 的 API 行为。
+- 新增 `tests/`（pytest，43 项）：23 项后端/API/持仓/回测测试，加 20 项 C++/NumPy parity、格点边界、坏输入、线程安全与回退测试。
 - 新增 `scripts/api_smoke.py`：真实启动服务后的端到端冒烟，覆盖全部只读接口、3 个写接口、SPA 首页与入口 JS。
 - CI 增加 `pytest` 与 `ruff --select F,E9`，并清理了未使用变量/多余 f-string。
 
@@ -39,7 +47,7 @@
 
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
-| 后端单测 | `.venv/bin/python -m pytest -q tests` | 23 passed |
+| 后端单测 | `.venv/bin/python -m pytest -q tests` | 43 passed（含 20 项原生） |
 | 静态检查 | `ruff check desktop/backend us tests --select F,E9` | All checks passed |
 | 前后端构建 | `cd desktop/frontend && npm run build` | 3631 modules，构建成功 |
 | 原生 C++ 核心 | `cd desktop && python setup.py build_ext --inplace` | `_native` 编译成功，`/api/health` 显示 `C++` |

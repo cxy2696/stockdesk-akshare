@@ -263,12 +263,12 @@ body {
 }
 
 .page-head {
-  flex: 0 0 230px;
-  width: 230px;
+  flex: 0 0 270px;
+  width: 270px;
   overflow: hidden;
 }
 @media (max-width: 1180px) {
-  .page-head { flex-basis: 170px; width: 170px; }
+  .page-head { flex-basis: 180px; width: 180px; }
 }
 .page-title {
   font-size: calc(15px * var(--fs, 1));
@@ -497,6 +497,7 @@ body {
   font-weight: 550;
   line-height: 1.2;
   color: var(--text);
+  white-space: nowrap;
 }
 .stock-code {
   font-size: calc(10.5px * var(--fs, 1));
@@ -785,7 +786,7 @@ body {
   flex: 0 0 210px;
 }
 
-.hud-mode .page-head { flex-basis: 150px; width: 150px; }
+.hud-mode .page-head { flex-basis: 270px; width: 270px; }
 @media (max-width: 1500px) {
   .ticker-strip .ticker:nth-child(n + 5) {
     display: none;
@@ -795,7 +796,7 @@ body {
   .ticker-strip .ticker:nth-child(n + 5) {
     display: none;
   }
-  .hud-mode .page-head { flex-basis: 140px; width: 140px; }
+  .hud-mode .page-head { flex-basis: 200px; width: 200px; }
 }
 @media (max-width: 1280px) {
   .kpi-grid {
@@ -2588,7 +2589,11 @@ html, body { overflow-x: hidden; }
 .font-scale-150 .ticker-strip { display: none !important; }
 .font-scale-120 .page-head,
 .font-scale-150 .page-head { flex: 0 0 210px; width: 210px; }
-.page-sub { white-space: normal; line-height: 1.25; overflow: visible; }
+/* Only the enlarged text modes wrap subtitles; at 100% the subtitle stays a
+   single ellipsised line so a long "HMM · 渗流 · ..." label cannot push the
+   topbar into a three-line block. */
+.font-scale-120 .page-sub,
+.font-scale-150 .page-sub { white-space: normal; line-height: 1.25; overflow: visible; }
 .font-scale-150 .hud-left-stack { padding-top: 96px; }
 .font-scale-150 .hud-profile { margin-top: 8px; }
 .font-scale-150 .hud-console-bottom { bottom: 48px; }
