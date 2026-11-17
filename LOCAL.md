@@ -53,7 +53,7 @@
 | macOS DMG 启动 | 1.17.0，C++ 1.2.2，rflux 0.7.0，5,581 行覆盖、data_complete=true、停牌 2 只 |
 | 独立安装 | 全新 `HOME` + 新数据目录启动，默认资产 200,000，未读取现有账户；18 个路由无横向溢出/控制台错误 |
 | iOS 模拟器 | `build_ios.sh` 构建成功，iPhone/iPad 页面已验证 |
-| Windows | 官方 1.17.0 CI 产物，SHA-256 与官方一致 |
+| Windows | 本轮源码 GitHub Actions 构建；exe 启动、health 1.17.0/C++、前端资源/模型元数据冒烟通过 |
 
 ## 产物
 
@@ -87,5 +87,5 @@ cd ios
 
 - macOS 包仅支持 Apple Silicon，使用 ad-hoc 签名。
 - iOS IPA 未签名，必须用自己的 Apple ID 重签；免费签名 7 天有效。
-- Windows 包是上游 1.17.0 CI 构建，本轮源码改动需要下一次 Windows CI 打包。
+- Windows 包由 GitHub Actions 从本轮源码重新构建；CI 只做了启动/接口冒烟，Windows 桌面 UI 仍需在 Windows 上目测。
 - 行情来自公开接口，仅供研究，不构成投资建议。
