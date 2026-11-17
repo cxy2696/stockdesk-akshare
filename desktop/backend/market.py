@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import math
+import threading
 import time
 from pathlib import Path
 import urllib.parse
@@ -1084,12 +1085,28 @@ def index_quote(secid_: str, code: str, name: str, short: str) -> dict:
         return {"code": code, "name": name, "short": short, "price": None, "pct": None, "ts": time.time()}
 
 
-def indices() -> list[dict]:
-    def work(i):
-        return index_quote(i["secid"], i["code"], i["name"], i["short"])
+_INDEX_LOCK = threading.Lock()
 
-    with ThreadPoolExecutor(max_workers=5) as ex:
-        return list(ex.map(work, INDEXES))
+
+def indices() -> list[dict]:
+    cached = db.cache_get("market:indices", 20)
+    if cached:
+        return cached
+    # The HUD asks for overview and light state at the same time; single-flight
+    # keeps both requests from hitting the index host twice on a cold start.
+    with _INDEX_LOCK:
+        cached = db.cache_get("market:indices", 20)
+        if cached:
+            return cached
+
+        def work(i):
+            return index_quote(i["secid"], i["code"], i["name"], i["short"])
+
+        with ThreadPoolExecutor(max_workers=5) as ex:
+            out = list(ex.map(work, INDEXES))
+        if out:
+            db.cache_set("market:indices", out)
+        return out
 
 
 def _breadth_reference(rows: list[dict]) -> dict:

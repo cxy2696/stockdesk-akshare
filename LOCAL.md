@@ -46,10 +46,12 @@
 | 项目 | 结果 |
 | --- | --- |
 | `pytest -q tests` | 59 passed |
+| 冷启动首屏 | 概览和轻量状态不再同步抓完整快照；指数缓存单飞，HUD 2–6 秒出数据 |
 | `ruff check desktop/backend us tests --select F,E9` | 通过 |
 | `python scripts/api_smoke.py http://127.0.0.1:8765` | 47 个只读 + 3 个写接口 + SPA 通过 |
 | `python scripts/coverage_check.py http://127.0.0.1:8765` | 正常行情源下 5,581/5,581，missing=0，duplicates=0；限流时 data_complete=false |
-| macOS DMG 启动 | 1.17.0，C++ 1.2.2，模型 2.7.0，页面与首日复盘验证通过 |
+| macOS DMG 启动 | 1.17.0，C++ 1.2.2，rflux 0.7.0，5,581 行覆盖、data_complete=true、停牌 2 只 |
+| 独立安装 | 全新 `HOME` + 新数据目录启动，默认资产 200,000，未读取现有账户；18 个路由无横向溢出/控制台错误 |
 | iOS 模拟器 | `build_ios.sh` 构建成功，iPhone/iPad 页面已验证 |
 | Windows | 官方 1.17.0 CI 产物，SHA-256 与官方一致 |
 

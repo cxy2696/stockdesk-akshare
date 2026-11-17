@@ -109,10 +109,47 @@ def _boards(fs: str, size: int = 40) -> list[dict]:
     return out
 
 
-def market_state() -> dict:
-    cached = db.cache_get("market:state", 60)
+def market_state(light: bool = False) -> dict:
+    cache_key = "market:state:light" if light else "market:state"
+    cached = db.cache_get(cache_key, 60)
     if cached:
         return cached
+
+    # The HUD only needs the index quote, breadth and a temperature. Do not
+    # fetch six K-line histories and two board lists on first paint; those are
+    # filled lazily by the full state and market pages.
+    if light:
+        idx = market.indices()
+        breadth = market.market_breadth()
+        spot = db.cache_get(market.SPOT_KEY, 600)
+        turnover = sum((r.get("amount") or 0) for r in (spot or {}).get("rows", [])) if spot else None
+        pcts = [q.get("pct") for q in idx if q.get("pct") is not None]
+        avg_pct = sum(pcts) / len(pcts) if pcts else 0.0
+        up, down = breadth.get("up", 0), breadth.get("down", 0)
+        up_ratio = up / max(up + down, 1)
+        limit_ratio = (breadth.get("limit_up", 0) - breadth.get("limit_down", 0)) / max(breadth.get("total", 0), 1)
+        score = round(max(0, min(100, 50 + (up_ratio - 0.5) * 70 + avg_pct * 6 - 7.5 + limit_ratio * 150)), 0)
+        if score >= 70:
+            label, tone = "强势", "up"
+        elif score >= 58:
+            label, tone = "偏强", "up"
+        elif score >= 45:
+            label, tone = "震荡", "flat"
+        elif score >= 32:
+            label, tone = "偏弱", "down"
+        else:
+            label, tone = "弱势", "down"
+        result = {
+            "light": True, "ts": time.time(), "indices": idx,
+            "breadth": {**breadth, "up_ratio": round(up_ratio * 100, 1)},
+            "turnover": round(turnover, 2) if turnover else None,
+            "sectors": {"top": [], "bottom": [], "concepts": []},
+            "score": score,
+            "verdict": {"label": label, "tone": tone, "reasons": []},
+            "status": clock.market_status(),
+        }
+        db.cache_set(cache_key, result)
+        return result
 
     # ---- index trend
     # Quote and history calls hit different endpoints; run them together so a
@@ -197,22 +234,21 @@ def market_state() -> dict:
         })
 
     # ---- breadth / turnover
+    # Never synchronously pull the full universe here. A cold HUD must paint
+    # immediately; the spot page / warm-up thread fills the cache separately.
     breadth = market.market_breadth()
     spot = db.cache_get(market.SPOT_KEY, 600)
-    if not spot:
-        try:
-            spot = market.fetch_spot(ttl=600)
-            breadth = market.market_breadth()
-        except Exception:
-            spot = None
     turnover = None
     if spot:
         amounts = [r.get("amount") or 0 for r in spot.get("rows", [])]
         turnover = sum(amounts)
 
-    # ---- sectors
-    industries = boards("industry", "pct", 60)
-    concepts = _boards("m:90+t:3", 40)
+    # ---- sectors (skip on the lightweight HUD request)
+    if light:
+        industries, concepts = [], []
+    else:
+        industries = boards("industry", "pct", 60)
+        concepts = _boards("m:90+t:3", 40)
     top_ind = [x for x in industries if x["pct"] is not None][:6]
     bottom_ind = [x for x in industries if x["pct"] is not None][-3:][::-1]
     skip = ("昨日", "涨停", "跌停", "连板", "首板", "破净", "融资融券", "标准普尔", "MSCI")
@@ -251,6 +287,7 @@ def market_state() -> dict:
         reasons.append(f"领涨行业：{'、'.join(x['name'] for x in top_ind[:3])}")
 
     result = {
+        "light": light,
         "ts": time.time(),
         "indices": details,
         "breadth": {**breadth, "up_ratio": round(up_ratio * 100, 1)},
@@ -260,7 +297,7 @@ def market_state() -> dict:
         "verdict": {"label": label, "tone": tone, "reasons": reasons},
         "status": clock.market_status(),
     }
-    db.cache_set("market:state", result)
+    db.cache_set(cache_key, result)
     return result
 
 

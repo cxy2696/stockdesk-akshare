@@ -54,6 +54,9 @@ def warm_spot():
     try:
         from backend import db, market
         db.init()
+        # The HUD paints from index quotes first; warm those before the much
+        # larger universe snapshot so the first screen is not blank.
+        market.indices()
         market.fetch_spot(ttl=0)
         print("[stockdesk] market snapshot warmed")
     except Exception as e:

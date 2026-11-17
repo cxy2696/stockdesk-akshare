@@ -94,7 +94,7 @@ export default function HudHome({ overview }: { overview: any }) {
       })
     }).catch(() => {}).finally(() => {
       // load heavy market panels only after the account snapshot is painted
-      api.get<any>('/api/market/state').then(setState).catch(() => {})
+      api.get<any>('/api/market/state?light=1').then(setState).catch(() => {})
       api.get<any>('/api/market/hot').then(setHot).catch(() => {})
     })
   }, [])

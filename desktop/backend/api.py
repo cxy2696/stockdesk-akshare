@@ -138,21 +138,18 @@ def index_analysis():
 
 
 @router.get("/api/market/state")
-def market_state():
-    return ok(state.market_state())
+def market_state(light: bool = False):
+    return ok(state.market_state(light=light))
 
 
 @router.get("/api/market/overview")
 def overview():
+    # First paint must not wait for the full 5,581-row snapshot. Breadth comes
+    # from the cached snapshot only; the market page fetches a fresh one when
+    # the user actually opens it. This keeps the HUD usable on a cold install
+    # even when the quote host is slow.
     idx = market.indices()
     breadth = market.market_breadth()
-    if not breadth:
-        # build breadth lazily from one cached snapshot
-        try:
-            market.fetch_spot(ttl=60)
-            breadth = market.market_breadth()
-        except Exception:
-            breadth = {}
     return ok({"indices": idx, "breadth": breadth, "status": clock.market_status()})
 
 
