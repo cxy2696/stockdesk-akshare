@@ -81,6 +81,21 @@ HMM 的输入是五个 A 股指数的日对数收益，输出弱势 / 震荡 / �
 
 `backend/native.py` 只报告 `C++ / NumPy fallback` 状态；`models.py` 在原生调用抛异常时自动回退到 NumPy，并读取真实的 `converged` 字段，而不是假报 `True`。回归测试 `tests/test_native.py` 覆盖 C++/NumPy parity、空/满/非方形格点、NaN/坏矩阵/坏迭代次数、线程安全和回退契约。
 
+### 全市场覆盖契约
+
+`market.fetch_spot()` 不再用“总数 ≥ 5500”猜测完整，而是每次生成带 schema 的快照：
+
+```text
+expected_codes   静态池 + 运行期发现的新上市（universe:extras:v1）
+rows             每个 expected code 必有一行；缺失行情保留占位行
+quote_status     ok / stale / suspended / missing
+expected/captured/present/missing/duplicates/unpriced/suspended
+complete         行集合完整且分页无失败
+fully_quoted     所有行都有实时价格（停牌会使它为 false，但不是数据丢失）
+```
+
+分页使用 6 路并发 + 单页 3 次重试；失败页由 Sina Market Center/批量报价补缺；旧缓存 `spot:v3–v5` 不再命中。`/api/market/coverage` 用 C++ `coverage_audit`（duplicates/missing/extra）对账，`scripts/coverage_check.py` 可作为发布门禁。
+
 ### 缓存键与单飞
 
 | 键 | TTL | 内容 |
@@ -209,7 +224,9 @@ The `IndustryNews.tsx` filename is historical; the news feed moved into `Daily.t
 
 The HMM looks at daily log returns of five A-share indices and returns weak / range / strong states, posteriors, entropy, regime age, a transition matrix and per-state risk statistics. In plain terms: it helps decide how much exposure to carry.
 
-The C++ core lives in `desktop/backend/native_core/`: `core.hpp` defines Python-free result contracts, `percolation.cpp` implements union-find percolation, `hmm.cpp` implements the scaled Baum-Welch pass, and `bindings.cpp` is the only pybind11 layer (shape/type validation + fixed-shape numpy outputs). `models.py` reads the real `converged` flag and falls back to NumPy on any native error; `tests/test_native.py` checks parity, edge cases, validation, thread safety and the fallback contract.
+The C++ core lives in `desktop/backend/native_core/`: `core.hpp` defines Python-free result contracts, `percolation.cpp` implements union-find percolation, `hmm.cpp` implements the scaled Baum-Welch pass, `census.cpp` implements one-row-per-stock breadth and coverage audits, and `bindings.cpp` is the only pybind11 layer (shape/type validation + fixed-shape numpy outputs). `models.py` reads the real `converged` flag and falls back to NumPy on any native error; `tests/test_native.py` checks parity, edge cases, validation, thread safety and the fallback contract.
+
+`market.fetch_spot()` now emits an explicit coverage contract: every expected code becomes a row (`quote_status` ok/stale/suspended/missing), failed pages are retried and repaired from Sina, and `complete`/`fully_quoted` distinguish representation from live pricing. `/api/market/coverage` uses the C++ coverage audit (duplicates/missing/extra), and `scripts/coverage_check.py` is a release gate.
 
 The percolation model places about 5,500 stocks on a 2-D lattice in `crc32(code)` order and finds the largest four-neighbour cluster. The number of rising stocks tells you *how many*; the largest cluster tells you whether they are *connected*. 0.592746 is the 2-D square-site threshold; with small samples, treat it as a relative guide. The snapshot also reports spanning, susceptibility, a random-layout baseline and a p-value.
 

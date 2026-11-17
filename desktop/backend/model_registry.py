@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import time
 
-MODEL_VERSION = "2.6.0"
+MODEL_VERSION = "2.7.0"
 
 MODELS = {
     "hmm": {
@@ -53,13 +53,15 @@ MODELS = {
         ),
     },
     "native": {
-        "version": "1.1.0",
-        "name": "C++ model core",
-        "params": {"grid": "union-find", "hmm": "diag-Gaussian Baum-Welch"},
+        "version": "1.2.0",
+        "name": "C++ market/model core",
+        "params": {"grid": "union-find", "hmm": "diag-Gaussian Baum-Welch",
+                   "census": "breadth/coverage audit"},
         "description": (
             "Optional pybind11 acceleration split into pure C++ algorithms and a validating binding layer. "
-            "Union-find percolation and scaled Baum-Welch are deterministic and thread-safe; the NumPy "
-            "fallback keeps the public result shape and convergence semantics identical."
+            "Union-find percolation, scaled Baum-Welch, a one-row-per-stock breadth census and a coverage "
+            "audit (duplicates/missing/extra) are deterministic and thread-safe; the NumPy/Python fallback "
+            "keeps the public result shape, classification rules and convergence semantics identical."
         ),
     },
 }

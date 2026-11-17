@@ -17,6 +17,27 @@ struct GridResult {
     bool spanning = false;      // largest cluster touches all four borders
 };
 
+struct BreadthResult {
+    std::size_t total = 0;
+    std::size_t traded = 0;
+    std::size_t up = 0;
+    std::size_t down = 0;
+    std::size_t flat = 0;
+    std::size_t limit_up = 0;
+    std::size_t limit_down = 0;
+    std::size_t suspended = 0;
+    std::size_t missing = 0;
+};
+
+struct CoverageResult {
+    std::size_t expected = 0;
+    std::size_t present = 0;
+    std::size_t duplicates = 0;
+    std::size_t missing = 0;
+    std::size_t extra = 0;
+    std::vector<long long> missing_sample;
+};
+
 struct HmmResult {
     std::vector<double> mu;     // k means
     std::vector<double> var;    // k variances
@@ -34,6 +55,18 @@ struct HmmResult {
 /// deterministic and ties resolve to the component discovered first in scan
 /// order. Throws std::invalid_argument on invalid dimensions/pointers.
 GridResult analyze_grid(const std::uint8_t *grid, std::size_t n, std::size_t cols);
+
+/// Census every row exactly once: traded / suspended / missing and limit hits.
+/// `pct`, `price` and `limit_pct` are row-aligned; NaN means unknown. The limit
+/// threshold is board-specific (5/10/20/30%), supplied by the caller.
+BreadthResult breadth_census(const double *pct, const double *price,
+                             const double *limit_pct, std::size_t n);
+
+/// Compare codes with the expected universe; duplicates and omissions are
+/// reported separately so a partial snapshot can never look complete.
+CoverageResult coverage_audit(const long long *codes, std::size_t n,
+                              const long long *expected, std::size_t m,
+                              std::size_t missing_sample = 20);
 
 /// Univariate Gaussian Baum-Welch with scaled forward/backward passes.
 ///

@@ -72,10 +72,10 @@ A local-first, single-user equity desk: portfolio, quotes, review, backtests, HM
 
 ## 1.17.0 历史更新 / Previous
 
-- **C++ 模型核心**：`desktop/backend/native_core/` 拆为纯算法层（`percolation.cpp` union-find、`hmm.cpp` scaled Baum-Welch）与验证/绑定层（`bindings.cpp`）；输入矩阵、方差、有限值和迭代次数均校验，C++ 与 NumPy 回退保持相同结果与 `converged` 语义。本机 420 根收益序列：C++ HMM 约 0.6 ms，NumPy 回退约 68 ms；5,500 格点渗流约 0.5 ms vs 3.8 ms。`setup.py` 对 MSVC 使用 `/O2`、对 clang/gcc 使用 `-O3`，Windows 构建不再因 `-O3` 失败。
-- **覆盖审计**：全市场 5,580 只 = 沪深 5,225 + 北交所 355，缺失 0；`/api/market/coverage` 实时返回总数、板块分布和缺失代码。
+- **C++ 模型核心**：`desktop/backend/native_core/` 拆为纯算法层（`percolation.cpp` union-find、`hmm.cpp` scaled Baum-Welch、`census.cpp` 全市场逐行 census/覆盖率审计）与验证/绑定层（`bindings.cpp`）；输入矩阵、方差、有限值和迭代次数均校验，C++ 与 NumPy 回退保持相同结果与 `converged` 语义。本机 420 根收益序列：C++ HMM 约 0.6 ms，NumPy 回退约 68 ms；5,500 格点渗流约 0.5 ms vs 3.8 ms。`setup.py` 对 MSVC 使用 `/O2`、对 clang/gcc 使用 `-O3`，Windows 构建不再因 `-O3` 失败。
+- **覆盖审计**：全市场 5,581 只 = 沪深 5,225 + 北交所 356，缺失 0；`/api/market/coverage` 实时返回总数、板块分布和缺失代码。
 - **载入**：桌面端按页懒加载；自选/持仓决策并发；iOS 交易决策 K 线并发 + 12 秒超时，弱网先展示已有结果，不再白屏。
-- **引擎可观测**：`/api/health` 返回 `engine.backend = C++`；设置页显示 C++ 核心与全 A 覆盖。
+- **引擎可观测**：`/api/health` 返回 `engine.backend = C++`；`/api/market/coverage` 返回 expected/present/missing/duplicates/unpriced/status_counts，实时对账全 A 覆盖。
 
 - **交易决策台**：新增「交易决策」页。每只候选给出 **评级好/中/差、操作、层级执行/确认/预警/观察、买入区间、止损、目标、盈亏比、判断依据与风险**；候选按 **好→中→差** 排序，右侧“今日精选”优先展示好股。
 - **市场预测**：新增「市场预测」页。HMM 状态转移推未来 5 日状态概率，再混合各状态历史收益/波动，输出 5 日状态条件收益与上涨概率；明确不是点位预测。

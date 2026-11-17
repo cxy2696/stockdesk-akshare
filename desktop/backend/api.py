@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import asyncio
 import time
+
+import numpy as np
 from typing import Optional
 
 from fastapi import APIRouter, Body, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -210,7 +212,7 @@ def stock_detail(code: str):
     # use the cached snapshot if it is already warm
     sp = None
     try:
-        s = db.cache_get("spot:v3", 600)
+        s = db.cache_get(market.SPOT_KEY, 600)
         if s:
             sp = next((r for r in s.get("rows", []) if r["code"] == code), None)
     except Exception:
@@ -289,20 +291,67 @@ def stock_detail(code: str):
 
 @router.get("/api/market/coverage")
 def market_coverage():
+    """Full-universe coverage audit, including duplicates and unpriced rows."""
     spot = market.fetch_spot(ttl=600)
     rows = spot.get("rows", [])
-    codes = {r["code"] for r in rows}
-    expected = market._universe_symbols()
-    missing = [c for c, _ in expected if c not in codes]
+    expected_codes = [str(c).zfill(6) for c in (spot.get("expected_codes") or [])]
+    if not expected_codes:
+        expected_codes = [str(c).zfill(6) for c, _ in market.universe_symbols()]
+    codes = [str(r.get("code") or "").zfill(6) for r in rows]
+    try:
+        if native.NATIVE:
+            audit = native.native.coverage_audit(
+                np.asarray([int(c) for c in codes], dtype=np.int64),
+                np.asarray([int(c) for c in expected_codes], dtype=np.int64),
+                20,
+            )
+            duplicates = int(audit["duplicates"])
+            missing = [str(c).zfill(6) for c in audit["missing_sample"]]
+            missing_count = int(audit["missing"])
+            present = int(audit["present"])
+        else:
+            raise RuntimeError("native unavailable")
+    except Exception:
+        actual, wanted = set(codes), set(expected_codes)
+        duplicates = len(codes) - len(actual)
+        missing_set = sorted(wanted - actual)
+        missing_count = len(missing_set)
+        missing = missing_set[:20]
+        present = len(actual)
     by_board: dict[str, int] = {}
     for r in rows:
         by_board[r.get("market") or "其他"] = by_board.get(r.get("market") or "其他", 0) + 1
     a_share = sum(n for k, n in by_board.items() if "北交" not in k)
     eligible = sum(1 for r in rows if (r.get("price") or 0) > 0 and (r.get("amount") or 0) >= 1e7
                    and "ST" not in (r.get("name") or "").upper() and "退" not in (r.get("name") or ""))
-    return ok({"total": len(rows), "all_symbols": len(expected), "a_share": a_share,
-               "eligible": eligible, "missing": len(missing), "missing_sample": missing[:20],
-               "boards": by_board, "date": spot.get("date"), "ts": spot.get("ts")})
+    suspended = sorted(str(r.get("code")).zfill(6) for r in rows if r.get("quote_status") == "suspended")
+    unpriced = sorted(str(r.get("code")).zfill(6) for r in rows if r.get("quote_status") in ("missing", "stale", "suspended"))
+    return ok({
+        "schema": spot.get("schema"),
+        "total": len(rows),
+        "expected": len(expected_codes),
+        "all_symbols": len(expected_codes),
+        "present": present,
+        "duplicates": duplicates,
+        "missing": missing_count,
+        "missing_sample": missing,
+        "unpriced": len(unpriced),
+        "unpriced_sample": unpriced[:20],
+        "suspended": len(suspended),
+        "suspended_sample": suspended[:20],
+        "complete": bool(spot.get("complete", False)),
+        "data_complete": bool(spot.get("complete", False)),
+        "fully_quoted": bool(spot.get("fully_quoted", False)),
+        "pages_failed": int(spot.get("pages_failed", 0)),
+        "sources": spot.get("sources") or [],
+        "status_counts": spot.get("status_counts") or {},
+        "field_missing": spot.get("field_missing") or {},
+        "a_share": a_share,
+        "eligible": eligible,
+        "boards": by_board,
+        "date": spot.get("date"),
+        "ts": spot.get("ts"),
+    })
 
 
 @router.get("/api/decision")

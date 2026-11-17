@@ -2,12 +2,21 @@
 
 ## 本地构建优化 / Local hardening（2026-11-17，基于 1.17.0 / iOS 4.1.2）
 
+### 全市场覆盖与算法
+
+- 快照升级为 schema 6（`spot:v6`）：静态池 + 运行期新上市，逐行 `quote_status`，`expected/captured/missing/duplicates/unpriced/suspended` 明确可审计，不再用“≥5500”猜测完整。
+- 东财分页 6 路并发 + 单页 3 次重试；失败页用 Sina Market Center/批量报价补缺；旧 v3/v4 缓存失效。
+- 修复 `302` 创业板、`689` 科创板分类；涨跌停按 5/10/20/30% 板别阈值统计，停牌/无行情不再算平盘。
+- 新增 C++ `breadth_census`（每行恰好归类一次，违反不变量抛错）和 `coverage_audit`（重复/缺失/额外），Python/NumPy 回退同规则。
+- 本机全市场：5,581/5,581，missing=0，duplicates=0，2 只停牌保留占位；冷启动抓取约 3–7s（旧顺序分页约 31s）。
+- 新增 `scripts/coverage_check.py` 门禁、52 项测试和模型注册表 2.7.0 / native 1.2.0。
+
 ### C++ 架构
 
 - `backend/native.cpp` 拆为 `native_core/core.hpp`、`percolation.cpp`（union-find）、`hmm.cpp`（scaled Baum-Welch）、`bindings.cpp`（唯一 pybind11 层）。
 - 修复 `cols=0` 除零、HMM 矩阵/方差/有限值未校验、C++ 路径永远报 `converged=True`、非方形格点右边界误判等实质问题。
 - `setup.py` 按平台选择编译参数（MSVC `/O2`，clang/gcc `-O3`），Windows 构建不再因 `-O3` 失败。
-- 新增 20 项原生测试；模型注册表升级到 2.6.0 / native 1.1.0。
+- 新增 20 项原生测试；模型注册表升级到 2.7.0 / native 1.2.0。
 
 ### 显示与排版
 

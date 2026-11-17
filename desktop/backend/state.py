@@ -198,7 +198,7 @@ def market_state() -> dict:
 
     # ---- breadth / turnover
     breadth = market.market_breadth()
-    spot = db.cache_get("spot:v3", 600)
+    spot = db.cache_get(market.SPOT_KEY, 600)
     if not spot:
         try:
             spot = market.fetch_spot(ttl=600)
@@ -480,7 +480,7 @@ def heatmap(groups_limit: int = 40, per_group: int = 30) -> dict:
     cached = db.cache_get(key, 120)
     if cached:
         return cached
-    spot = db.cache_get("spot:v3", 600)
+    spot = db.cache_get(market.SPOT_KEY, 600)
     if not spot:
         try:
             spot = market.fetch_spot(ttl=600)
@@ -519,7 +519,7 @@ def heatmap(groups_limit: int = 40, per_group: int = 30) -> dict:
 
 
 def limit_pool(direction: str = "up", limit: int = 30) -> list[dict]:
-    spot = db.cache_get("spot:v3", 600)
+    spot = db.cache_get(market.SPOT_KEY, 600)
     if not spot:
         try:
             spot = market.fetch_spot(ttl=600)
@@ -527,15 +527,7 @@ def limit_pool(direction: str = "up", limit: int = 30) -> list[dict]:
             spot = None
     rows = (spot or {}).get("rows", [])
     def _limit_pct(r: dict) -> float:
-        code = r.get("code") or ""
-        name = (r.get("name") or "").upper()
-        if "ST" in name:
-            return 4.8
-        if code.startswith(("300", "301", "688")):
-            return 19.7
-        if code.startswith(("8", "4", "92")):
-            return 29.5
-        return 9.7
+        return market.limit_pct(r) - 0.2
 
     if direction == "down":
         pool = [r for r in rows if (r.get("pct") or 0) <= -_limit_pct(r)]
@@ -570,7 +562,7 @@ def hot_board(limit: int = 10) -> dict:
     if cached:
         return cached
     t0 = time.time()
-    spot = db.cache_get("spot:v3", 600)
+    spot = db.cache_get(market.SPOT_KEY, 600)
     if not spot:
         try:
             spot = market.fetch_spot(ttl=600)

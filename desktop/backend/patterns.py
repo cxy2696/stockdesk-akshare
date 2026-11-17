@@ -147,7 +147,7 @@ def _detect(df: pd.DataFrame, pattern: str) -> tuple[bool, str, float]:
 
 
 def _candidates(universe: str, limit: int) -> list[dict]:
-    spot = db.cache_get("spot:v3", 600)
+    spot = db.cache_get(market.SPOT_KEY, 600)
     if not spot:
         try:
             spot = market.fetch_spot(ttl=600)

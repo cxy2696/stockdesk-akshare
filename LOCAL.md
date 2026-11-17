@@ -8,7 +8,7 @@
 
 ### C++ 原生核心 / Native core
 
-- 原 200 行单文件 `backend/native.cpp` 拆为 `backend/native_core/`：`core.hpp`（无 Python 依赖的纯类型契约）、`percolation.cpp`（union-find 四邻接）、`hmm.cpp`（scaled Baum-Welch）、`bindings.cpp`（唯一 pybind11 层，负责 numpy 形状/类型校验）。
+- 原 200 行单文件 `backend/native.cpp` 拆为 `backend/native_core/`：`core.hpp`（无 Python 依赖的纯类型契约）、`percolation.cpp`（union-find 四邻接）、`hmm.cpp`（scaled Baum-Welch）、`census.cpp`（全市场 breadth/coverage 审计）、`bindings.cpp`（唯一 pybind11 层，负责 numpy 形状/类型校验）。
 - 修复 `cols=0` 除零、HMM 未校验矩阵/方差/有限值、C++ 路径永远 `converged=True`、非方形格点最后一行被误判为右边界。
 - `setup.py` 按平台选择编译参数：MSVC 用 `/O2 /EHsc`，clang/gcc 用 `-O3`；Windows 不再因 `-O3` 编译失败。
 - 性能（本机 Apple Silicon）：5,500 格点渗流 **0.5 ms vs NumPy 3.8 ms**；420 根收益 HMM **0.6 ms vs NumPy 68 ms**。
@@ -20,12 +20,14 @@
 - **WAL + busy timeout**：用户库和缓存库启用 WAL，连接设置 5s busy timeout，WebSocket 与 REST 并发读写不再直接报 `database is locked`。
 - **缓存写入兜底**：行情计算偶发 `NaN/Infinity` 时，原来的 `allow_nan=False` 会让整次缓存写入抛错并变成 500。现在会递归把非有限数值转成 `null`，保留其余字段。
 - **FastAPI lifespan**：移除重复且已废弃的 `on_event("startup")`，统一到 lifespan，启动只初始化一次数据库。
+- **全市场覆盖契约**：快照 schema 6，逐行 `quote_status`，静态池 + 运行期新上市，分页并发/重试/补缺，`/api/market/coverage` 对账；冷启动抓取由约 31s 降至约 3–7s。
+- **算法口径**：`302`/`689` 分类修复，涨跌停按 5/10/20/30% 板别阈值，停牌/无行情不再计入平盘；C++ `breadth_census` 保证每行恰好归类一次。
 - **缓存清理接口**：新增 `db.cache_clear(prefix)`，方便排查行情缓存问题。
 - **前端版本号单一来源**：HUD、设置、使用指南、版本比对原先硬编码 `1.16.0`，与服务端 1.17.0 不一致并触发首次加载自动刷新。现在 Vite 构建时从 `backend/config.py` 注入 `__APP_VERSION__`。
 
 ### 测试与接口 / Tests & API
 
-- 新增 `tests/`（pytest，43 项）：23 项后端/API/持仓/回测测试，加 20 项 C++/NumPy parity、格点边界、坏输入、线程安全与回退测试。
+- 新增 `tests/`（pytest，52 项）：23 项后端/API/持仓/回测、20 项 C++/NumPy parity/边界/线程，加 9 项全市场覆盖、分页缓存、breadth 与 C++ census/audit 测试。
 - 新增 `scripts/api_smoke.py`：真实启动服务后的端到端冒烟，覆盖全部只读接口、3 个写接口、SPA 首页与入口 JS。
 - CI 增加 `pytest` 与 `ruff --select F,E9`，并清理了未使用变量/多余 f-string。
 
@@ -47,7 +49,8 @@
 
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
-| 后端单测 | `.venv/bin/python -m pytest -q tests` | 43 passed（含 20 项原生） |
+| 后端单测 | `.venv/bin/python -m pytest -q tests` | 52 passed（含 20 项原生、9 项覆盖） |
+| 全市场覆盖 | `python scripts/coverage_check.py http://127.0.0.1:8765` | 5,581/5,581，missing=0，duplicates=0，2 只停牌占位 |
 | 静态检查 | `ruff check desktop/backend us tests --select F,E9` | All checks passed |
 | 前后端构建 | `cd desktop/frontend && npm run build` | 3631 modules，构建成功 |
 | 原生 C++ 核心 | `cd desktop && python setup.py build_ext --inplace` | `_native` 编译成功，`/api/health` 显示 `C++` |

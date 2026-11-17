@@ -6,7 +6,7 @@
 
 ### 版本
 
-当前模型注册表：**2.6.0**（`desktop/backend/model_registry.py`）
+当前模型注册表：**2.7.0**（`desktop/backend/model_registry.py`）
 
 | 模型 | 版本 | 参数 | 输出 | 边界 |
 | --- | --- | --- | --- | --- |
@@ -116,7 +116,7 @@ GitHub Actions 的 `Model check` 每周一至周五定时跑，改后端代码�
 
 ### Versions
 
-Registry version: **2.6.0**, in `desktop/backend/model_registry.py`.
+Registry version: **2.7.0**, in `desktop/backend/model_registry.py`.
 
 | Model | Version | Parameters | Output | Limits |
 | --- | --- | --- | --- | --- |
@@ -143,7 +143,7 @@ Nine consecutive closes below the close four bars earlier form a buy setup; nine
 
 Endpoint: `GET /api/market/td/{code}?limit=220`. The model snapshot also carries TD for the five indices, up to eight holdings and the leaders of industries closest to criticality. A 9/9 is exhaustion; wait for a volume-backed close or a reclaim of the 5-day line before acting.
 
-### Composite score (current 2.6.0)
+### Composite score (current 2.7.0)
 
 The Models page and Daily Plan show a transparent 0–100 composite:
 

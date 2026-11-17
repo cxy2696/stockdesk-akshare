@@ -6,13 +6,16 @@ the app has no dependency on a browser-grade networking stack.
 from __future__ import annotations
 
 import json
+import math
 import time
 from pathlib import Path
 import urllib.parse
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from . import clock, db
+import numpy as np
+
+from . import clock, db, native
 from .config import EM_HIS, EM_LIST, EM_QUOTE, EM_UT, INDEXES, KLINE_TTL, QUOTE_TTL, SPOT_TTL
 from .net import prefer_ipv4_eastmoney
 
@@ -25,6 +28,9 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML,
 SPOT_FIELDS = "f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f22,f23,f24,f25,f11,f62,f100"
 # f62 = 主力净流入(元) on the quote API
 FS_A = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
+SPOT_KEY = "spot:v6"
+SPOT_SCHEMA = 6
+UNIVERSE_EXTRA_KEY = "universe:extras:v1"
 
 _spot_lock = __import__("threading").Lock()
 
@@ -98,17 +104,30 @@ def secid(code: str) -> str:
 
 def market_of(code: str) -> str:
     code = str(code)
-    if code.startswith("688"):
-        return "科创板"
+    if code.startswith(("688", "689")):
+        return "科创板"          # 689 = CDR (e.g. 九号公司-WD)
     if code.startswith(("60", "900")):
         return "沪市主板"
-    if code.startswith(("300", "301")):
-        return "创业板"
+    if code.startswith(("300", "301", "302")):
+        return "创业板"          # 302 is the newer ChiNext segment
     if code.startswith(("00", "200")):
         return "深市主板"
     if code.startswith(("8", "4", "92")):
         return "北交所"
     return "其他"
+
+
+def limit_pct(row: dict) -> float:
+    """Approximate daily price limit for a row (5/10/20/30%)."""
+    code = str(row.get("code") or "")
+    name = (row.get("name") or "").upper()
+    if "ST" in name:
+        return 5.0
+    if code.startswith(("8", "4", "92")):
+        return 30.0
+    if code.startswith(("300", "301", "302", "688", "689")):
+        return 20.0
+    return 10.0
 
 
 def _row_from_spot(f: dict) -> dict:
@@ -294,7 +313,7 @@ def _sina_market_center() -> dict[str, dict]:
     out: dict[str, dict] = {}
     try:
         with ThreadPoolExecutor(max_workers=8) as ex:
-            for chunk in ex.map(page, range(1, 57)):
+            for chunk in ex.map(page, range(1, 71)):
                 for r in chunk:
                     code = str(r.get("code") or "")[-6:]
                     if not code.isdigit():
@@ -331,85 +350,245 @@ def _sina_market_center() -> dict[str, dict]:
     return out
 
 
-def _akshare_spot() -> dict:
-    """Complete fallback universe with Sina quotes and Eastmoney-like fields."""
-    cached = db.cache_get("spot:ak", 600)
-    if cached:
-        cached["date"] = clock.last_session_date()
-        return cached
-    universe = _universe_symbols()
-    quotes = _sina_market_center()
-    if not quotes:
-        quotes = _sina_batch([code for code, _ in universe])
-    flow = _fund_flow()
-    rows = []
-    universe_map = dict(universe)
-    for code, name in universe:
-        q = quotes.get(code) or {}
-        f = flow.get(code) or {}
-        row = {**q}
-        row.update({
-            "code": code,
-            "name": q.get("name") or name,
-            "main_inflow": f.get("main_inflow"),
-            "inflow": f.get("inflow"),
-            "outflow": f.get("outflow"),
-            "market": market_of(code),
-        })
-        row.setdefault("industry", "")
-        rows.append(row)
-    for code, q in quotes.items():
-        if code in universe_map or not q.get("price"):
-            continue
-        row = {**q}
-        row.update({"code": code, "main_inflow": None, "inflow": None, "outflow": None,
-                    "market": market_of(code)})
-        row.setdefault("industry", "")
-        rows.append(row)
-    out = {
-        "ts": time.time(),
-        "date": clock.last_session_date(),
-        "total": len(rows),
-        "rows": rows,
-        "source": "sina-market-center" if quotes else "empty",
+_QUOTE_KEYS = ("name", "price", "pct", "chg", "open", "high", "low", "prev_close",
+               "volume", "amount", "amplitude", "turnover", "pe", "pb", "mcap", "fcap",
+               "volume_ratio", "speed", "pct60", "pct_ytd", "pct5m", "industry")
+
+
+def _blank_spot_row(code: str, name: str = "") -> dict:
+    return {
+        "code": code, "name": name, "price": None, "pct": None, "chg": None,
+        "volume": None, "amount": None, "amplitude": None, "turnover": None,
+        "pe": None, "pb": None, "high": None, "low": None, "open": None,
+        "prev_close": None, "mcap": None, "fcap": None, "volume_ratio": None,
+        "speed": None, "pct60": None, "pct_ytd": None, "pct5m": None,
+        "main_inflow": None, "inflow": None, "outflow": None,
+        "market": market_of(code), "industry": "",
     }
-    if rows:
-        db.cache_set("spot:ak", out)
-        db.cache_set("spot:v3", out)
+
+
+def _extra_symbols() -> dict[str, str]:
+    """New listings observed since the bundled universe was built."""
+    raw = db.cache_get(UNIVERSE_EXTRA_KEY, 86400 * 30) or {}
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for code, name in raw.items():
+        code = str(code).zfill(6)
+        if len(code) == 6 and code.isdigit():
+            out[code] = str(name or "")
     return out
 
 
 def _universe_symbols() -> list[tuple[str, str]]:
     """Bundled complete A-share code/name list (all ~5,580 listings)."""
     try:
-        import json as _json
         path = Path(__file__).resolve().parent / "data" / "all_symbols.json"
-        data = _json.loads(path.read_text("utf-8"))
+        data = json.loads(path.read_text("utf-8"))
         return [(str(x["code"]).zfill(6), str(x["name"])) for x in data if x.get("code")]
     except Exception:
         return []
 
 
-def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
-    """Full A-share snapshot: Eastmoney fields plus the complete symbol list.
+def universe_symbols() -> list[tuple[str, str]]:
+    """Bundled universe plus new listings discovered by earlier snapshots."""
+    merged = dict(_universe_symbols())
+    merged.update(_extra_symbols())
+    return list(merged.items())
 
-    Eastmoney's paged list is fast and carries valuation/fund-flow fields, but
-    pages can overlap while prices move and some Beijing listings are missing.
-    We dedupe by code, then fill every bundled universe symbol from Sina so the
-    table stays complete even when a page is skipped.
 
-    Only one thread may build the snapshot.  Without this lock the daily page,
-    the model snapshot and the hot board all trigger their own full-market
-    download the moment the cache expires, which turned a 3 s fetch into a
-    multi-minute stall on a slow network.
+def _is_active_extra(row: dict) -> bool:
+    """A newly discovered *trading* A-share, not a delisted/placeholder row.
+
+    The Sina/EM lists also contain delisted entries and private-placement
+    conversion codes (810xxx, names with 退/定转). Those must never inflate the
+    live universe or be counted as covered market rows.
     """
-    cached = db.cache_get("spot:v3", ttl)
-    if cached and cached.get("total", 0) >= 5500:
+    code = str(row.get("code") or "").zfill(6)
+    name = str(row.get("name") or "")
+    if len(code) != 6 or not code.isdigit():
+        return False
+    if not code.startswith(("0", "3", "6", "4", "8", "92")):
+        return False
+    if "退" in name or "定转" in name:
+        return False
+    price = row.get("price")
+    pct = row.get("pct")
+    return price is not None and price > 0 and pct is not None
+
+
+def _remember_universe(rows: list[dict]) -> None:
+    """Persist newly observed active codes for fallback snapshots."""
+    base = {c for c, _ in _universe_symbols()}
+    extras = _extra_symbols()
+    changed = False
+    for row in rows:
+        if not _is_active_extra(row):
+            continue
+        code = str(row.get("code") or "").zfill(6)
+        if code in base or code in extras:
+            continue
+        extras[code] = str(row.get("name") or "")
+        changed = True
+    if changed:
+        db.cache_set(UNIVERSE_EXTRA_KEY, extras)
+
+
+def _merge_row(row: dict, quote: dict | None, flow: dict | None, expected_name: str = "") -> dict:
+    if not row:
+        row = _blank_spot_row(str(quote.get("code") if quote else ""), expected_name)
+    if quote:
+        for key in _QUOTE_KEYS:
+            if row.get(key) is None and quote.get(key) is not None:
+                row[key] = quote[key]
+    if expected_name and not row.get("name"):
+        row["name"] = expected_name
+    if row.get("main_inflow") is None and flow:
+        row["main_inflow"] = flow.get("main_inflow")
+        row["inflow"] = flow.get("inflow")
+        row["outflow"] = flow.get("outflow")
+    return row
+
+
+def _assemble_snapshot(seen: dict[str, dict], expected: list[tuple[str, str]],
+                       quotes: dict[str, dict] | None = None,
+                       flow: dict[str, dict] | None = None, *,
+                       em_total: int = 0, pages_failed: int = 0,
+                       sources: list[str] | None = None) -> dict:
+    """Build a lossless snapshot: every expected and discovered code gets a row.
+
+    Missing quotes remain rows with quote_status=missing/suspended, so counts,
+    coverage audits and the UI can distinguish "not fetched" from "no trade".
+    """
+    quotes = quotes or {}
+    flow = flow or {}
+    expected_map = {str(code).zfill(6): str(name) for code, name in expected}
+    # Codes discovered in the live pages/Sina are part of the expected universe
+    # for this snapshot; they must not be classified as unexplained extras.
+    for code, row in seen.items():
+        if _is_active_extra(row):
+            expected_map.setdefault(str(code).zfill(6), str(row.get("name") or ""))
+    for code, quote in quotes.items():
+        if _is_active_extra(quote):
+            expected_map.setdefault(str(code).zfill(6), str(quote.get("name") or ""))
+    all_codes = list(expected_map)
+    rows = []
+    for code in all_codes:
+        code = str(code).zfill(6)
+        row = dict(seen.get(code) or {})
+        row = _merge_row(row, quotes.get(code), flow.get(code), expected_map.get(code, ""))
+        row["code"] = code
+        row["name"] = row.get("name") or expected_map.get(code, "")
+        row["market"] = market_of(code)
+        row.setdefault("industry", "")
+        price = row.get("price")
+        pct = row.get("pct")
+        if price is not None and price > 0:
+            row["quote_status"] = "ok"
+        elif pct is not None:
+            row["quote_status"] = "stale"
+        elif row.get("prev_close") is not None or row.get("volume") is not None or row.get("amount") is not None:
+            row["quote_status"] = "suspended"
+        else:
+            row["quote_status"] = "missing"
+        rows.append(row)
+
+    row_codes = {r["code"] for r in rows}
+    expected_codes = sorted(expected_map.keys())
+    missing = sorted(set(expected_codes) - row_codes)
+    unpriced = sorted(r["code"] for r in rows if r.get("quote_status") in ("missing", "stale"))
+    suspended = sorted(r["code"] for r in rows if r.get("quote_status") == "suspended")
+    status_counts = {key: 0 for key in ("ok", "stale", "suspended", "missing")}
+    for row in rows:
+        status_counts[row["quote_status"]] += 1
+    field_missing = {
+        field: sum(1 for row in rows if row.get(field) is None or row.get(field) == "")
+        for field in ("price", "pct", "amount", "mcap", "industry", "main_inflow")
+    }
+    complete = not missing and pages_failed == 0
+    source_names = list(dict.fromkeys(sources or ["universe"]))
+    return {
+        "schema": SPOT_SCHEMA,
+        "ts": time.time(),
+        "date": clock.last_session_date(),
+        "total": len(rows),
+        "expected": len(expected_codes),
+        "captured": len(rows),
+        "quoted": len(rows) - len(unpriced) - len(suspended),
+        "unpriced": len(unpriced) + len(suspended),
+        "suspended": len(suspended),
+        "missing": len(missing),
+        "missing_sample": missing[:20],
+        "unpriced_codes": unpriced[:20],
+        "suspended_codes": suspended[:20],
+        "expected_codes": expected_codes,
+        "status_counts": status_counts,
+        "field_missing": field_missing,
+        "complete": complete,
+        # complete = every expected row is represented; fully_quoted = every
+        # row also has a live price (legitimate suspensions can make it false).
+        "data_complete": complete,
+        "fully_quoted": complete and not unpriced and not suspended,
+        "em_total": em_total,
+        "pages_failed": pages_failed,
+        "sources": source_names,
+        "source": "+".join(source_names),
+        "rows": rows,
+    }
+
+
+def _akshare_spot() -> dict:
+    """Complete fallback universe with Sina quotes and Eastmoney-like fields."""
+    cached = db.cache_get("spot:ak", 600)
+    if cached and cached.get("schema") == SPOT_SCHEMA:
+        cached["date"] = clock.last_session_date()
+        return cached
+    universe = universe_symbols()
+    quotes = _sina_market_center()
+    source = "sina-market-center"
+    if not quotes:
+        quotes = _sina_batch([code for code, _ in universe])
+        source = "sina-batch"
+    flow = _fund_flow()
+    out = _assemble_snapshot({}, universe, quotes, flow,
+                             em_total=0, pages_failed=0, sources=[source, "universe"])
+    if out["rows"]:
+        db.cache_set("spot:ak", out)
+        db.cache_set(SPOT_KEY, out)
+        _remember_universe(out["rows"])
+    return out
+
+
+def _cached_snapshot(ttl: float) -> dict | None:
+    cached = db.cache_get(SPOT_KEY, ttl)
+    if not cached or cached.get("schema") != SPOT_SCHEMA:
+        return None
+    if cached.get("complete"):
+        return cached
+    # Do not hammer the upstream when a partial snapshot was just built; show
+    # it with complete=false and retry after a short grace period.
+    age = db.cache_age(SPOT_KEY)
+    if age is not None and age < 20:
+        return cached
+    return None
+
+
+def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
+    """Full A-share snapshot: every code represented, never silently dropped.
+
+    Eastmoney pages are fetched concurrently and retried; a failed page or a
+    missing quote is filled from Sina or represented by a placeholder row with
+    quote_status. The cache stores the coverage contract (expected/captured/
+    missing/status) so callers can distinguish a complete snapshot from a
+    partial one instead of relying on a magic minimum count.
+    """
+    cached = _cached_snapshot(ttl)
+    if cached:
         cached["date"] = clock.last_session_date()
         return cached
     with _spot_lock:
-        cached = db.cache_get("spot:v3", ttl)
-        if cached and cached.get("total", 0) >= 5500:
+        cached = _cached_snapshot(ttl)
+        if cached:
             cached["date"] = clock.last_session_date()
             return cached
         return _fetch_spot_unlocked(ttl, progress)
@@ -420,14 +599,29 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
         f"{EM_LIST}?po=1&np=1&fltt=2&invt=2&fid=f12&fs={urllib.parse.quote(FS_A)}"
         f"&fields={SPOT_FIELDS}"
     )
-    try:
-        first = _http_json(f"{base}&pn=1&pz=100")
-    except Exception:
-        return _akshare_spot()
+
+    def fetch_page(page: int):
+        for attempt in range(3):
+            try:
+                return _http_json(f"{base}&pn={page}&pz=100")
+            except Exception:
+                if attempt < 2:
+                    time.sleep(0.12 * (attempt + 1))
+        return None
+
+    first = fetch_page(1)
     data = (first or {}).get("data") or {}
     total = int(data.get("total") or 0)
     if not total:
         return _akshare_spot()
+
+    page_size = 100
+    page_count = min(120, max(1, math.ceil(total / page_size)))
+    pages: dict[int, dict | None] = {1: first}
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        futures = {ex.submit(fetch_page, p): p for p in range(2, page_count + 1)}
+        for fut in as_completed(futures):
+            pages[futures[fut]] = fut.result()
 
     seen: dict[str, dict] = {}
 
@@ -437,17 +631,14 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
             if r["code"]:
                 seen[r["code"]] = r
 
-    take(data.get("diff") or [])
-    page = 1
-    while len(seen) < total and page < 80:
-        page += 1
-        try:
-            d = _http_json(f"{base}&pn={page}&pz=100")
-            diff = ((d or {}).get("data") or {}).get("diff") or []
-        except Exception:
-            break
+    pages_failed = 0
+    for page in range(1, page_count + 1):
+        payload = pages.get(page)
+        diff = ((payload or {}).get("data") or {}).get("diff") or []
         if not diff:
-            break
+            if len(seen) < total:
+                pages_failed += 1
+            continue
         take(diff)
         if progress:
             progress(min(99, int(len(seen) / max(total, 1) * 100)))
@@ -455,48 +646,40 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
     if len(seen) < 1000:
         return _akshare_spot()
 
-    universe = _universe_symbols()
-    uni_map = dict(universe)
-    need = [c for c, _ in universe if c not in seen or not (seen[c].get("price"))]
-    quotes = _sina_batch(need) if need else {}
-    flow = _fund_flow() if need else {}
-    quote_keys = ("price", "high", "low", "open", "volume", "amount", "prev_close", "pct", "chg")
+    # Merge everything known: bundled/extra universe, Eastmoney rows and Sina
+    # quotes discovered while repairing failed pages.
+    expected = universe_symbols()
+    expected_map = dict(expected)
+    quotes: dict[str, dict] = {}
+    sources = ["eastmoney", "universe"]
+    need = [code for code in expected_map if code not in seen or seen[code].get("price") is None]
+    if pages_failed:
+        # Only a failed page needs the full Sina universe sweep; a couple of
+        # suspended rows can be filled by the much cheaper batch endpoint.
+        sina = _sina_market_center()
+        quotes.update(sina)
+        sources.append("sina-market-center")
+        for code, q in sina.items():
+            if _is_active_extra(q):
+                expected_map.setdefault(code, q.get("name") or "")
+        need = [code for code in expected_map if code not in seen or seen[code].get("price") is None]
+    if need:
+        batch = _sina_batch(need)
+        if batch:
+            quotes.update(batch)
+            sources.append("sina-batch")
+    flow = _fund_flow() if any((row.get("main_inflow") is None) for row in seen.values()) or need else {}
+    out = _assemble_snapshot(seen, list(expected_map.items()), quotes, flow,
+                             em_total=total, pages_failed=pages_failed,
+                             sources=sources)
+    if progress:
+        progress(100)
+    if out["rows"]:
+        db.cache_set(SPOT_KEY, out)
+        _remember_universe(out["rows"])
+        return out
+    return _akshare_spot()
 
-    for code, name in universe:
-        r = seen.get(code)
-        q = quotes.get(code) or {}
-        if r is None:
-            r = {"code": code, "name": name, "price": None, "pct": None, "chg": None,
-                 "volume": None, "amount": None, "amplitude": None, "turnover": None,
-                 "pe": None, "pb": None, "high": None, "low": None, "open": None,
-                 "prev_close": None, "mcap": None, "fcap": None, "volume_ratio": None,
-                 "speed": None, "pct60": None, "pct_ytd": None, "pct5m": None,
-                 "main_inflow": None, "market": market_of(code), "industry": ""}
-            seen[code] = r
-        if not r.get("name"):
-            r["name"] = name
-        if not r.get("price") and q:
-            for key in quote_keys:
-                if q.get(key) is not None:
-                    r[key] = q[key]
-        if r.get("main_inflow") is None:
-            f = flow.get(code) or {}
-            r["main_inflow"] = f.get("main_inflow")
-            r["inflow"] = f.get("inflow")
-            r["outflow"] = f.get("outflow")
-
-    rows = [r for r in seen.values()
-            if r["code"] in uni_map or r.get("price") is not None]
-    out = {
-        "ts": time.time(),
-        "date": clock.last_session_date(),
-        "total": len(rows),
-        "rows": rows,
-        "source": "eastmoney+universe",
-    }
-    if rows:
-        db.cache_set("spot:v3", out)
-    return out if rows else _akshare_spot()
 
 def _sina_quote(code: str, prefix: str | None = None) -> dict | None:
     """Fallback quote when the Eastmoney push2 endpoint is rate-limited."""
@@ -759,7 +942,7 @@ def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qf
 
 
 def stock_name_map() -> dict[str, str]:
-    spot = db.cache_get("spot:v3", 86400 * 30)
+    spot = db.cache_get(SPOT_KEY, 86400 * 30)
     if not spot:
         return {}
     return {r["code"]: r["name"] for r in spot.get("rows", [])}
@@ -825,34 +1008,71 @@ def indices() -> list[dict]:
         return list(ex.map(work, INDEXES))
 
 
+def _breadth_reference(rows: list[dict]) -> dict:
+    """Pure-Python fallback for the C++ census; same classification rules."""
+    out = {"total": len(rows), "traded": 0, "up": 0, "down": 0, "flat": 0,
+           "limit_up": 0, "limit_down": 0, "suspended": 0, "missing": 0}
+    for row in rows:
+        price = row.get("price")
+        pct = row.get("pct")
+        if (price is None or price <= 0) and pct is None:
+            out["missing"] += 1
+            continue
+        if pct is None:
+            out["suspended"] += 1
+            continue
+        out["traded"] += 1
+        if pct > 0.01:
+            out["up"] += 1
+        elif pct < -0.01:
+            out["down"] += 1
+        else:
+            out["flat"] += 1
+        limit = limit_pct(row)
+        if pct >= limit - 0.2:
+            out["limit_up"] += 1
+        if pct <= -limit + 0.2:
+            out["limit_down"] += 1
+    return out
+
+
 def market_breadth() -> dict:
-    """Up/down counts and limit-up/down stats from the full snapshot."""
-    spot = db.cache_get("spot:v3", 600)
+    """Up/down/suspended/limit census from the full snapshot.
+
+    The C++ census counts every row exactly once and rejects an invariant
+    violation; the Python reference is used when the optional extension is not
+    built. Suspended and missing rows are no longer folded into "flat".
+    """
+    spot = db.cache_get(SPOT_KEY, 600)
     if not spot:
         return {}
-    up = down = flat = limit_up = limit_down = 0
-    for r in spot["rows"]:
-        p = r.get("pct")
-        if p is None:
-            flat += 1
-            continue
-        if p > 0.01:
-            up += 1
-        elif p < -0.01:
-            down += 1
+    rows = spot.get("rows", [])
+    pct = np.asarray([np.nan if r.get("pct") is None else float(r["pct"]) for r in rows], dtype=float)
+    price = np.asarray([np.nan if r.get("price") is None else float(r["price"]) for r in rows], dtype=float)
+    limits = np.asarray([limit_pct(r) for r in rows], dtype=float)
+    try:
+        if native.NATIVE:
+            raw = native.native.breadth_census(pct, price, limits)
+            counts = {k: int(v) for k, v in raw.items()}
         else:
-            flat += 1
-        if p >= 9.8:
-            limit_up += 1
-        if p <= -9.8:
-            limit_down += 1
+            counts = _breadth_reference(rows)
+    except Exception:
+        counts = _breadth_reference(rows)
+    # The snapshot is the authority for suspended/missing: C++ receives NaN
+    # prices and cannot tell a halted stock from a never-fetched one. Keep its
+    # traded distribution (one classification per row) and reconcile the two
+    # non-traded buckets from quote_status.
+    status_counts = spot.get("status_counts") or {}
+    if status_counts:
+        counts["suspended"] = int(status_counts.get("suspended", 0))
+        counts["missing"] = int(status_counts.get("missing", counts.get("missing", 0)))
+        counts["traded"] = int(counts.get("up", 0)) + int(counts.get("down", 0)) + int(counts.get("flat", 0))
     return {
-        "up": up,
-        "down": down,
-        "flat": flat,
-        "limit_up": limit_up,
-        "limit_down": limit_down,
-        "total": spot.get("total", 0),
+        **counts,
+        "total": len(rows),
+        "expected": spot.get("expected", len(rows)),
+        "complete": bool(spot.get("complete", False)),
+        "unpriced": spot.get("unpriced", 0),
         "ts": spot.get("ts"),
     }
 
@@ -862,7 +1082,7 @@ def search(keyword: str, limit: int = 20) -> list[dict]:
     kw = (keyword or "").strip().upper()
     if not kw:
         return []
-    spot = db.cache_get("spot:v3", 86400)
+    spot = db.cache_get(SPOT_KEY, 86400)
     rows = spot.get("rows", []) if spot else []
     if not rows:
         # slow path: one page of quotes only; the spot list may be rate-limited
@@ -898,7 +1118,7 @@ def search(keyword: str, limit: int = 20) -> list[dict]:
 
 # ---------------------------------------------------------------- rankings
 def ranking(by: str = "pct", limit: int = 10) -> list[dict]:
-    spot = db.cache_get("spot:v3", 600)
+    spot = db.cache_get(SPOT_KEY, 600)
     rows = spot.get("rows", []) if spot else []
     key = {"pct": "pct", "turnover": "turnover", "amount": "amount", "inflow": "main_inflow"}.get(by, "pct")
     clean = [r for r in rows if r.get(key) is not None and r.get("price")]
