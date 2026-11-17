@@ -12,7 +12,7 @@
 
 | 平台 | 推荐文件 | 安装 |
 | --- | --- | --- |
-| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.17.0.dmg`（约 72 MB） | 打开 DMG，双击 `Install-StockDesk.command` |
+| macOS 12+ (Apple Silicon) | `StockDesk-macOS-1.17.0.dmg`（约 43 MB） | 打开 DMG，双击 `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe`（精简单文件，约 53 MB） | 双击运行；装好 WebView2 Runtime；SmartScreen 拦截时「更多信息 → 仍要运行」 |
 | iPhone iOS 17+ | `StockDesk-iOS-4.1.2-unsigned.ipa` | Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | 见 `PACKAGES.md` |
@@ -64,7 +64,7 @@ python main.py --browser
 - 如果 Windows SmartScreen 提示「已保护你的电脑」：点「更多信息」→「仍要运行」。
 - 需要 WebView2 Runtime；没有时程序会退回默认浏览器。
 - 双击后没有窗口：查看 `%LOCALAPPDATA%\StockDesk\stockdesk.log`；也可以运行 `StockDesk.exe --browser`，用浏览器打开。
-- 1.10.3 在启动失败时会弹出错误提示，不再静默退出。
+- 启动失败时会弹出错误提示，不再静默退出。
 
 ### 打包 macOS App
 

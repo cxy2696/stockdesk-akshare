@@ -12,13 +12,13 @@
 
 | 平台 | 推荐文件 | 大小 | 安装 |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.17.0.dmg` | 71 MB | 打开 DMG，双击 `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.17.0.zip` | 67 MB | 解压后双击 `Install-StockDesk.command` |
-| Windows 10/11 x64 | `StockDesk.exe` | 52 MB | 双击；需要 WebView2 |
-| iPhone / iPad iOS 17+ | `StockDesk-iOS-4.1.2-unsigned.ipa` | 2.0 MB | Sideloadly / AltStore / Xcode 重签 |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.17.0.dmg` | 43 MB | 打开 DMG，双击 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.17.0.zip` | 42 MB | 解压后双击 `Install-StockDesk.command` |
+| Windows 10/11 x64 | `StockDesk.exe` | 53 MB | 双击；需要 WebView2 |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-4.1.2-unsigned.ipa` | 1.9 MB | Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | — | 见 [PACKAGES](PACKAGES.md) |
 
-> 桌面端源码为 1.17.0；Releases 安装包仍为 1.17.0（1.17.0 待重新打包）。需要自行构建时用 `cd desktop && ./build_app.sh`（macOS）或 `build_win.ps1`（Windows），iOS 用 `xcodegen generate` 后从 Xcode 打包。
+> 桌面端源码和安装包均为 1.17.0。自行构建：macOS 用 `cd desktop && ./package_macos.sh`，Windows 用 `build_win.ps1`，iOS 用 `cd ios && ./build_ios.sh`。
 
 #### macOS 首次打开
 
@@ -62,7 +62,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:1.0.2
 4. **加自选**：点顶部星号，搜索代码或名称。
 5. **看每日策略**：先读页面顶部的摘要和模型结论，再看今日标的。
 6. **看模型**：模型页看 HMM 状态和渗流最大簇。
-7. **忘了怎么用**：左侧栏 → 使用指南。10 章分别是 5 分钟上手、每日使用流程、页面地图、指标词典、仓位与风控、数据与隐私、快捷键与效率、常见问题、交易决策与预测、版本与更新。
+7. **忘了怎么用**：左侧栏 → 使用指南，按 5 分钟上手、每日流程、页面地图、指标、风控、数据、快捷键、常见问题、交易决策、版本和美股排列。
 
 刚打开时总资产等于初始资产、可用现金等于本金、仓位 0，这是正常的。首次拉全市场快照要几秒。
 
@@ -83,7 +83,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:1.0.2
 | 指数分析 | `/index-analysis` | 12 个 A 股宽基 + 3 个海外指数、支撑压力、结论 | 看综合评分和偏多/偏空数量 |
 | 量化模型 | `/models` | HMM、渗流、九转、综合评分、行业关注、个股仓位建议 | 先看综合评分和结论条，再看拆解 |
 | 设置 | `/settings` | 资产、主题、缩放、语言、缓存、数据目录 | 备份前先退出 App |
-| 使用指南 | `/guide` | 5 分钟上手到版本更新，10 章 | 侧栏目录跳转；页内可点进各页面 |
+| 使用指南 | `/guide` | 从 5 分钟上手到版本更新 | 侧栏目录跳转；页内可点进各页面 |
 
 旧地址不用改：`/asset-analysis` 自动跳到持仓管理的资产分析 Tab，`/advice-center` 跳到投资建议 Tab，`/industry-news` 和 `/index-analysis` 都指向指数分析。
 
@@ -171,26 +171,34 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:1.0.2
 
 面积过小的方块会被隐藏（`visibleMin`），几千个 2–3px 的小块不再糊成噪点；小市值个股用搜索能找到。
 
+### 9. 交易决策、因子筛选与市场预测
+
+- **交易决策**：在「交易决策」页或个股详情顶部看评级（好/中/差）、层级（执行/确认/预警/观察）、买入区间、止损、目标、盈亏比、判断依据和风险。
+- **怎么读**：好 = 评分/趋势/结构共振且盈亏比 ≥1.5；中 = 有优势但位置或风险一般；差 = 趋势/风险结构偏弱。执行 = 可分批；确认 = 等回调/小仓；预警 = 只观察；观察 = 不操作。
+- **市场预测**：用 HMM 转移矩阵推未来 5 日状态概率，再混合各状态历史日均收益/波动，输出 5 日状态条件收益和上涨概率；这是统计估计，不是点位预测。
+- **参数解释**：设置页新增“参数、评级与风控说明”；风险口径、单票/行业上限、止损与目标仓位都在这里逐项说明。
+- **操作顺序**：先看市场预测与仓位 → 再看交易决策评级/层级 → 价格回到买区再动手 → 跌破止损先减/清。
+
 ### 10. iOS / iPad 版
 
 ![iPad 资产中枢](assets/ipad-hub.png)
 
-![iPhone HUB](assets/ios-hub.png)
+![iPhone HUB](../ios/docs/ios-hub.png)
 
 完全独立的 SwiftUI App，当前 **4.1.2 (36)**，支持 iPhone 与 iPad：HUB 3+5 模块、搜索/自选/笔记/异常提醒、100%/120%/150%、横竖屏、本地 `stockdesk.json`。iPad 会自动放大 HUB、四列 KPI 和地图；150% 自动单列 HUB。
 
-本轮变化：
+当前 iOS 版的主要交互：
 
-- HUB 中央圆盘直接进持仓管理，右侧第三个入口从「行业要闻」改为「指数分析」。
-- 每日策略的主力追踪改成三列（个股流入 / 个股流出 / 行业流入），新增「模型结论」卡和「九转模型分析」卡。
-- 持仓管理顶部加了「资产分析 / 投资建议」两个快捷入口。
-- 要闻标题可点开东方财富全文，并显示摘要。
+- HUB 中央圆盘直接进持仓管理，右侧第三个入口是指数分析。
+- 每日策略的主力追踪分三列：个股流入、个股流出、行业流入；另外有模型结论和九转分析卡。
+- 持仓管理顶部有资产分析和投资建议两个快捷入口。
+- 要闻标题可以打开东方财富全文，列表里带摘要。
 
 ![iPad 每日策略](assets/ipad-daily.png)
 
 指数走新浪；北证 50 使用 `bj899050`；无数据显示「暂无」而不是「正常」。
 
-![iPhone 板块](assets/ios-market.png)
+![iPhone 板块](../ios/docs/ios-market.png)
 
 行业/概念板块回退新浪资金流；成分股仍需东方财富 BK 代码。
 
@@ -346,19 +354,11 @@ cd frontend && npm ci && npm run build && cd ..
 python main.py            # --browser 仅浏览器
 ```
 
-macOS 打包：`cd desktop && VERSION=1.17.0 ./package_macos.sh`<br>
+macOS 打包：`cd desktop && ./package_macos.sh`<br>
 Windows 打包：`cd desktop && powershell -ExecutionPolicy Bypass -File .\build_win.ps1`
 
 完整依赖、iOS/容器构建与发版见 [INSTALL](INSTALL.md)。行情与模型用于研究，不构成投资建议。
 
-
-### 10. 交易决策、因子筛选与市场预测（1.17.0）
-
-- **交易决策**：在「交易决策」页或个股详情顶部看评级（好/中/差）、层级（执行/确认/预警/观察）、买入区间、止损、目标、盈亏比、判断依据和风险。
-- **怎么读**：好 = 评分/趋势/结构共振且盈亏比 ≥1.5；中 = 有优势但位置或风险一般；差 = 趋势/风险结构偏弱。执行 = 可分批；确认 = 等回调/小仓；预警 = 只观察；观察 = 不操作。
-- **市场预测**：用 HMM 转移矩阵推未来 5 日状态概率，再混合各状态历史日均收益/波动，输出 5 日状态条件收益和上涨概率；这是统计估计，不是点位预测。
-- **参数解释**：设置页新增“参数、评级与风控说明”；风险口径、单票/行业上限、止损与目标仓位都在这里逐项说明。
-- **操作顺序**：先看市场预测与仓位 → 再看交易决策评级/层级 → 价格回到买区再动手 → 跌破止损先减/清。
 
 ## English
 
@@ -366,10 +366,10 @@ Windows 打包：`cd desktop && powershell -ExecutionPolicy Bypass -File .\build
 
 | Platform | File | Size | Install |
 | --- | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.17.0.dmg` | 71 MB | Open the DMG and run `Install-StockDesk.command` |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.17.0.zip` | 67 MB | Unzip and run `Install-StockDesk.command` |
-| Windows 10/11 x64 | `StockDesk.exe` | 52 MB | Double-click; WebView2; SmartScreen → More info → Run anyway |
-| iPhone / iPad iOS 17+ | `StockDesk-iOS-4.1.2-unsigned.ipa` | 2.0 MB | Re-sign with Sideloadly / AltStore / Xcode |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.17.0.dmg` | 43 MB | Open the DMG and run `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.17.0.zip` | 42 MB | Unzip and run `Install-StockDesk.command` |
+| Windows 10/11 x64 | `StockDesk.exe` | 53 MB | Double-click; WebView2; SmartScreen → More info → Run anyway |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-4.1.2-unsigned.ipa` | 1.9 MB | Re-sign with Sideloadly / AltStore / Xcode |
 
 The macOS app is ad-hoc signed. The installer clears `com.apple.quarantine`; manual fallback:
 
@@ -448,7 +448,7 @@ cd frontend && npm ci && npm run build && cd ..
 python main.py
 ```
 
-macOS package: `VERSION=1.17.0 ./package_macos.sh`<br>
+macOS package: `./package_macos.sh`<br>
 Windows package: `powershell -ExecutionPolicy Bypass -File .\build_win.ps1`
 
 See [INSTALL](INSTALL.md) for full build/release steps. Market data is for research only, not investment advice.

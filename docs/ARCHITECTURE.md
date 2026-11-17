@@ -54,7 +54,7 @@ iOS
 | `/industry-news` | `IndexAnalysis` | 同一页，保留旧书签 |
 | `/decision` | `Decision` | 交易决策台：评级、层级、买区、止损/目标、盈亏比、原因 |
 | `/forecast` | `Forecast` | 市场预测：5 日状态条件收益、上涨概率、未来状态概率 |
-| `/guide` | `Guide` | 侧栏新增，10 章，目录 sticky |
+| `/guide` | `Guide` | 使用指南，侧栏目录 sticky |
 
 `IndustryNews.tsx` 这个名字是历史遗留，现在渲染的是指数分析；行业要闻已经并进 `Daily.tsx` 的 `NewsCenter`，和 7×24 快讯合成一个列表。
 
