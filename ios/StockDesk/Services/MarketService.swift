@@ -130,23 +130,35 @@ actor MarketService {
         return (all.sorted { ($0.amount ?? 0) > ($1.amount ?? 0) }, df.string(from: Date()))
     }
 
-    func spot(ttl: TimeInterval = 180) async throws -> (rows: [Quote], date: String) {
-        let sina = await sinaSpot(ttl: ttl)
-        if sina.rows.count > 100 { return sina }
+    func spot(ttl: TimeInterval = 180, preferSina: Bool = true) async throws -> (rows: [Quote], date: String) {
+        if preferSina {
+            let sina = await sinaSpot(ttl: ttl)
+            if sina.rows.count > 100 { return sina }
+        }
         var all: [[String: JVal]] = []
         var total = 0
-        var page = 1
-        while page <= 70 {
-            let url = "\(listURL)?po=1&np=1&fltt=2&invt=2&fid=f3&fs=\(fsA.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? fsA)&fields=\(spotFields)&pn=\(page)&pz=100"
-            let obj = try await net.getJSON(JObj.self, url: url, ttl: ttl, key: "spot2-p\(page)")
-            guard let data = obj["data"]?.dict else { break }
+        func pageURL(_ page: Int) -> String {
+            "\(listURL)?po=1&np=1&fltt=2&invt=2&fid=f3&fs=\(fsA.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? fsA)&fields=\(spotFields)&pn=\(page)&pz=100"
+        }
+        let first = try await net.getJSON(JObj.self, url: pageURL(1), ttl: ttl, key: "spot2-p1")
+        if let data = first["data"]?.dict {
             total = Int(data["total"]?.double ?? 0)
-            let diff = data["diff"]?.array ?? []
-            for item in diff {
+            for item in data["diff"]?.array ?? [] {
                 if let d = item.dict { all.append(d) }
             }
-            if all.count >= total || diff.isEmpty { break }
-            page += 1
+        }
+        let maxPage = min(70, max(1, Int(ceil(Double(max(total, all.count)) / 100.0))))
+        if maxPage > 1 {
+            await withTaskGroup(of: [[String: JVal]].self) { group in
+                for p in 2...maxPage {
+                    group.addTask {
+                        guard let obj = try? await self.net.getJSON(JObj.self, url: pageURL(p), ttl: ttl, key: "spot2-p\(p)"),
+                              let data = obj["data"]?.dict else { return [] }
+                        return (data["diff"]?.array ?? []).compactMap { $0.dict }
+                    }
+                }
+                for await chunk in group { all.append(contentsOf: chunk) }
+            }
         }
         let rows = all.compactMap { d -> Quote? in
             let q = Self.quoteFrom(d)

@@ -25,7 +25,9 @@ struct InvestHudHeader: View {
     ]
     private let right: [(String, String, String)] = [
         ("交易决策", "target", "decision"),
+        ("市场预测", "waveform.path.ecg", "forecast"),
         ("策略回测", "flask.fill", "backtest"),
+        ("因子筛选", "line.3.horizontal.decrease.circle", "factors"),
         ("地域", "mappin.and.ellipse", "regions"),
         ("指数分析", "chart.line.uptrend.xyaxis", "index-analysis"),
         ("量化模型", "brain.head.profile", "models"),
@@ -132,7 +134,8 @@ struct InvestHudHeader: View {
     private func itemLabel(_ data: (String, String, String)) -> some View {
         let en = ["每日策略": "Daily Plan", "板块跟踪": "Sectors", "收益复盘": "Review",
                   "策略回测": "Backtest", "地域": "Regions", "指数分析": "Index Analysis",
-                  "量化模型": "Quant Models", "交易决策": "Decision"][data.0] ?? data.0
+                  "量化模型": "Quant Models", "交易决策": "Decision",
+                  "市场预测": "Forecast", "因子筛选": "Factors"][data.0] ?? data.0
         return HStack(spacing: 7) {
             Image(systemName: data.1).font(.system(size: isPad ? 14 : 12)).foregroundStyle(.black).frame(width: isPad ? 18 : 16)
             Text(lang == "en" ? en : data.0).font(.system(size: isPad ? 13 : 10.5, weight: .semibold)).foregroundStyle(.black).lineLimit(1)
@@ -390,6 +393,8 @@ struct MoreView: View {
                 case "dashboard": DashboardView(embedded: true)
                 case "daily": DailyView()
                 case "decision": DecisionView()
+                case "forecast": ForecastView()
+                case "factors": FactorsView()
                 case "market": MarketView()
                 case "watchlist": WatchlistView(embedded: true)
                 case "portfolio": PortfolioView(embedded: true)
@@ -418,7 +423,7 @@ struct MoreView: View {
                 }
             }
         .onAppear {
-            if let s = store.debugScreen(), ["backtest", "dashboard", "watchlist", "portfolio", "analytics", "settings", "daily", "market", "asset-analysis", "advice-center", "index-analysis", "hub-map", "regions", "industry-news", "models", "decision"].contains(s) {
+            if let s = store.debugScreen(), ["backtest", "dashboard", "watchlist", "portfolio", "analytics", "settings", "daily", "market", "asset-analysis", "advice-center", "index-analysis", "hub-map", "regions", "industry-news", "models", "decision", "forecast", "factors"].contains(s) {
                 path = [s]
             }
         }

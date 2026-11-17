@@ -188,7 +188,7 @@ docker run --rm -p 8770:8770 ghcr.io/cxy2696/stockdesk-akshare-us:1.0.2
 
 ![iPhone HUB](../ios/docs/ios-hub.png)
 
-完全独立的 SwiftUI App，当前 **4.1.2 (36)**，支持 iPhone 与 iPad：HUB 3+5 模块、搜索/自选/笔记/异常提醒、100%/120%/150%、横竖屏、本地 `stockdesk.json`。iPad 会自动放大 HUB、四列 KPI 和地图；150% 自动单列 HUB。
+完全独立的 SwiftUI App，当前 **4.1.2 (36)**，支持 iPhone 与 iPad：HUB 3+7 模块（新增独立市场预测、因子筛选）、搜索/自选/笔记/异常提醒、100%/120%/150%、横竖屏、本地 `stockdesk.json`。iPad 会自动放大 HUB、四列 KPI 和地图；150% 自动单列 HUB。
 
 当前 iOS 版的主要交互：
 
