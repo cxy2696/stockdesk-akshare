@@ -53,7 +53,7 @@ MODELS = {
         ),
     },
     "native": {
-        "version": "1.2.0",
+        "version": "1.2.1",
         "name": "C++ market/model core",
         "params": {"grid": "union-find", "hmm": "diag-Gaussian Baum-Welch",
                    "census": "breadth/coverage audit"},

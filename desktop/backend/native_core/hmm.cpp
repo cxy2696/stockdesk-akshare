@@ -99,11 +99,15 @@ HmmResult fit_hmm(const double *x, std::size_t n,
     int used = 0;
     bool converged = false;
 
+    std::vector<double> log_norm(k);
     for (int it = 0; it < iters; ++it) {
+        // The normalisation term is constant across time; compute it once per
+        // state per iteration instead of once per (state, bar).
+        for (std::size_t j = 0; j < k; ++j) log_norm[j] = std::log(kTwoPi * var[j]);
         for (std::size_t t = 0; t < n; ++t) {
             for (std::size_t j = 0; j < k; ++j) {
                 const double d = x[t] - mu[j];
-                B[t * k + j] = std::exp(-0.5 * (std::log(kTwoPi * var[j]) + d * d / var[j])) + kTiny;
+                B[t * k + j] = std::exp(-0.5 * (log_norm[j] + d * d / var[j])) + kTiny;
             }
         }
 

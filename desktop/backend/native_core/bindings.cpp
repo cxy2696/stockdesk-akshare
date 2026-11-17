@@ -3,6 +3,7 @@
 // This file validates Python/numpy objects, converts them to plain C++
 // containers once, and converts the typed results back to numpy arrays. The
 // algorithms in percolation.cpp / hmm.cpp have no Python dependency.
+#include <pybind11/gil.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -42,10 +43,16 @@ py::dict grid_largest(py::array_t<std::uint8_t, py::array::c_style | py::array::
     if (cols <= 0) throw std::invalid_argument("cols must be > 0");
     if (info.shape[0] > INT_MAX) throw std::invalid_argument("grid is too large for 32-bit indices");
 
-    const auto result = stockdesk::native::analyze_grid(
-        static_cast<const std::uint8_t *>(info.ptr),
-        static_cast<std::size_t>(info.shape[0]),
-        static_cast<std::size_t>(cols));
+    stockdesk::native::GridResult result;
+    {
+        // The algorithm is pure and thread-safe; release the GIL so concurrent
+        // Python callers can actually run it in parallel.
+        py::gil_scoped_release release;
+        result = stockdesk::native::analyze_grid(
+            static_cast<const std::uint8_t *>(info.ptr),
+            static_cast<std::size_t>(info.shape[0]),
+            static_cast<std::size_t>(cols));
+    }
 
     py::dict out;
     out["largest"] = result.largest;
@@ -62,9 +69,13 @@ py::dict breadth_census(py::array_t<double, py::array::c_style | py::array::forc
     if (p.shape[0] != q.shape[0] || p.shape[0] != l.shape[0]) {
         throw std::invalid_argument("pct/price/limit must have the same length");
     }
-    const auto result = stockdesk::native::breadth_census(
-        static_cast<const double *>(p.ptr), static_cast<const double *>(q.ptr),
-        static_cast<const double *>(l.ptr), static_cast<std::size_t>(p.shape[0]));
+    stockdesk::native::BreadthResult result;
+    {
+        py::gil_scoped_release release;
+        result = stockdesk::native::breadth_census(
+            static_cast<const double *>(p.ptr), static_cast<const double *>(q.ptr),
+            static_cast<const double *>(l.ptr), static_cast<std::size_t>(p.shape[0]));
+    }
     py::dict out;
     out["total"] = result.total;
     out["traded"] = result.traded;
@@ -83,10 +94,14 @@ py::dict coverage_audit(py::array_t<long long, py::array::c_style | py::array::f
                         std::size_t missing_sample) {
     const py::buffer_info c = codes.request(), e = expected.request();
     if (c.ndim != 1 || e.ndim != 1) throw std::invalid_argument("codes/expected must be 1-D");
-    const auto result = stockdesk::native::coverage_audit(
-        static_cast<const long long *>(c.ptr), static_cast<std::size_t>(c.shape[0]),
-        static_cast<const long long *>(e.ptr), static_cast<std::size_t>(e.shape[0]),
-        missing_sample);
+    stockdesk::native::CoverageResult result;
+    {
+        py::gil_scoped_release release;
+        result = stockdesk::native::coverage_audit(
+            static_cast<const long long *>(c.ptr), static_cast<std::size_t>(c.shape[0]),
+            static_cast<const long long *>(e.ptr), static_cast<std::size_t>(e.shape[0]),
+            missing_sample);
+    }
     py::dict out;
     out["expected"] = result.expected;
     out["present"] = result.present;
@@ -107,9 +122,13 @@ py::dict baum_welch(py::array_t<double, py::array::c_style | py::array::forcecas
     const std::size_t k = mu.size();
     if (A.size() != k * k) throw std::invalid_argument("A must be k*k in row-major order");
 
-    const HmmResult result = stockdesk::native::fit_hmm(
-        static_cast<const double *>(info.ptr), n, std::move(mu), std::move(var),
-        std::move(pi), std::move(A), iters);
+    HmmResult result;
+    {
+        py::gil_scoped_release release;
+        result = stockdesk::native::fit_hmm(
+            static_cast<const double *>(info.ptr), n, std::move(mu), std::move(var),
+            std::move(pi), std::move(A), iters);
+    }
 
     py::dict out;
     out["mu"] = vector_to_array(result.mu);
@@ -127,7 +146,7 @@ py::dict baum_welch(py::array_t<double, py::array::c_style | py::array::forcecas
 
 PYBIND11_MODULE(_native, m) {
     m.doc() = "StockDesk C++ model core: lattice percolation + univariate Gaussian HMM";
-    m.attr("__version__") = "1.2.0";
+    m.attr("__version__") = "1.2.1";
     m.def("grid_largest", &grid_largest, py::arg("grid"), py::arg("cols"),
           "Largest four-neighbour lattice component (union-find).");
     m.def("breadth_census", &breadth_census, py::arg("pct"), py::arg("price"), py::arg("limit_pct"),

@@ -53,7 +53,7 @@ def reference_component(grid: list[int], cols: int):
 
 def test_version_and_status():
     assert native.status()["backend"] == "C++"
-    assert native.native.__version__ == "1.2.0"
+    assert native.native.__version__ == "1.2.1"
 
 
 @pytest.mark.parametrize("cols", [1, 2, 3, 4, 5, 7, 12])

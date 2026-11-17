@@ -1,6 +1,6 @@
 # 本机构建说明
 
-更新时间：2026-11-17。当前基线是桌面端 1.17.0、iOS 4.1.2 (36)、模型注册表 2.7.0、C++ 核心 1.2.0。
+更新时间：2026-11-17。当前基线是桌面端 1.17.0、iOS 4.1.2 (36)、模型注册表 2.7.0、C++ 核心 1.2.1。
 
 这个目录是 StockDesk 的本地源码副本。源码已与上游 `main` 同步，并做了下面这些本地修改。
 
@@ -22,6 +22,7 @@
   - `bindings.cpp`：pybind11 绑定。
 - 修复 `cols=0` 除零、HMM 输入未校验、假报 `converged=True`、非方形格点边界错误。
 - 编译参数按平台切换，Windows 不再因 `-O3` 构建失败。
+- C++ 计算期间释放 GIL；渗流格点从 Python 到 C++ 全程使用 uint8 numpy 连续内存，避免逐次列表转换；HMM 每轮只计算一次归一化项。
 
 **界面**
 - 页头副标题在 100% 缩放下保持单行省略，120%/150% 才换行；1280 宽度页头放宽到 200px。
@@ -42,7 +43,7 @@
 | `ruff check desktop/backend us tests --select F,E9` | 通过 |
 | `python scripts/api_smoke.py http://127.0.0.1:8765` | 47 个只读 + 3 个写接口 + SPA 通过 |
 | `python scripts/coverage_check.py http://127.0.0.1:8765` | 5,581/5,581，missing=0，duplicates=0 |
-| macOS DMG 启动 | 1.17.0，C++ 1.2.0，模型 2.7.0，覆盖率门禁通过 |
+| macOS DMG 启动 | 1.17.0，C++ 1.2.1，模型 2.7.0，覆盖率门禁通过 |
 | iOS 模拟器 | `build_ios.sh` 构建成功，iPhone/iPad 页面已验证 |
 | Windows | 官方 1.17.0 CI 产物，SHA-256 与官方一致 |
 

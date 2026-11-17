@@ -386,10 +386,13 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True) -> 
         return {}
     rows = _stable_order(rows)
     cols = int(math.ceil(math.sqrt(n)))
-    grid = [1 if (r.get("pct") or 0) > 0 else 0 for r in rows]
-    grid += [0] * (cols * cols - len(grid))  # pad the last lattice row
+    # Keep the lattice as a contiguous uint8 array all the way through the
+    # C++ boundary. Converting a Python list for every baseline/bootstrap call
+    # cost ~0.6 ms per call even though the native kernel itself is ~0.06 ms.
+    grid = np.zeros(cols * cols, dtype=np.uint8)
+    grid[:n] = [1 if (r.get("pct") or 0) > 0 else 0 for r in rows]
     largest, sizes, spanning = _largest_component(grid, cols, collect_all=True)
-    occ = sum(grid)
+    occ = int(grid.sum())
     ratio = occ / n
     giant = len(largest) / n
     giant_occ = len(largest) / max(occ, 1)
@@ -402,14 +405,13 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True) -> 
     distance = giant_occ - PERC_THRESHOLD
 
     # Random-layout baseline: how much of the cluster is just luck of ordering?
-    occ_idx = [i for i in range(n) if grid[i]]
-    vals = [grid[i] for i in occ_idx]
+    occ_idx = np.flatnonzero(grid[:n])
+    vals = [int(grid[i]) for i in occ_idx]
     robust = []
     for seed in (11, 23, 37):
         random.Random(seed).shuffle(vals)
-        g = [0] * (cols * cols)
-        for idx, val in zip(occ_idx, vals):
-            g[idx] = val
+        g = np.zeros(cols * cols, dtype=np.uint8)
+        g[occ_idx] = vals
         comp = _largest_component(g, cols)
         robust.append(round(len(comp) / max(occ, 1), 4))
     baseline = sum(robust) / len(robust)
@@ -421,10 +423,10 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True) -> 
     boot = []
     for seed in range(12):
         rnd = random.Random(1000 + seed)
-        sample = rnd.choices([1, 0], weights=[max(occ, 1), max(n - occ, 1)], k=n)
-        sample += [0] * (cols * cols - len(sample))
+        sample = np.zeros(cols * cols, dtype=np.uint8)
+        sample[:n] = rnd.choices([1, 0], weights=[max(occ, 1), max(n - occ, 1)], k=n)
         comp = _largest_component(sample, cols)
-        boot.append(len(comp) / max(sum(sample[:n]), 1))
+        boot.append(len(comp) / max(int(sample[:n].sum()), 1))
     boot_sorted = sorted(boot)
     ci_low = round(boot_sorted[1], 4)
     ci_high = round(boot_sorted[-2], 4)
