@@ -69,7 +69,7 @@
 | `SHA256SUMS.txt` | 校验和 |
 | `verification.json` | 构建、测试和产物的机器可读记录 |
 
-安装与校验步骤见 [`release/README.md`](release/README.md)。
+安装与校验步骤见 GitHub Releases 的 `README`/`SHA256SUMS.txt`；本机 `release/` 不提交到 Git。
 
 ## 重新构建
 
