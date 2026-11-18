@@ -15,10 +15,11 @@ can be extended later by persisting daily snapshots.
 from __future__ import annotations
 
 import math
+import numpy as np
 from functools import lru_cache
 from statistics import NormalDist, median, pstdev
 
-from . import db, market
+from . import db, market, native
 
 CATEGORY_LABELS = {
     "momentum": "动量",
@@ -270,33 +271,62 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
         dirn = int(f.get("direction") or 1)
         z_by_name[f["name"]] = [z * dirn for z in _rank_normal(f["values"])]
     state, weights = _regime()
-    cat_z: dict[str, list[float | None]] = {}
-    for cat in CATEGORY_LABELS:
-        factors = [f for f in selected if f["category"] == cat]
-        if not factors:
-            continue
-        cat_z[cat] = []
+    category_keys = list(CATEGORY_LABELS)
+    if native.NATIVE and selected:
+        # C++ owns the cross-sectional math: rank normalisation, category
+        # aggregation, regime weighting and percentile.  Python only builds the
+        # dense input matrix and turns the typed result into the API payload.
+        matrix = np.full((len(rows), len(selected)), np.nan, dtype=np.float64)
+        for j, f in enumerate(selected):
+            vals = f["values"]
+            for i, v in enumerate(vals):
+                if v is not None:
+                    matrix[i, j] = float(v)
+        directions = np.asarray([int(f.get("direction") or 1) for f in selected], dtype=np.int64)
+        cat_ids = np.asarray([category_keys.index(f["category"]) for f in selected], dtype=np.int64)
+        cat_weights = np.asarray([float(weights.get(c, 0.0)) for c in category_keys], dtype=np.float64)
+        nr = native.native.factor_composite(matrix, directions, cat_ids, cat_weights)
+        cat_z = {}
+        for ci, cat in enumerate(category_keys):
+            col = nr["category_scores"][:, ci]
+            if any(f["category"] == cat for f in selected):
+                cat_z[cat] = [None if not math.isfinite(float(v)) else float(v) for v in col]
+        category_hits = [int(v) for v in nr["category_hits"]]
+        factor_hits_by_row = [int(v) for v in nr["factor_hits"]]
+        composite = [None if not math.isfinite(float(v)) else float(v) for v in nr["composite"]]
+        pct = [None if not math.isfinite(float(v)) else float(v) for v in nr["percentile"]]
+    else:
+        z_by_name: dict[str, list[float]] = {}
+        for f in selected:
+            dirn = int(f.get("direction") or 1)
+            z_by_name[f["name"]] = [z * dirn for z in _rank_normal(f["values"])]
+        cat_z = {}
+        for cat in CATEGORY_LABELS:
+            factors = [f for f in selected if f["category"] == cat]
+            if not factors:
+                continue
+            cat_z[cat] = []
+            for i in range(len(rows)):
+                vals = [z_by_name[f["name"]][i] for f in factors
+                        if f["values"][i] is not None]
+                cat_z[cat].append(sum(vals) / len(vals) if vals else None)
+        composite: list[float | None] = []
+        category_hits: list[int] = []
         for i in range(len(rows)):
-            vals = [z_by_name[f["name"]][i] for f in factors
-                    if f["values"][i] is not None]
-            cat_z[cat].append(sum(vals) / len(vals) if vals else None)
-    composite: list[float | None] = []
-    category_hits: list[int] = []
-    for i in range(len(rows)):
-        available = [(c, cat_z[c][i]) for c in cat_z if cat_z[c][i] is not None]
-        category_hits.append(len(available))
-        if not available:
-            composite.append(None)
-            continue
-        denom = sum(weights.get(c, 0.0) for c, _ in available)
-        composite.append(sum(v * weights.get(c, 0.0) for c, v in available) / (denom or 1.0))
-    # Cross-sectional percentile -> 0-100 score, calculated only over stocks
-    # that have at least one complete factor category.
-    valid_indices = [i for i, v in enumerate(composite) if v is not None]
-    order = sorted(valid_indices, key=lambda i: composite[i])
-    pct: list[float | None] = [None] * len(composite)
-    for rank, i in enumerate(order):
-        pct[i] = (rank + 0.5) / max(1, len(order))
+            available = [(c, cat_z[c][i]) for c in cat_z if cat_z[c][i] is not None]
+            category_hits.append(len(available))
+            if not available:
+                composite.append(None)
+                continue
+            denom = sum(weights.get(c, 0.0) for c, _ in available)
+            composite.append(sum(v * weights.get(c, 0.0) for c, v in available) / (denom or 1.0))
+        valid_indices = [i for i, v in enumerate(composite) if v is not None]
+        order = sorted(valid_indices, key=lambda i: composite[i])
+        pct: list[float | None] = [None] * len(composite)
+        for rank, i in enumerate(order):
+            pct[i] = (rank + 0.5) / max(1, len(order))
+        factor_hits_by_row = [sum(1 for f in selected if f["values"][i] is not None)
+                              for i in range(len(rows))]
     selected_names = [f["name"] for f in selected]
     stocks = []
     for i, row in enumerate(rows):
@@ -310,7 +340,7 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
         if exclude_st and ("ST" in name.upper() or "退" in name):
             continue
         scores = {c: round(cat_z[c][i], 3) for c in cat_z if cat_z[c][i] is not None}
-        factor_hits = sum(1 for f in selected if f["values"][i] is not None)
+        factor_hits = factor_hits_by_row[i]
         # Shrink extreme percentiles when the candidate has narrow coverage.
         # This is an overfit guard: a high score built from two categories and
         # few factors is moved toward neutral instead of being treated as a

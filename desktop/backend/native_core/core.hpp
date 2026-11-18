@@ -43,6 +43,14 @@ struct CoverageResult {
     std::vector<long long> missing_sample;
 };
 
+struct FactorResult {
+    std::vector<double> category_scores;  // rows*n_categories, NaN when missing
+    std::vector<std::int64_t> category_hits; // non-empty categories per row
+    std::vector<std::int64_t> factor_hits;   // non-missing factors per row
+    std::vector<double> composite;       // regime-weighted category score
+    std::vector<double> percentile;      // 0..1, NaN when unavailable
+};
+
 struct HmmResult {
     std::vector<double> mu;     // k means
     std::vector<double> var;    // k variances
@@ -84,6 +92,18 @@ CoverageResult coverage_audit(const long long *codes, std::size_t n,
 /// `std::vector<double>` for A in row-major k*k order. Throws
 /// std::invalid_argument for malformed/non-finite inputs and
 /// std::runtime_error if the iteration produces non-finite parameters.
+/// Cross-sectional factor rank/composite/percentile kernel.
+///
+/// `values` is row-major rows*factors with NaN for missing observations.
+/// `directions` is +1/-1 per factor; `categories` indexes 0..n_categories-1;
+/// `category_weights` carries the regime weights.  The function performs rank
+/// normalisation, per-category averaging and percentile scoring without any
+/// Python dependency.
+FactorResult factor_composite(const double *values, std::size_t rows,
+                              std::size_t factors, const std::int64_t *directions,
+                              const std::int64_t *categories, std::size_t n_categories,
+                              const double *category_weights);
+
 HmmResult fit_hmm(const double *x, std::size_t n,
                   std::vector<double> mu, std::vector<double> var,
                   std::vector<double> pi, std::vector<double> A,

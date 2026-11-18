@@ -53,7 +53,7 @@ def reference_component(grid: list[int], cols: int):
 
 def test_version_and_status():
     assert native.status()["backend"] == "C++"
-    assert native.native.__version__ == "1.2.6"
+    assert native.native.__version__ == "1.3.0"
     assert model_registry.MODELS["native"]["version"] == native.VERSION
 
 
@@ -227,3 +227,24 @@ def test_grid_batch_matches_individual_calls():
         single = native.native.grid_largest(grid, 75)
         assert batch["largest_size"][i] == len(single["largest"])
         assert bool(batch["spanning"][i]) is bool(single["spanning"])
+
+
+def test_factor_composite_kernel():
+    values = np.asarray([
+        [1.0, np.nan],
+        [2.0, 3.0],
+        [3.0, 4.0],
+        [4.0, 5.0],
+    ], dtype=np.float64)
+    got = native.native.factor_composite(
+        values,
+        np.asarray([1, 1], dtype=np.int64),
+        np.asarray([0, 0], dtype=np.int64),
+        np.asarray([1.0], dtype=np.float64),
+    )
+    pct = [float(v) for v in got["percentile"]]
+    assert pct == sorted(pct)
+    assert pct[0] == 0.125 and pct[-1] == 0.875
+    assert list(got["category_hits"]) == [1, 1, 1, 1]
+    assert list(got["factor_hits"]) == [1, 2, 2, 2]
+    assert abs(float(got["composite"][0]) - (-0.8416212336)) < 1e-6

@@ -79,6 +79,42 @@ py::dict grid_batch(py::array_t<std::uint8_t, py::array::c_style | py::array::fo
     return out;
 }
 
+py::dict factor_composite(py::array_t<double, py::array::c_style | py::array::forcecast> values,
+                            py::array_t<std::int64_t, py::array::c_style | py::array::forcecast> directions,
+                            py::array_t<std::int64_t, py::array::c_style | py::array::forcecast> categories,
+                            py::array_t<double, py::array::c_style | py::array::forcecast> weights) {
+    const py::buffer_info v = values.request(), d = directions.request();
+    const py::buffer_info c = categories.request(), w = weights.request();
+    if (v.ndim != 2 || d.ndim != 1 || c.ndim != 1 || w.ndim != 1) {
+        throw std::invalid_argument("values must be 2-D; directions/categories/weights 1-D");
+    }
+    const std::size_t rows = static_cast<std::size_t>(v.shape[0]);
+    const std::size_t factors = static_cast<std::size_t>(v.shape[1]);
+    if (d.shape[0] != v.shape[1] || c.shape[0] != v.shape[1] ||
+        w.shape[0] == 0) {
+        throw std::invalid_argument("factor vector lengths do not match");
+    }
+    stockdesk::native::FactorResult result;
+    {
+        py::gil_scoped_release release;
+        result = stockdesk::native::factor_composite(
+            static_cast<const double *>(v.ptr), rows, factors,
+            static_cast<const std::int64_t *>(d.ptr),
+            static_cast<const std::int64_t *>(c.ptr),
+            static_cast<std::size_t>(w.shape[0]),
+            static_cast<const double *>(w.ptr));
+    }
+    py::dict out;
+    out["category_scores"] = matrix_to_array(result.category_scores,
+                                              static_cast<py::ssize_t>(rows),
+                                              static_cast<py::ssize_t>(w.shape[0]));
+    out["category_hits"] = result.category_hits;
+    out["factor_hits"] = result.factor_hits;
+    out["composite"] = vector_to_array(result.composite);
+    out["percentile"] = vector_to_array(result.percentile);
+    return out;
+}
+
 py::dict breadth_census(py::array_t<double, py::array::c_style | py::array::forcecast> pct,
                         py::array_t<double, py::array::c_style | py::array::forcecast> price,
                         py::array_t<double, py::array::c_style | py::array::forcecast> limit_pct) {
@@ -164,11 +200,13 @@ py::dict baum_welch(py::array_t<double, py::array::c_style | py::array::forcecas
 
 PYBIND11_MODULE(_native, m) {
     m.doc() = "StockDesk C++ model core: lattice percolation + univariate Gaussian HMM";
-    m.attr("__version__") = "1.2.6";
+    m.attr("__version__") = "1.3.0";
     m.def("grid_largest", &grid_largest, py::arg("grid"), py::arg("cols"),
           "Largest four-neighbour lattice component (union-find).");
     m.def("grid_batch", &grid_batch, py::arg("grids"), py::arg("cols"),
           "Batched largest-component summaries for Monte-Carlo lattices.");
+    m.def("factor_composite", &factor_composite, py::arg("values"), py::arg("directions"),
+          py::arg("categories"), py::arg("weights"));
     m.def("breadth_census", &breadth_census, py::arg("pct"), py::arg("price"), py::arg("limit_pct"),
           "Census every row once: traded/suspended/missing and board-specific limit hits.");
     m.def("coverage_audit", &coverage_audit, py::arg("codes"), py::arg("expected"),
