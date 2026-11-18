@@ -344,6 +344,45 @@ def _compute_market_state(light: bool = False) -> dict:
     return result
 
 
+def _sina_concept_rows() -> list[dict]:
+    """Sina concept-board list, independent of Eastmoney/THS.
+
+    The newFLJK payload is a JS object whose values are CSV strings:
+    code,name,companies,avg_price,chg,pct,volume,amount,leader_code,
+    leader_pct,leader_price,leader_chg,leader_name.
+    """
+    import json
+    import urllib.request
+
+    t0 = time.time()
+    try:
+        url = "https://money.finance.sina.com.cn/q/view/newFLJK.php?param=class"
+        req = urllib.request.Request(url, headers={"User-Agent": market.UA, "Referer": "https://finance.sina.com.cn/"})
+        text = urllib.request.urlopen(req, timeout=10).read().decode("gbk", "ignore")
+        payload = json.loads(text.split("=", 1)[1].strip().rstrip(";")) if "=" in text else {}
+        out = []
+        for key, row in payload.items():
+            p = str(row).split(",")
+            if len(p) < 9 or not p[1]:
+                continue
+            out.append({
+                "code": key, "name": p[1], "pct": market._num(p[5]),
+                "inflow": None, "amount": market._num(p[7]),
+                "up": None, "down": None,
+                "leader": p[12] if len(p) > 12 else None,
+                "leader_code": p[8] if p[8] else None,
+                "leader_pct": market._num(p[9]),
+                "companies": int(market._num(p[2]) or 0),
+                "kind": "concept", "source": "sina",
+            })
+        out.sort(key=lambda r: r.get("pct") or -999, reverse=True)
+        source_health.mark("sina", bool(out), time.time() - t0, "concept")
+        return out
+    except Exception as exc:
+        source_health.mark("sina", False, time.time() - t0, f"concept: {exc}")
+        return []
+
+
 def _ths_industry_flow() -> list[dict]:
     """90-industry board fallback with breadth, net inflow and leader.
 
@@ -494,6 +533,8 @@ def _board_rows_inner(kind: str = "industry") -> list[dict]:
             })
         if not out:
             out = _ths_industry_flow()
+    if not out and kind == "concept":
+        out = _sina_concept_rows()
     if out:
         db.cache_set(cache_key, out)
     return out
