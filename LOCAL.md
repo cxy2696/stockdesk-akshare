@@ -84,7 +84,7 @@
 | macOS DMG 启动 | 1.17.0，C++ 1.2.4，rflux 0.7.0，5,581 行覆盖、data_complete=true、停牌 2 只 |
 | 独立安装 | 全新 `HOME` + 新数据目录启动，默认资产 200,000，未读取现有账户；18 个路由无横向溢出/控制台错误 |
 | iOS 模拟器 | `build_ios.sh` 构建成功，iPhone/iPad 页面已验证 |
-| Windows | 本轮源码 GitHub Actions 构建；exe 启动、health 1.17.0/C++、前端资源/模型元数据冒烟通过 |
+| Windows | 本轮源码 GitHub Actions 构建（run 44319589490）；exe 启动、health 1.17.0/C++、前端资源、组合回测 696 日、历史测评 155 期冒烟通过 |
 
 ## 产物
 
