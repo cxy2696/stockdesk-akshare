@@ -257,6 +257,13 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
     if not rows:
         return {"ready": False, "date": spot.get("date"), "ts": spot.get("ts"),
                 "factors": [], "stocks": [], "classification": classify()}
+    full_key = f"factor:full:v2:{spot.get('date') or spot.get('ts')}"
+    cached = db.cache_get(full_key, 300)
+    if cached and cached.get("ready"):
+        out = dict(cached)
+        out["stocks"] = (out.get("stocks") or [])[:max(1, min(limit, 6000))]
+        return out
+
     selected, screening = screen(rows)
     z_by_name: dict[str, list[float]] = {}
     for f in selected:
@@ -358,7 +365,7 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
         "classification": classify(),
         "factors": factor_rows,
         "screening": screening_out,
-        "stocks": stocks[: max(1, min(limit, 6000))],
+        "stocks": stocks[:6000],
         "trace": {
             "algorithm": "cross-sectional-factor-v2",
             "snapshot_ts": spot.get("ts"),
@@ -378,3 +385,7 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
         },
         "note": "横截面因子筛选；按类别计算可用因子均值，缺失类别不强行补 0；每只候选显示类别/因子覆盖率。动量/资金因子的覆盖率取决于当前快照源，缺失时明确排除而不是编造。历史 IC 需持久化每日快照后计算，本页不伪造 IC。",
     }
+    db.cache_set(full_key, out)
+    out = dict(out)
+    out["stocks"] = out["stocks"][:max(1, min(limit, 6000))]
+    return out

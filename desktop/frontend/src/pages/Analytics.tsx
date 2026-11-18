@@ -15,18 +15,23 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // The analytics payload is independent of the market/advice decorations.
+    // Previously Promise.all kept the whole page on a skeleton while the much
+    // slower advice/factor calculation was still running.
+    let alive = true
+    api.get<any>('/api/portfolio/analytics')
+      .then((a) => { if (alive) setData(a) })
+      .catch((e) => { if (alive) message.error(e.message) })
+      .finally(() => { if (alive) setLoading(false) })
     Promise.all([
-      api.get<any>('/api/portfolio/analytics'),
       api.get<any>('/api/market/state').catch(() => null),
       api.get<any>('/api/portfolio/advice').catch(() => null),
-    ])
-      .then(([a, m, adv]) => {
-        setData(a)
-        setMarket(m)
-        setAdvice(adv)
-      })
-      .catch((e) => message.error(e.message))
-      .finally(() => setLoading(false))
+    ]).then(([m, adv]) => {
+      if (!alive) return
+      setMarket(m)
+      setAdvice(adv)
+    })
+    return () => { alive = false }
   }, [])
 
   const metrics = data?.metrics ?? {}
