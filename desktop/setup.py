@@ -9,8 +9,10 @@ from setuptools import setup
 # the Windows build fail, so keep the platform split explicit.
 if sys.platform == "win32":
     compile_args = ["/O2", "/DNDEBUG", "/EHsc"]
+    link_args = []
 else:
-    compile_args = ["-O3", "-DNDEBUG", "-Wall", "-Wextra", "-fno-math-errno"]
+    compile_args = ["-O3", "-DNDEBUG", "-Wall", "-Wextra", "-fno-math-errno", "-flto"]
+    link_args = ["-flto"]
 
 ext = Pybind11Extension(
     "backend._native",
@@ -23,10 +25,11 @@ ext = Pybind11Extension(
     include_dirs=["backend/native_core"],
     cxx_std=17,
     extra_compile_args=compile_args,
+    extra_link_args=link_args,
 )
 setup(
     name="stockdesk-native",
-    version="1.2.5",
+    version="1.2.6",
     ext_modules=[ext],
     cmdclass={"build_ext": build_ext},
 )

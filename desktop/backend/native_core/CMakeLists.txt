@@ -10,7 +10,7 @@
 #   ./build/native-cpp/native_bench
 #
 cmake_minimum_required(VERSION 3.16)
-project(stockdesk_native VERSION 1.2.5 LANGUAGES CXX)
+project(stockdesk_native VERSION 1.2.6 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,6 +48,10 @@ else()
         -O3 -DNDEBUG -Wall -Wextra -fno-math-errno
     )
 endif()
+
+# Link-time optimisation lets the compiler inline the small per-state kernels
+# across translation units without changing the numerical contract.
+set_property(TARGET stockdesk_native PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 
 add_executable(native_selftest selftest.cpp)
 target_link_libraries(native_selftest PRIVATE stockdesk_native)

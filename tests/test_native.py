@@ -53,7 +53,7 @@ def reference_component(grid: list[int], cols: int):
 
 def test_version_and_status():
     assert native.status()["backend"] == "C++"
-    assert native.native.__version__ == "1.2.5"
+    assert native.native.__version__ == "1.2.6"
     assert model_registry.MODELS["native"]["version"] == native.VERSION
 
 

@@ -79,7 +79,12 @@ export default function Factors() {
     return base.filter((r: any) => (r.score ?? -1) >= threshold)
   }, [stocks, market, minScore, search])
 
-  if (loading && !data) return <Card><Skeleton active paragraph={{ rows: 12 }} /></Card>
+  if (loading && !data) return (
+    <Card>
+      <div className="muted small" style={{ marginBottom: 10 }}>首次计算全市场因子约 3–5 秒；之后后台缓存命中，不会重复空转。</div>
+      <Skeleton active paragraph={{ rows: 12 }} />
+    </Card>
+  )
   if (!data?.ready) {
     return <Card><EmptyState text="暂无全市场快照，无法计算因子" icon={<FilterOutlined />} /></Card>
   }

@@ -37,6 +37,7 @@ def _interval(name: str, is_open: bool) -> float:
         "index": (300, 1800),
         "models": (600, 1800),
         "evaluation": (1800, 3600),
+        "factors": (180, 600),
     }
     return float(table.get(name, (600, 1800))[0 if is_open else 1])
 
@@ -53,11 +54,12 @@ def _cache_keys() -> dict[str, tuple[str, str]]:
         "index": ("market:index-analysis:v1", "指数分析"),
         "models": ("market:models:v10", "量化模型"),
         "evaluation": ("model:history:v2:000300:1000", "历史测评"),
+        "factors": ("factor:screen:6000:30000000.0:1", "因子筛选"),
     }
 
 
 def _job_table():
-    from . import daily, evaluation, market, models, state
+    from . import daily, evaluation, factors, market, models, state
     return {
         "spot": market.fetch_spot_now,
         "state": lambda: state.market_state(light=False),
@@ -65,6 +67,7 @@ def _job_table():
         "index": state.index_analysis,
         "models": models.model_snapshot,
         "evaluation": lambda: evaluation.model_history("000300", 1000),
+        "factors": lambda: factors.snapshot(limit=6000, min_amount=30_000_000, exclude_st=True),
     }
 
 
@@ -90,7 +93,7 @@ def tick_once(force: bool = False) -> str | None:
     keys = _cache_keys()
     jobs = _job_table()
     now = time.time()
-    for name in ("spot", "state", "daily", "index", "models", "evaluation"):
+    for name in ("spot", "state", "daily", "index", "models", "evaluation", "factors"):
         key = keys[name][0]
         age = db.cache_age(key)
         forced = force or name in _FORCE
@@ -159,7 +162,7 @@ def request(name: str | None = None) -> None:
         if name:
             _FORCE.add(name)
         else:
-            _FORCE.update(("spot", "state", "daily", "index", "models", "evaluation"))
+            _FORCE.update(("spot", "state", "daily", "index", "models", "evaluation", "factors"))
 
 
 def status() -> dict:

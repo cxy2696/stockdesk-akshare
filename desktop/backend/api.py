@@ -735,7 +735,7 @@ def factor_snapshot(limit: int = Query(100, ge=10, le=6000),
                     exclude_st: bool = Query(True)):
     """Cross-sectional factor screen + classification over the full snapshot."""
     key = f"factor:screen:{limit}:{min_amount}:{int(exclude_st)}"
-    cached = db.cache_get(key, 30)
+    cached = db.cache_get(key, 300)
     if cached:
         return ok(cached)
     out = factor_lib.snapshot(limit=limit, min_amount=min_amount,
