@@ -86,27 +86,6 @@ def _pct(values: list[float], n: int) -> float | None:
     return (values[-1] / values[-1 - n] - 1) * 100
 
 
-def _boards(fs: str, size: int = 40) -> list[dict]:
-    url = (
-        f"{market.EM_LIST}?pn=1&pz={size}&po=1&np=1&fltt=2&invt=2&fid=f3&fs={fs}"
-        "&fields=f12,f14,f3,f62,f104,f105"
-    )
-    try:
-        d = market._http_json(url)
-        rows = ((d or {}).get("data") or {}).get("diff") or []
-    except Exception:
-        rows = []
-    out = []
-    for r in rows:
-        out.append({
-            "code": r.get("f12"),
-            "name": r.get("f14"),
-            "pct": market._num(r.get("f3")),
-            "inflow": market._num(r.get("f62")),
-            "up": market._num(r.get("f104")),
-            "down": market._num(r.get("f105")),
-        })
-    return out
 
 
 _STATE_LOCK = threading.Lock()
@@ -128,7 +107,7 @@ def _refresh_market_state(light: bool) -> None:
 def market_state(light: bool = False) -> dict:
     """Serve the last state immediately; refresh expired data in the background."""
     name = "light" if light else "full"
-    cache_key = "market:state:light" if light else "market:state"
+    cache_key = "market:state:light" if light else "market:state:v2"
     cached = db.cache_get(cache_key)
     if cached:
         age = time.time() - float(cached.get("ts") or 0)
@@ -156,7 +135,7 @@ def market_state(light: bool = False) -> dict:
 
 
 def _compute_market_state(light: bool = False) -> dict:
-    cache_key = "market:state:light" if light else "market:state"
+    cache_key = "market:state:light" if light else "market:state:v2"
 
     # The HUD only needs the index quote, breadth and a temperature. Do not
     # fetch six K-line histories and two board lists on first paint; those are
@@ -291,7 +270,7 @@ def _compute_market_state(light: bool = False) -> dict:
         industries, concepts = [], []
     else:
         industries = boards("industry", "pct", 60)
-        concepts = _boards("m:90+t:3", 40)
+        concepts = boards("concept", "pct", 40)
     top_ind = [x for x in industries if x["pct"] is not None][:6]
     bottom_ind = [x for x in industries if x["pct"] is not None][-3:][::-1]
     skip = ("昨日", "涨停", "跌停", "连板", "首板", "破净", "融资融券", "标准普尔", "MSCI")

@@ -77,7 +77,7 @@ def _market_context() -> dict:
         # A full snapshot up to half an hour old is still a better context
         # than a light state that may have no cached breadth at all; the daily
         # page refreshes it every two minutes in normal use.
-        cached = db.cache_get("market:state", 1800)
+        cached = db.cache_get("market:state:v2", 1800)
         if cached:
             return cached
         return state.market_state(light=True)

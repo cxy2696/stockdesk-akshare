@@ -93,7 +93,7 @@ def _model_snapshot() -> dict:
         return {}
 
 
-_CACHE_KEY = "market:daily:v10"
+_CACHE_KEY = "market:daily:v11"
 _REFRESH_LOCK = __import__("threading").Lock()
 _REFRESHING = False
 

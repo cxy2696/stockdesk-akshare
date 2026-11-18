@@ -185,7 +185,7 @@ def classify() -> dict:
 
 
 def _regime() -> tuple[str, dict]:
-    cached = db.cache_get("market:state", 180) or {}
+    cached = db.cache_get("market:state:v2", 180) or {}
     label = str(((cached.get("verdict") or {}).get("label")) or "震荡")
     if label not in REGIME_WEIGHTS:
         label = "震荡"
