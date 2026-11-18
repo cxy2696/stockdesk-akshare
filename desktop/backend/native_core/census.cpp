@@ -52,9 +52,13 @@ BreadthResult breadth_census(const double *pct, const double *price,
 CoverageResult coverage_audit(const long long *codes, std::size_t n,
                               const long long *expected, std::size_t m,
                               std::size_t missing_sample) {
+    if (n && codes == nullptr) throw std::invalid_argument("codes pointer is null");
+    if (m && expected == nullptr) throw std::invalid_argument("expected pointer is null");
     CoverageResult out;
-    std::vector<long long> actual(codes, codes + n);
-    std::vector<long long> wanted(expected, expected + m);
+    std::vector<long long> actual;
+    std::vector<long long> wanted;
+    if (n) actual.assign(codes, codes + n);
+    if (m) wanted.assign(expected, expected + m);
     std::sort(actual.begin(), actual.end());
     std::sort(wanted.begin(), wanted.end());
     const auto actual_end = std::unique(actual.begin(), actual.end());
@@ -64,9 +68,11 @@ CoverageResult coverage_audit(const long long *codes, std::size_t n,
     out.duplicates = n - out.present;
 
     std::vector<long long> missing;
+    missing.reserve(out.expected);
     std::set_difference(wanted.begin(), wanted_end, actual.begin(), actual_end,
                         std::back_inserter(missing));
     std::vector<long long> extra;
+    extra.reserve(out.present);
     std::set_difference(actual.begin(), actual_end, wanted.begin(), wanted_end,
                         std::back_inserter(extra));
     out.missing = missing.size();

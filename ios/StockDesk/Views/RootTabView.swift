@@ -192,12 +192,17 @@ struct InvestHudHeader: View {
                 .padding(4)
                 .rotationEffect(.degrees(scan ? 360 : 0))
                 .animation(.linear(duration: 8).repeatForever(autoreverses: false), value: scan)
-            VStack(spacing: 3) {
+            VStack(spacing: 4) {
                 Text("资产中枢").font(.system(size: 15, weight: .bold)).tracking(2).foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.7), radius: 2)
                 HStack(spacing: 4) {
                     Circle().fill(Theme.accent).frame(width: 4, height: 4)
                     Text(lang == "en" ? "PORTFOLIO" : "持仓管理 · 点击进入").font(.system(size: 8)).tracking(1.2).foregroundStyle(Theme.accent)
                 }
+                .padding(.horizontal, 7).padding(.vertical, 3)
+                .background(Color(hex: 0x070A0C).opacity(0.78))
+                .clipShape(Capsule())
+                .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.2), lineWidth: 0.6))
             }
         }
         .aspectRatio(1, contentMode: .fit)
@@ -217,7 +222,10 @@ struct InvestHudHeader: View {
                 Text("UID: \(adminUid) · \(lang == "en" ? "Asset level" : "资产等级") \(assetLevel)").font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
                 GeometryReader { geo in
                     Capsule().fill(Theme.borderSoft).frame(height: 3)
-                        .overlay(alignment: .leading) { Capsule().fill(Theme.accent).frame(width: geo.size.width * 0.62, height: 3) }
+                        .overlay(alignment: .leading) {
+                            Capsule().fill(Theme.accent)
+                                .frame(width: geo.size.width * CGFloat(min(1, Double(assetLevel) / 10)), height: 3)
+                        }
                 }
                 .frame(height: 3)
             }
@@ -281,7 +289,7 @@ struct InvestHudHeader: View {
     @State private var scan = false
 
     private var assetLevel: Int {
-        max(1, String(max(0, Int(store.summary.cash))).count)
+        max(1, String(max(0, Int(store.summary.total))).count)
     }
 }
 

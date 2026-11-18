@@ -36,6 +36,15 @@ def test_percolation_trace_is_reproducible():
     assert light["trace"]["grid_sha"] == trace["grid_sha"]
 
 
+def test_percolation_random_baseline_is_not_a_noop():
+    """The robust baseline must reshuffle occupancy, not the all-ones values."""
+    rows = _rows(600)
+    p = models._percolation(rows, with_grid=False)
+    assert p["random_baseline"] != p["giant_occupied"]
+    assert 0.0 <= p["p_value"] <= 1.0
+    assert p["robustness"]["min"] <= p["robustness"]["mean"] <= p["robustness"]["max"]
+
+
 def test_hmm_trace_contract():
     import numpy as np
     x = np.random.default_rng(3).normal(size=180)

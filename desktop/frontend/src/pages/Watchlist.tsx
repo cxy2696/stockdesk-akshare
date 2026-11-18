@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Input, Modal, Select, Skeleton, Table, Tooltip, message } from 'antd'
+import { Button, Input, Modal, Skeleton, Table, Tooltip, message } from 'antd'
 import StockSearch from '../components/StockSearch'
 import { PlusOutlined, ReloadOutlined, SettingOutlined, StarFilled } from '@ant-design/icons'
 import { api } from '../api'
@@ -18,14 +18,15 @@ export default function Watchlist() {
   const [sparks, setSparks] = useState<Record<string, number[]>>({})
   const [speeders, setSpeeders] = useState<any[]>([])
   const [advanced, setAdvanced] = useState(false)
+  const sparksBusy = useRef(false)
+  const decisionsBusy = useRef(false)
 
-  const load = async () => {
-    setLoading(true)
+  const loadSparks = async (items: any[]) => {
+    if (sparksBusy.current) return
+    sparksBusy.current = true
     try {
-      const r = await api.get<any[]>('/api/watchlist?with_decision=1')
-      setRows(r)
       const pairs = await Promise.all(
-        r.slice(0, 12).map(async (x) => {
+        items.slice(0, 12).map(async (x) => {
           try {
             const k = await api.get<any>(`/api/market/kline/${x.code}?limit=60`)
             return [x.code, k.rows.map((i: any) => i.close)] as [string, number[]]
@@ -34,7 +35,41 @@ export default function Watchlist() {
           }
         }),
       )
-      setSparks(Object.fromEntries(pairs))
+      setSparks((prev) => ({ ...prev, ...Object.fromEntries(pairs) }))
+    } finally {
+      sparksBusy.current = false
+    }
+  }
+
+  const loadDecisions = async () => {
+    if (decisionsBusy.current) return
+    decisionsBusy.current = true
+    try {
+      const plans = await api.get<Record<string, any>>('/api/watchlist/decisions')
+      setRows((prev) => prev.map((x) => (plans[x.code] ? { ...x, decision: plans[x.code] } : x)))
+    } catch {
+      /* quotes are already visible; keep the placeholders */
+    } finally {
+      decisionsBusy.current = false
+    }
+  }
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const r = await api.get<any[]>('/api/watchlist')
+      // Keep the previous decision while the new one is being computed so a
+      // 45-second quote refresh does not blank the rating columns.
+      setRows((prev) => {
+        const old = new Map(prev.map((x) => [x.code, x]))
+        return r.map((x) => {
+          const prior = old.get(x.code)
+          return prior?.decision ? { ...x, decision: prior.decision } : x
+        })
+      })
+      setLoading(false)
+      void loadSparks(r)
+      void loadDecisions()
     } finally {
       setLoading(false)
     }

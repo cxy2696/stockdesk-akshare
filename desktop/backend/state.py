@@ -109,11 +109,54 @@ def _boards(fs: str, size: int = 40) -> list[dict]:
     return out
 
 
+_STATE_LOCK = threading.Lock()
+_STATE_COMPUTE_LOCKS = {"light": threading.Lock(), "full": threading.Lock()}
+_STATE_REFRESHING = {"light": False, "full": False}
+
+
+def _refresh_market_state(light: bool) -> None:
+    name = "light" if light else "full"
+    try:
+        _compute_market_state(light)
+    except Exception:
+        pass
+    finally:
+        with _STATE_LOCK:
+            _STATE_REFRESHING[name] = False
+
+
 def market_state(light: bool = False) -> dict:
+    """Serve the last state immediately; refresh expired data in the background."""
+    name = "light" if light else "full"
     cache_key = "market:state:light" if light else "market:state"
-    cached = db.cache_get(cache_key, 60)
+    cached = db.cache_get(cache_key)
     if cached:
-        return cached
+        age = time.time() - float(cached.get("ts") or 0)
+        stale = age > 120
+        if stale:
+            with _STATE_LOCK:
+                if not _STATE_REFRESHING[name]:
+                    _STATE_REFRESHING[name] = True
+                    threading.Thread(target=_refresh_market_state, args=(light,), daemon=True).start()
+        payload = dict(cached)
+        payload["stale"] = stale
+        payload["age"] = round(age, 1)
+        payload["refreshing"] = bool(_STATE_REFRESHING[name])
+        return payload
+    # Cold start: single-flight so the startup warm-up and the first HUD/Nav
+    # request do not fetch the same 5 index histories and board lists twice.
+    with _STATE_COMPUTE_LOCKS[name]:
+        cached = db.cache_get(cache_key)
+        if cached:
+            payload = dict(cached)
+            payload["stale"] = False
+            payload["age"] = round(time.time() - float(cached.get("ts") or 0), 1)
+            return payload
+        return _compute_market_state(light)
+
+
+def _compute_market_state(light: bool = False) -> dict:
+    cache_key = "market:state:light" if light else "market:state"
 
     # The HUD only needs the index quote, breadth and a temperature. Do not
     # fetch six K-line histories and two board lists on first paint; those are
@@ -121,7 +164,7 @@ def market_state(light: bool = False) -> dict:
     if light:
         idx = market.indices()
         breadth = market.market_breadth()
-        spot = db.cache_get(market.SPOT_KEY, 600)
+        spot = market.cached_spot()
         turnover = sum((r.get("amount") or 0) for r in (spot or {}).get("rows", [])) if spot else None
         pcts = [q.get("pct") for q in idx if q.get("pct") is not None]
         avg_pct = sum(pcts) / len(pcts) if pcts else 0.0
@@ -157,7 +200,7 @@ def market_state(light: bool = False) -> dict:
     def _rows_for(item):
         code, sec = item
         try:
-            return code, market.klines(code, limit=160, adjust="", secid_override=sec)
+            return code, market.klines(code, limit=160, adjust="", secid_override=sec, allow_akshare=False)
         except Exception:
             return code, []
 
@@ -237,7 +280,7 @@ def market_state(light: bool = False) -> dict:
     # Never synchronously pull the full universe here. A cold HUD must paint
     # immediately; the spot page / warm-up thread fills the cache separately.
     breadth = market.market_breadth()
-    spot = db.cache_get(market.SPOT_KEY, 600)
+    spot = market.cached_spot()
     turnover = None
     if spot:
         amounts = [r.get("amount") or 0 for r in spot.get("rows", [])]
@@ -434,19 +477,22 @@ def _board_rows_inner(kind: str = "industry") -> list[dict]:
             "kind": kind,
         })
     if not out and kind == "industry":
-        out = _ths_industry_flow()
+        # Sina first: it is a plain HTTP table and normally returns in a few
+        # seconds, while the akshare/THS path can block for tens of seconds on
+        # a rate-limited host. THS remains the second fallback for breadth.
+        for i, r in enumerate(market._sina_industry_flow()):
+            name = r.get("name") or ""
+            if not name:
+                continue
+            out.append({
+                "code": f"SINA{i}", "name": name,
+                "pct": r.get("pct"), "inflow": r.get("inflow"),
+                "up": None, "down": None,
+                "leader": r.get("leader"), "leader_code": None,
+                "leader_pct": r.get("leader_pct"), "kind": kind,
+            })
         if not out:
-            for i, r in enumerate(market._sina_industry_flow()):
-                name = r.get("name") or ""
-                if not name:
-                    continue
-                out.append({
-                    "code": f"SINA{i}", "name": name,
-                    "pct": r.get("pct"), "inflow": r.get("inflow"),
-                    "up": None, "down": None,
-                    "leader": r.get("leader"), "leader_code": None,
-                    "leader_pct": r.get("leader_pct"), "kind": kind,
-                })
+            out = _ths_industry_flow()
     if out:
         db.cache_set(cache_key, out)
     return out
@@ -871,6 +917,7 @@ def _ema(vals: list[float], n: int) -> list[float]:
 
 
 _US_INDEX_SINA = {"SPX": ".INX", "NDX": ".IXIC", "DJIA": ".DJI"}
+_US_AK_LOCK = threading.Lock()
 
 
 def _us_index_klines(code: str) -> list[dict]:
@@ -879,8 +926,11 @@ def _us_index_klines(code: str) -> list[dict]:
     if not symbol:
         return []
     try:
-        import akshare as ak
-        df = ak.index_us_stock_sina(symbol=symbol)
+        # akshare's Sina US adapter embeds libmini_racer; initialise it from one
+        # thread at a time or the V8 isolate can abort the process.
+        with _US_AK_LOCK:
+            import akshare as ak
+            df = ak.index_us_stock_sina(symbol=symbol)
         out = []
         prev = None
         for _, r in df.tail(420).iterrows():
@@ -903,7 +953,49 @@ def _us_index_klines(code: str) -> list[dict]:
         return []
 
 
+_INDEX_ANALYSIS_KEY = "market:index-analysis:v1"
+_INDEX_ANALYSIS_LOCK = threading.Lock()
+_INDEX_ANALYSIS_COMPUTE_LOCK = threading.Lock()
+_INDEX_ANALYSIS_REFRESHING = False
+
+
+def _refresh_index_analysis() -> None:
+    global _INDEX_ANALYSIS_REFRESHING
+    try:
+        with _INDEX_ANALYSIS_COMPUTE_LOCK:
+            result = _compute_index_analysis()
+        if result:
+            db.cache_set(_INDEX_ANALYSIS_KEY, {"rows": result, "_ts": time.time()})
+    except Exception:
+        pass
+    finally:
+        with _INDEX_ANALYSIS_LOCK:
+            _INDEX_ANALYSIS_REFRESHING = False
+
+
 def index_analysis() -> list[dict]:
+    """Return the last index table immediately and refresh it in the background."""
+    global _INDEX_ANALYSIS_REFRESHING
+    cached = db.cache_get(_INDEX_ANALYSIS_KEY)
+    if isinstance(cached, dict) and cached.get("rows"):
+        age = time.time() - float(cached.get("_ts") or 0)
+        if age > 300:
+            with _INDEX_ANALYSIS_LOCK:
+                if not _INDEX_ANALYSIS_REFRESHING:
+                    _INDEX_ANALYSIS_REFRESHING = True
+                    threading.Thread(target=_refresh_index_analysis, daemon=True).start()
+        return cached["rows"]
+    with _INDEX_ANALYSIS_COMPUTE_LOCK:
+        cached = db.cache_get(_INDEX_ANALYSIS_KEY)
+        if isinstance(cached, dict) and cached.get("rows"):
+            return cached["rows"]
+        result = _compute_index_analysis()
+    if result:
+        db.cache_set(_INDEX_ANALYSIS_KEY, {"rows": result, "_ts": time.time()})
+    return result
+
+
+def _compute_index_analysis() -> list[dict]:
     # Fifteen indices used to be fetched one by one. Use a small pool so the
     # page paints in roughly the slowest single request instead of the sum.
     from concurrent.futures import ThreadPoolExecutor
@@ -911,7 +1003,7 @@ def index_analysis() -> list[dict]:
     def fetch(item):
         code, _name, secid, _region, _style, _desc, _note = item
         try:
-            rows = market.klines(code, limit=280, adjust="", secid_override=secid)
+            rows = market.klines(code, limit=280, adjust="", secid_override=secid, allow_akshare=False)
         except Exception:
             rows = []
         if len(rows) < 20:

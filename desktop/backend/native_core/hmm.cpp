@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
-#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -64,13 +63,14 @@ void require_finite_result(const HmmResult &r) {
 
 }  // namespace
 
-HmmResult fit_hmm(const double *x, std::size_t n,
-                  std::vector<double> mu, std::vector<double> var,
-                  std::vector<double> pi, std::vector<double> A,
-                  int iters) {
+template <std::size_t FixedK>
+HmmResult fit_hmm_impl(const double *x, std::size_t n,
+                       std::vector<double> mu, std::vector<double> var,
+                       std::vector<double> pi, std::vector<double> A,
+                       int iters) {
     if (x == nullptr) throw std::invalid_argument("x pointer is null");
     if (n < 2) throw std::invalid_argument("need n >= 2");
-    const std::size_t k = mu.size();
+    const std::size_t k = FixedK == 0 ? mu.size() : FixedK;
     if (k < 2) throw std::invalid_argument("need k >= 2");
     if (k > 64) throw std::invalid_argument("k is unreasonably large");
     if (n > std::numeric_limits<std::size_t>::max() / k) throw std::invalid_argument("n*k is too large");
@@ -93,107 +93,173 @@ HmmResult fit_hmm(const double *x, std::size_t n,
     normalise_rows(A, k);
 
     std::vector<double> B(n * k), alpha(n * k), beta(n * k), gamma(n * k), c(n);
-    std::vector<double> pi2 = pi;
-    std::vector<double> xi(k * k), scratch(k * k);
+    std::vector<double> xi(k * k), scratch(k * k), bB(k);
+    std::vector<double> log_coeff(k), inv_half_var(k);
+    std::vector<double> weight(k), weighted_sum(k);
     double last = -std::numeric_limits<double>::infinity();
     int used = 0;
     bool converged = false;
 
-    std::vector<double> log_norm(k);
+    const double *xp = x;
+    double *Bp = B.data();
+    double *ap = alpha.data();
+    double *bp = beta.data();
+    double *gp = gamma.data();
+    double *dp = A.data();
+    double *scp = scratch.data();
+    double *xip = xi.data();
+
     for (int it = 0; it < iters; ++it) {
-        // The normalisation term is constant across time; compute it once per
-        // state per iteration instead of once per (state, bar).
-        for (std::size_t j = 0; j < k; ++j) log_norm[j] = std::log(kTwoPi * var[j]);
+        // Half-log normalisation and half-inverse variance are constant per
+        // state for the whole iteration.  Fold the -0.5 factor in once so the
+        // emission loop only does one multiply and one add per state/bar.
+        for (std::size_t j = 0; j < k; ++j) {
+            log_coeff[j] = -0.5 * std::log(kTwoPi * var[j]);
+            inv_half_var[j] = -0.5 / var[j];
+        }
         for (std::size_t t = 0; t < n; ++t) {
+            const double xt = xp[t];
+            double *bt = Bp + t * k;
             for (std::size_t j = 0; j < k; ++j) {
-                const double d = x[t] - mu[j];
-                B[t * k + j] = std::exp(-0.5 * (log_norm[j] + d * d / var[j])) + kTiny;
+                const double d = xt - mu[j];
+                bt[j] = std::exp(log_coeff[j] + d * d * inv_half_var[j]) + kTiny;
             }
         }
 
-        for (std::size_t j = 0; j < k; ++j) alpha[j] = pi[j] * B[j];
-        c[0] = std::max(kTiny, std::accumulate(alpha.begin(), alpha.begin() + k, 0.0));
-        for (std::size_t j = 0; j < k; ++j) alpha[j] /= c[0];
+        // Forward pass with reciprocal normalisation (multiply, don't divide).
+        for (std::size_t j = 0; j < k; ++j) ap[j] = pi[j] * Bp[j];
+        {
+            double sum = 0;
+            for (std::size_t j = 0; j < k; ++j) sum += ap[j];
+            c[0] = std::max(sum, kTiny);
+            const double inv = 1.0 / c[0];
+            for (std::size_t j = 0; j < k; ++j) ap[j] *= inv;
+        }
         for (std::size_t t = 1; t < n; ++t) {
+            const double *prev = ap + (t - 1) * k;
+            double *cur = ap + t * k;
+            const double *bt = Bp + t * k;
             for (std::size_t j = 0; j < k; ++j) {
                 double sum = 0;
-                for (std::size_t i = 0; i < k; ++i) sum += alpha[(t - 1) * k + i] * A[i * k + j];
-                alpha[t * k + j] = sum * B[t * k + j];
+                for (std::size_t i = 0; i < k; ++i) sum += prev[i] * dp[i * k + j];
+                cur[j] = sum * bt[j];
             }
             double sum = 0;
-            for (std::size_t j = 0; j < k; ++j) sum += alpha[t * k + j];
-            c[t] = std::max(kTiny, sum);
-            for (std::size_t j = 0; j < k; ++j) alpha[t * k + j] /= c[t];
+            for (std::size_t j = 0; j < k; ++j) sum += cur[j];
+            c[t] = std::max(sum, kTiny);
+            const double inv = 1.0 / c[t];
+            for (std::size_t j = 0; j < k; ++j) cur[j] *= inv;
         }
 
-        for (std::size_t j = 0; j < k; ++j) beta[(n - 1) * k + j] = 1.0;
+        // Backward pass.  Cache B*beta for the next bar once per t instead of
+        // re-reading and re-multiplying it inside the state loop.
+        for (std::size_t j = 0; j < k; ++j) bp[(n - 1) * k + j] = 1.0;
         for (std::size_t t = n - 1; t-- > 0;) {
+            const double *bn = bp + (t + 1) * k;
+            const double *bBn = Bp + (t + 1) * k;
+            for (std::size_t j = 0; j < k; ++j) bB[j] = bBn[j] * bn[j];
+            const double inv_c = 1.0 / std::max(c[t + 1], kTiny);
+            double *cur = bp + t * k;
             for (std::size_t i = 0; i < k; ++i) {
+                const double *arow = dp + i * k;
                 double sum = 0;
-                for (std::size_t j = 0; j < k; ++j) {
-                    sum += A[i * k + j] * B[(t + 1) * k + j] * beta[(t + 1) * k + j];
-                }
-                beta[t * k + i] = sum / std::max(c[t + 1], kTiny);
+                for (std::size_t j = 0; j < k; ++j) sum += arow[j] * bB[j];
+                cur[i] = sum * inv_c;
             }
         }
 
+        // Smoothed posterior, row-normalised in one pass.
         for (std::size_t t = 0; t < n; ++t) {
+            const double *at = ap + t * k;
+            const double *bt = bp + t * k;
+            double *gt = gp + t * k;
             double sum = 0;
             for (std::size_t j = 0; j < k; ++j) {
-                gamma[t * k + j] = alpha[t * k + j] * beta[t * k + j];
-                sum += gamma[t * k + j];
+                const double v = at[j] * bt[j];
+                gt[j] = v;
+                sum += v;
             }
-            sum = std::max(sum, kTiny);
-            for (std::size_t j = 0; j < k; ++j) gamma[t * k + j] /= sum;
+            const double inv = 1.0 / std::max(sum, kTiny);
+            for (std::size_t j = 0; j < k; ++j) gt[j] *= inv;
         }
 
-        // Accumulate xi without an O(n*k*k) tensor: one k*k matrix per pass.
+        // Accumulate xi without an O(n*k*k) tensor: one k*k scratch matrix
+        // per transition, then fold it into the k*k accumulator.
         std::fill(xi.begin(), xi.end(), 0.0);
         for (std::size_t t = 0; t + 1 < n; ++t) {
+            const double *at = ap + t * k;
+            const double *bBn = Bp + (t + 1) * k;
+            const double *bn = bp + (t + 1) * k;
+            for (std::size_t j = 0; j < k; ++j) bB[j] = bBn[j] * bn[j];
             double total = 0;
             for (std::size_t i = 0; i < k; ++i) {
+                const double ai = at[i];
+                const double *arow = dp + i * k;
+                double *srow = scp + i * k;
                 for (std::size_t j = 0; j < k; ++j) {
-                    const double v = alpha[t * k + i] * A[i * k + j] *
-                                     B[(t + 1) * k + j] * beta[(t + 1) * k + j];
-                    scratch[i * k + j] = v;
+                    const double v = ai * arow[j] * bB[j];
+                    srow[j] = v;
                     total += v;
                 }
             }
-            total = std::max(total, kTiny);
-            for (std::size_t i = 0; i < k * k; ++i) xi[i] += scratch[i] / total;
+            const double inv = 1.0 / std::max(total, kTiny);
+            for (std::size_t i = 0; i < k * k; ++i) xip[i] += scp[i] * inv;
         }
 
-        double weight_sum = 0;
-        for (std::size_t j = 0; j < k; ++j) weight_sum += gamma[j];
-        pi2.assign(k, 0.0);
-        for (std::size_t j = 0; j < k; ++j) pi2[j] = gamma[j] / std::max(weight_sum, kTiny);
+        // Initial-state distribution from the first posterior row. The old pi
+        // is no longer needed after the forward pass, so update it in place
+        // instead of keeping a second k-vector in sync.
+        {
+            double weight_sum = 0;
+            for (std::size_t j = 0; j < k; ++j) weight_sum += gp[j];
+            const double inv = 1.0 / std::max(weight_sum, kTiny);
+            for (std::size_t j = 0; j < k; ++j) pi[j] = gp[j] * inv;
+        }
 
+        // Transition matrix: floor then row-normalise with reciprocal.
         for (std::size_t i = 0; i < k; ++i) {
             double row_sum = 0;
-            for (std::size_t j = 0; j < k; ++j) row_sum += xi[i * k + j];
+            for (std::size_t j = 0; j < k; ++j) row_sum += xip[i * k + j];
             row_sum = std::max(row_sum, kTiny);
             double norm = 0;
             for (std::size_t j = 0; j < k; ++j) {
-                A[i * k + j] = std::max(1e-4, xi[i * k + j] / row_sum);
-                norm += A[i * k + j];
+                const double v = std::max(1e-4, xip[i * k + j] / row_sum);
+                dp[i * k + j] = v;
+                norm += v;
             }
-            if (!(norm > 0)) norm = 1.0;
-            for (std::size_t j = 0; j < k; ++j) A[i * k + j] /= norm;
+            const double inv = norm > 0 ? 1.0 / norm : 1.0;
+            for (std::size_t j = 0; j < k; ++j) dp[i * k + j] *= inv;
         }
 
-        for (std::size_t j = 0; j < k; ++j) {
-            double weight = 1e-6;
-            for (std::size_t t = 0; t < n; ++t) weight += gamma[t * k + j];
-            double mean = 0;
-            for (std::size_t t = 0; t < n; ++t) mean += gamma[t * k + j] * x[t];
-            mean /= weight;
-            double variance = 0;
-            for (std::size_t t = 0; t < n; ++t) {
-                const double d = x[t] - mean;
-                variance += gamma[t * k + j] * d * d;
+        // State weights/means in one t-major pass (cache friendly for small
+        // k), then the variance around the new mean in a second pass.  This
+        // keeps the stable two-pass variance while avoiding 2*k separate
+        // strides through gamma.
+        std::fill(weight.begin(), weight.end(), 1e-6);
+        std::fill(weighted_sum.begin(), weighted_sum.end(), 0.0);
+        for (std::size_t t = 0; t < n; ++t) {
+            const double xt = xp[t];
+            const double *gt = gp + t * k;
+            for (std::size_t j = 0; j < k; ++j) {
+                const double g = gt[j];
+                weight[j] += g;
+                weighted_sum[j] += g * xt;
             }
-            mu[j] = mean;
-            var[j] = std::max(kVarFloor, variance / weight);
+        }
+        for (std::size_t j = 0; j < k; ++j) {
+            mu[j] = weighted_sum[j] / weight[j];
+            var[j] = 0.0;
+        }
+        for (std::size_t t = 0; t < n; ++t) {
+            const double xt = xp[t];
+            const double *gt = gp + t * k;
+            for (std::size_t j = 0; j < k; ++j) {
+                const double d = xt - mu[j];
+                var[j] += gt[j] * d * d;
+            }
+        }
+        for (std::size_t j = 0; j < k; ++j) {
+            var[j] = std::max(kVarFloor, var[j] / weight[j]);
         }
 
         double loglik = 0;
@@ -206,13 +272,12 @@ HmmResult fit_hmm(const double *x, std::size_t n,
             break;
         }
         last = loglik;
-        pi = pi2;
     }
 
     HmmResult result;
     result.mu = std::move(mu);
     result.var = std::move(var);
-    result.pi = std::move(pi2);
+    result.pi = std::move(pi);
     result.A = std::move(A);
     result.gamma = std::move(gamma);
     result.loglik = last;
@@ -220,6 +285,21 @@ HmmResult fit_hmm(const double *x, std::size_t n,
     result.converged = converged;
     require_finite_result(result);
     return result;
+}
+
+HmmResult fit_hmm(const double *x, std::size_t n,
+                  std::vector<double> mu, std::vector<double> var,
+                  std::vector<double> pi, std::vector<double> A,
+                  int iters) {
+    // k=3 is the production configuration.  Instantiating the generic loop
+    // with a compile-time K lets the compiler unroll the state loops and turn
+    // t*k into a shift while keeping a runtime fallback for other k.
+    if (mu.size() == 3) {
+        return fit_hmm_impl<3>(x, n, std::move(mu), std::move(var),
+                               std::move(pi), std::move(A), iters);
+    }
+    return fit_hmm_impl<0>(x, n, std::move(mu), std::move(var),
+                           std::move(pi), std::move(A), iters);
 }
 
 }  // namespace stockdesk::native

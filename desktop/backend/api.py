@@ -94,6 +94,16 @@ def market_models():
     return ok(model_snapshot())
 
 
+@router.get("/api/models/history")
+def models_history(code: str = "000300", limit: int = Query(1000, ge=300, le=1600)):
+    """Walk-forward evaluation of the HMM regime model."""
+    from . import evaluation
+    try:
+        return ok(evaluation.model_history(code=code, limit=limit))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
 @router.get("/api/market/company-map")
 def company_map():
     from .state import company_distribution
@@ -387,6 +397,12 @@ def market_daily():
     return ok(daily.daily_brief())
 
 
+@router.get("/api/market/forecast")
+def market_forecast():
+    """Regime forecast without the decision candidate scan."""
+    return ok(decision.forecast_overview())
+
+
 @router.get("/api/market/picks")
 def market_picks(universe: str = "amount", limit: int = 150, top: int = 12):
     return ok(pattern_lib.picks(universe, limit, top))
@@ -465,9 +481,35 @@ def get_watchlist(with_decision: bool = Query(False)):
                 item["decision"] = {}
             return item
 
-        with ThreadPoolExecutor(max_workers=6) as ex:
+        with ThreadPoolExecutor(max_workers=8) as ex:
             list(ex.map(enrich, items))
     return ok(items)
+
+
+@router.get("/api/watchlist/decisions")
+def get_watchlist_decisions():
+    """Decision plans keyed by code, fetched separately from the quote rows.
+
+    A watchlist of 20+ names can need 20+ K-line histories.  Returning them in
+    the same request kept the whole table on a skeleton until the slowest
+    symbol finished; the page now paints quotes first and merges this payload
+    when it arrives.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    items = repo.watchlist()
+    if not items:
+        return ok({})
+
+    def enrich(item):
+        code = str(item.get("code") or "")
+        try:
+            return code, decision.stock_plan(code)
+        except Exception:
+            return code, {}
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        return ok(dict(ex.map(enrich, items)))
 
 
 class WatchIn(BaseModel):
@@ -657,6 +699,44 @@ def run_bt(body: BacktestIn):
 @router.get("/api/backtest/last")
 def last_bt():
     return ok(db.get_setting("last_backtest"))
+
+
+class PortfolioBacktestIn(BaseModel):
+    mode: str = "recommended"
+    holdings: list[dict] = []
+    universe: list[str] = []
+    start: Optional[str] = None
+    end: Optional[str] = None
+    capital: float = 1_000_000
+    benchmark: str = "000001"
+    top_n: int = 5
+    rebalance_days: int = 20
+    commission: float = 0.00025
+    slippage: float = 0.0005
+
+
+@router.post("/api/backtest/portfolio")
+def run_portfolio_bt(body: PortfolioBacktestIn):
+    from . import portfolio_backtest
+    try:
+        mode = str(body.mode or "recommended").lower()
+        if mode == "recommended":
+            return ok(portfolio_backtest.run_recommended(
+                body.universe, body.start, body.end, body.capital, body.benchmark,
+                body.top_n, body.rebalance_days, body.commission, body.slippage))
+        if mode == "custom":
+            return ok(portfolio_backtest.run_custom(
+                body.holdings, body.start, body.end, body.capital, body.benchmark,
+                body.rebalance_days, body.commission, body.slippage))
+        if mode == "ledger":
+            return ok(portfolio_backtest.run_ledger(
+                body.end, body.capital, body.benchmark,
+                body.commission, body.slippage))
+        raise ValueError("未知回测模式")
+    except ValueError as e:
+        return fail(str(e))
+    except Exception as e:
+        raise HTTPException(500, f"组合回测失败: {e}")
 
 
 # ================================================================ streams

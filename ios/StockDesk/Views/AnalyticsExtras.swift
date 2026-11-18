@@ -51,7 +51,7 @@ struct ReviewSummaryView: View {
         var p: [String] = []
         p.append("收益：年化 \(r.metrics.annualReturn.pct())，最大回撤 \(r.metrics.maxDrawdown.pct())，夏普 \(String(format: "%.2f", r.metrics.sharpe))。")
         if r.stats.closedCount > 0 {
-            p.append("交易：平仓 \(r.stats.closedCount) 笔，胜率 \(r.stats.winRate.map { String(format: "%.1f%%", $0) } ?? "--")，盈亏比 \(r.stats.profitFactor.map { String(format: "%.2f", $0) } ?? "--")。")
+            p.append("交易：平仓 \(r.stats.closedCount) 笔，胜率 \(r.stats.winRate.map { $0.pctLevel(1) } ?? "--")，盈亏比 \(r.stats.profitFactor.map { String(format: "%.2f", $0) } ?? "--")。")
         }
         if let top = r.byStock.max(by: { $0.pnl < $1.pnl }), let worst = r.byStock.min(by: { $0.pnl < $1.pnl }) {
             p.append("个股：\(top.name) 贡献 \(top.pnl.signed()) 元，\(worst.name) \(worst.pnl.signed()) 元。")
@@ -80,7 +80,7 @@ struct AdviceCardView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(a.action).font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(a.action == "减仓" ? Theme.up : (a.action == "加仓" ? Theme.down : Theme.accent))
+                        .foregroundStyle(a.action == "加仓" ? Theme.up : (a.action == "减仓" ? Theme.down : Theme.accent))
                     Text("· \(a.urgency)").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
                     Spacer()
                     Text("温度 \(a.score)").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
@@ -88,7 +88,7 @@ struct AdviceCardView: View {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("当前仓位").font(.system(size: 9.5)).foregroundStyle(Theme.textDim)
-                        Text(String(format: "%.1f%%", a.currentPct)).font(.system(size: 20, weight: .bold, design: .rounded))
+                        Text(a.currentPct.pctLevel(1)).font(.system(size: 20, weight: .bold, design: .rounded))
                     }
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {

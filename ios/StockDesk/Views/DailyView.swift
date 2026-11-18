@@ -47,7 +47,7 @@ struct DailyView: View {
     }
 
     private func summaryCard(_ s: MarketState) -> some View {
-        Card(title: "每日行情", subtitle: dateText) {
+        Card(title: "每日行情", subtitle: dateText(s)) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(summaryText(s))
                     .font(.system(size: 12))
@@ -105,7 +105,7 @@ struct DailyView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Text(a.action).font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(a.action == "减仓" ? Theme.up : (a.action == "加仓" ? Theme.down : Theme.accent))
+                                .foregroundStyle(a.action == "加仓" ? Theme.up : (a.action == "减仓" ? Theme.down : Theme.accent))
                             Text("· \(a.urgency)").font(.system(size: 11)).foregroundStyle(Theme.textDim)
                             Spacer()
                             Text("温度 \(a.score)").font(.system(size: 11)).foregroundStyle(Theme.textDim)
@@ -272,15 +272,22 @@ struct DailyView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
-    private var dateText: String {
+    private func dateText(_ s: MarketState) -> String {
+        if !s.asOf.isEmpty { return "数据截至 " + s.asOf }
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         return df.string(from: Date())
     }
 
     private func summaryText(_ s: MarketState) -> String {
         let sh = s.indices.first
-        var t = "今日 A 股\(s.label)，上证指数 \(QuantModels.pctText(sh?.pct)) 收于 \(QuantModels.num(sh?.price))，"
-        t += "全市场 \(s.breadth.up) 家上涨、\(s.breadth.down) 家下跌，涨停 \(s.breadth.limitUp) 家、跌停 \(s.breadth.limitDown) 家，"
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        let today = df.string(from: Date())
+        let session = (s.asOf.isEmpty || s.asOf == today) ? "今日" : "最近交易日"
+        var t = "\(session) A 股\(s.label)"
+        if let sh {
+            t += "，上证指数 \(QuantModels.pctText(sh.pct)) 收于 \(QuantModels.num(sh.price))"
+        }
+        t += "，全市场 \(s.breadth.up) 家上涨、\(s.breadth.down) 家下跌，涨停 \(s.breadth.limitUp) 家、跌停 \(s.breadth.limitDown) 家，"
         t += "成交额约 \(QuantModels.money(s.turnover))。"
         if let top = s.top.first { t += "领涨行业：\(top.name)。" }
         if let advice {
@@ -305,8 +312,8 @@ struct DailyView: View {
                             Text(i.name).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.text).frame(width: 64, alignment: .leading)
                             Text(QuantModels.num(i.price)).font(.system(size: 10.5, design: .monospaced)).foregroundStyle(Theme.textSub).frame(width: 62, alignment: .trailing)
                             Spacer()
-                            Text("支撑 " + QuantModels.num(i.support)).font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Theme.up)
-                            Text("压力 " + QuantModels.num(i.resistance)).font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Theme.down)
+                            Text("支撑 " + QuantModels.num(i.support)).font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Theme.down)
+                            Text("压力 " + QuantModels.num(i.resistance)).font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Theme.up)
                         }
                         .padding(.vertical, 5)
                         .overlay(alignment: .bottom) { SoftDivider() }
@@ -356,7 +363,7 @@ struct DailyView: View {
                             Text(QuantModels.num(i.macdDif, 0) + "/" + QuantModels.num(i.macdDea, 0))
                                 .font(.system(size: 8, design: .monospaced)).frame(width: 76, alignment: .trailing)
                             Text(i.tdBuy > 0 ? "买\(i.tdBuy)" : (i.tdSell > 0 ? "卖\(i.tdSell)" : "--"))
-                                .font(.system(size: 8.5)).foregroundStyle(i.tdBuy > 0 ? Theme.down : (i.tdSell > 0 ? Theme.up : Theme.textDim)).frame(width: 40, alignment: .trailing)
+                                .font(.system(size: 8.5)).foregroundStyle(i.tdBuy > 0 ? Theme.up : (i.tdSell > 0 ? Theme.down : Theme.textDim)).frame(width: 40, alignment: .trailing)
                             Text(i.bottomDull ? "钝化" : "--").font(.system(size: 8)).foregroundStyle(i.bottomDull ? Theme.up : Theme.textDim).frame(width: 40, alignment: .trailing)
                             Text(QuantModels.num(i.support, 0)).font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.down).frame(width: 48, alignment: .trailing)
                             Text(QuantModels.num(i.resistance, 0)).font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.up).frame(width: 48, alignment: .trailing)
@@ -519,7 +526,7 @@ struct DailyView: View {
                     .font(.system(size: 11)).foregroundStyle(Theme.text).lineSpacing(3)
                 HStack(spacing: 5) {
                     Text("HMM/渗流见量化模型").font(.system(size: 8.5))
-                    Text("站上 MA20 \(above)/\(s.indices.count)").font(.system(size: 8.5))
+                    Text("站上 MA20 " + (s.indices.isEmpty ? "--" : "\(above)/\(s.indices.count)")).font(.system(size: 8.5))
                     Text("九转 买 \(buys) / 卖 \(sells)").font(.system(size: 8.5))
                 }
                 .foregroundStyle(Theme.textDim)
@@ -533,12 +540,14 @@ struct DailyView: View {
         if above * 2 >= total {
             text += " \(above)/\(total) 个指数站在 MA20 上方，趋势还在，可以按计划拿住。"
         } else {
-            text += " 只有 \(above)/\(total) 个指数站在 MA20 上方，先控制仓位，等指数重新站上均线再谈进攻。"
+            text += " 仅 \(above)/\(total) 个指数站在 MA20 上方，先控制仓位，等指数重新站上均线再谈进攻。"
         }
         if sells > buys {
             text += " 九转卖出结构 \(sells) 个、买入结构 \(buys) 个，上涨动能更疲惫，兑现优先于加仓。"
         } else if buys > sells {
             text += " 九转买入结构 \(buys) 个、卖出结构 \(sells) 个，低吸机会更多，但要等止跌确认。"
+        } else if buys == 0 {
+            text += " 当前没有九转买卖结构，方向交给趋势与资金。"
         } else {
             text += " 九转买卖结构数量相当，方向不明，按趋势和资金执行。"
         }
@@ -550,7 +559,7 @@ struct DailyView: View {
         let sells = s.indices.filter { $0.tdSell >= 7 }.count
         return Card(title: "九转模型分析", subtitle: "TD Sequential · 建仓 9 根 / 倒计时 13 根") {
             VStack(alignment: .leading, spacing: 8) {
-                Text("当前 \(buys) 个指数出现买入结构、\(sells) 个出现卖出结构。九转只说明这一段动能累了，不保证立刻反转；买结构要等放量收阳，卖结构跌破 5 日线再减。")
+                Text("当前 \(buys) 个指数进入买入结构（≥7/9）、\(sells) 个进入卖出结构（≥7/9）。九转只说明这一段动能累了，不保证立刻反转；买结构要等放量收阳，卖结构跌破 5 日线再减。")
                     .font(.system(size: 10.5)).foregroundStyle(Theme.textSub).lineSpacing(2)
                 ForEach(s.indices) { i in
                     HStack(spacing: 8) {

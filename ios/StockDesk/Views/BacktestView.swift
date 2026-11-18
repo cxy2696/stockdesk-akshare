@@ -144,7 +144,7 @@ struct BacktestView: View {
                 HStack(alignment: .top, spacing: 16) {
                     VStack {
                         StatLine(title: "年化收益", value: r.metrics.annualReturn.pct())
-                        StatLine(title: "波动率", value: r.metrics.volatility.pct())
+                        StatLine(title: "波动率", value: r.metrics.volatility.pctLevel(2))
                         StatLine(title: "索提诺", value: r.metrics.sortino.map { String(format: "%.2f", $0) } ?? "--")
                     }
                     VStack {

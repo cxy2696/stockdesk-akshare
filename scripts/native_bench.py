@@ -43,10 +43,20 @@ def main() -> int:
     for i in range(3):
         A[i * 3 + i] = 0.8
 
+    batch = (rng.random((15, cols * cols)) < 0.5).astype(np.uint8)
+    pct = np.array([r["pct"] for r in rows], dtype=float)
+    price = np.array([r["price"] for r in rows], dtype=float)
+    limits = np.full(len(rows), 10.0)
+    codes = np.arange(len(rows), dtype=np.int64)
+    expected = codes.copy()
+
     print("engine:", native.status()["backend"], native.status()["version"])
     bench("grid kernel", lambda: native.native.grid_largest(grid, cols), 500)
+    bench("grid batch 15", lambda: native.native.grid_batch(batch, cols), 200)
     bench("percolation wrapper", lambda: models._percolation(rows, with_grid=False), 20)
     bench("HMM kernel", lambda: native.native.baum_welch(x, mu, var, pi, A, 80), 100)
+    bench("breadth census", lambda: native.native.breadth_census(pct, price, limits), 500)
+    bench("coverage audit", lambda: native.native.coverage_audit(codes, expected, 20), 100)
     return 0
 
 

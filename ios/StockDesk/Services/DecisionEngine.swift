@@ -78,12 +78,18 @@ enum DecisionEngine {
             variance = max(0, variance / mass - expected * expected)
         }
         let prob = variance > 0 ? normalCDF(expected / sqrt(variance)) : nil
+        // Percent formatting rounds to two decimals.  Snap values that would
+        // render as "-0.00%" (and colour the metric green) to a true zero.
+        let shownExpected = abs(expected) < 0.00005 ? 0 : expected
         return MarketForecast(
             state: hmm.state,
-            expected5d: mass > 0 ? expected : nil,
+            expected5d: mass > 0 ? shownExpected : nil,
             probUp: prob,
             confidence: hmm.probabilities.map(\.p).max(),
-            nextProbs: byLabel.sorted { $0.1 > $1.1 },
+            // Keep the model's canonical weak → range → strong order.  Sorting
+            // by probability made the same rows jump around on every refresh
+            // and disagreed with the HMM card.
+            nextProbs: byLabel,
             caveat: "状态条件估算，不是点位预测；样本不足时只作弱参考。"
         )
     }

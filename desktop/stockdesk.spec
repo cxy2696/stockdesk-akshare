@@ -29,7 +29,8 @@ datas = [
 ] + collect_data_files("akshare")
 binaries = []
 hiddenimports = collect_submodules("uvicorn") + collect_submodules("akshare") + [
-    "backend._native", "backend.native", "webview", "webview.platforms.cocoa",
+    "backend._native", "backend.native", "backend.evaluation", "backend.portfolio_backtest",
+    "webview", "webview.platforms.cocoa",
 ]
 
 # Optional rflux HMM backend. It is not a hard dependency: if the package or

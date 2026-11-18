@@ -95,7 +95,7 @@ struct StockDetailView: View {
     private var quoteGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             miniCell("成交额", shortMoney(q?.amount))
-            miniCell("换手率", q?.turnover.map { String(format: "%.2f%%", $0) } ?? "--")
+            miniCell("换手率", q?.turnover.map { $0.pctLevel(2) } ?? "--")
             miniCell("市盈率", q?.pe.fmt() ?? "--")
             miniCell("市净率", q?.pb.fmt() ?? "--")
             miniCell("总市值", shortMoney(q?.mcap))
@@ -160,7 +160,7 @@ struct StockDetailView: View {
             VStack(spacing: 10) {
                 HStack(spacing: 8) {
                     chipMetric("平均成本", c.avgCost.fmt(2))
-                    chipMetric("获利比例", c.profitRatio.pct(1), color: c.profitRatio >= 50 ? Theme.up : Theme.down)
+                    chipMetric("获利比例", c.profitRatio.pctLevel(1), color: c.profitRatio >= 50 ? Theme.up : Theme.down)
                     chipMetric("集中度", c.concentration.fmt(1) + "%")
                 }
                 HStack(spacing: 8) {

@@ -12,13 +12,16 @@ export const fmt = {
   },
   pct(v?: number | null, digits = 2) {
     if (v === null || v === undefined || !Number.isFinite(v)) return '--'
-    const s = v > 0 ? '+' : ''
-    return `${s}${v.toFixed(digits)}%`
+    // Avoid the "-0.00%" display when a tiny negative return rounds to zero.
+    const rounded = Number(v.toFixed(digits))
+    const s = rounded > 0 ? '+' : ''
+    return `${s}${rounded.toFixed(digits)}%`
   },
   signed(v?: number | null, digits = 2) {
     if (v === null || v === undefined || !Number.isFinite(v)) return '--'
-    const s = v > 0 ? '+' : ''
-    return `${s}${v.toLocaleString('zh-CN', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`
+    const rounded = Number(v.toFixed(digits))
+    const s = rounded > 0 ? '+' : ''
+    return `${s}${rounded.toLocaleString('zh-CN', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`
   },
   big(v?: number | null) {
     if (v === null || v === undefined || !Number.isFinite(v)) return '--'

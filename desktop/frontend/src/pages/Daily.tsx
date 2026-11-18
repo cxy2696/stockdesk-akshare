@@ -38,11 +38,28 @@ export default function Daily() {
     }
   }
 
+  const refreshBrief = async () => {
+    try {
+      setBrief(await api.get<any>('/api/market/daily'))
+    } catch {
+      /* keep the current snapshot */
+    }
+  }
+
   useEffect(() => {
     load()
     const t = setInterval(load, 180000)
     return () => clearInterval(t)
   }, [])
+
+  // A stale brief is served immediately while the backend refreshes it in a
+  // thread.  Poll quickly until the timestamp catches up instead of showing a
+  // two-hour-old summary labelled "已更新" for another three minutes.
+  useEffect(() => {
+    if (!brief?.stale) return
+    const t = setInterval(refreshBrief, 5000)
+    return () => clearInterval(t)
+  }, [brief?.stale, brief?.ts])
 
   if (loading && !brief) {
     return (
@@ -91,7 +108,7 @@ export default function Daily() {
       <Card
         title={`每日行情 · ${brief.date}`}
         desc={`${brief.status?.label ?? ''} · 数据 ${new Date((brief.ts ?? 0) * 1000).toLocaleTimeString('zh-CN', { hour12: false })}`}
-        extra={<span className="daily-status"><SyncOutlined /> {error ? '部分数据延迟' : '已更新'}</span>}
+        extra={<span className="daily-status"><SyncOutlined spin={!!brief.stale} /> {error ? '部分数据延迟' : brief.stale ? '数据更新中' : '已更新'}</span>}
       >
         <div className="daily-summary">{brief.summary}</div>
 

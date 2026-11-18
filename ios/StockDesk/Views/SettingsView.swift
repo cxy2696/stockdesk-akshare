@@ -121,6 +121,11 @@ struct SettingsView: View {
                     }
                 }
                 .padding(.vertical, 2)
+                HStack {
+                    Text("版本")
+                    Spacer()
+                    Text(AppInfo.versionLabel + " · 模型 v2.2.0").font(.system(size: 11.5, design: .monospaced)).foregroundStyle(Theme.textDim)
+                }
                 Text("行情、K 线、财务数据来自东方财富公开接口，可能存在延迟，仅用于个人研究，不构成投资建议。所有账户数据保存在本机。")
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.textDim)

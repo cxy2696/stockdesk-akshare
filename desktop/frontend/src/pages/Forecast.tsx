@@ -10,13 +10,13 @@ export default function Forecast() {
   const nav = useNavigate()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const scan = 300
-  const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1_000_000_000))
 
   const load = async () => {
     setLoading(true)
     try {
-      setData(await api.get<any>(`/api/decision?scan=${scan}&seed=${seed}`))
+      // Forecast only needs the regime and the P^5 distribution.  It must not
+      // wait for the decision page's 300-stock K-line scan.
+      setData(await api.get<any>('/api/market/forecast'))
     } finally {
       setLoading(false)
     }
@@ -25,19 +25,14 @@ export default function Forecast() {
     load()
     const t = setInterval(load, 5 * 60_000)
     return () => clearInterval(t)
-  }, [seed])
+  }, [])
 
   if (loading && !data) return <div className="card card-pad"><Skeleton active paragraph={{ rows: 8 }} /></div>
   if (!data) return <Card title="市场预测暂时不可用"><EmptyState text="模型或行情尚未就绪。" /><Button onClick={load} icon={<ReloadOutlined />}>重试</Button></Card>
 
   const f = data.forecast ?? {}
   const m = data.market ?? {}
-  const candidates = data.candidates ?? []
-  const counts = {
-    good: candidates.filter((x: any) => x.rating === '好').length,
-    mid: candidates.filter((x: any) => x.rating === '中').length,
-    bad: candidates.filter((x: any) => x.rating === '差').length,
-  }
+  const b = m.breadth ?? {}
   const stateCols = [
     { title: '状态', dataIndex: 'label', render: (v: string) => <b>{v}</b> },
     { title: '5 日估算', dataIndex: 'mean_5d', align: 'right' as const, render: (v: number) => <span className={`num ${trendClass(v)}`}>{v == null ? '--' : fmt.pct(v * 100)}</span> },
@@ -51,16 +46,17 @@ export default function Forecast() {
       <Card
         title="市场预测 · 未来 5 日"
         desc="HMM 状态转移 × 同状态历史收益；概率不是点位承诺"
-        extra={<Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={() => setSeed(Math.floor(Math.random() * 1_000_000_000))}>刷新</Button>}
+        extra={<Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button>}
       >
         <div className="grid-3" style={{ marginBottom: 12 }}>
           <Kpi label="5 日状态条件收益" value={f.expected_5d == null ? '--' : fmt.pct(f.expected_5d * 100)} color={f.expected_5d == null ? undefined : f.expected_5d >= 0 ? 'var(--up)' : 'var(--down)'} sub="同状态历史均值" />
-          <Kpi label="上涨概率" value={f.prob_up == null ? '--' : f.prob_up == null ? '--' : `${Math.round(f.prob_up * 100)}%`} sub="由收益/波动近似" />
+          <Kpi label="上涨概率" value={f.prob_up == null ? '--' : `${Math.round(f.prob_up * 100)}%`} sub="由收益/波动近似" />
           <Kpi label="当前市场" value={m.label ?? f.state ?? '--'} sub={`温度 ${m.score ?? '--'} · 置信度 ${f.confidence == null ? '--' : fmt.pct(f.confidence * 100, 0)}`} />
         </div>
         <div className="small" style={{ lineHeight: 1.9, marginBottom: 12 }}>
-          今日候选：<b className="up">{counts.good} 好</b> · <b style={{ color: 'var(--amber)' }}>{counts.mid} 中</b> · <b className="down">{counts.bad} 差</b>。
-          状态分裂或收益接近 0 时，优先降仓，不频繁换股。
+          全市场 <b className="up">{b.up ?? '--'}</b> 家上涨 / <b className="down">{b.down ?? '--'}</b> 家下跌
+          {b.limit_up != null && <> · 涨停 {b.limit_up} 家 / 跌停 {b.limit_down ?? '--'} 家</>}。
+          状态分裂或收益接近 0 时，优先降仓，不频繁换股；候选评级请到「交易决策」查看。
         </div>
         <Table rowKey="label" size="small" pagination={false} dataSource={f.states ?? []} columns={stateCols as any} />
         <div className="muted small" style={{ marginTop: 10 }}>{f.caveat} 方法：{f.method}。</div>

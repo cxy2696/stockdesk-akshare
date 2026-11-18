@@ -12,10 +12,10 @@ struct AssetAnalysisView: View {
 
     private var habits: [String] {
         var out: [String] = []
-        out.append(cashPct > 40 ? "现金占比 \(cashPct.pct(1))，偏防御，等待更明确的机会。" : cashPct < 10 ? "现金仅 \(cashPct.pct(1))，仓位偏满，需保留应对波动的余地。" : "现金占比 \(cashPct.pct(1))，仓位中性。")
-        out.append(maxWeight > 40 ? "第一大持仓权重 \(maxWeight.pct(1))，集中度偏高，单票波动会显著影响账户。" : "第一大持仓权重 \(maxWeight.pct(1))，集中度可控。")
+        out.append(cashPct > 40 ? "现金占比 \(cashPct.pctLevel(1))，偏防御，等待更明确的机会。" : cashPct < 10 ? "现金仅 \(cashPct.pctLevel(1))，仓位偏满，需保留应对波动的余地。" : "现金占比 \(cashPct.pctLevel(1))，仓位中性。")
+        out.append(maxWeight > 40 ? "第一大持仓权重 \(maxWeight.pctLevel(1))，集中度偏高，单票波动会显著影响账户。" : "第一大持仓权重 \(maxWeight.pctLevel(1))，集中度可控。")
         if let wr = result?.stats.winRate {
-            out.append("已平仓胜率 \(wr.pct(1))，盈亏比 \(result?.stats.profitFactor?.fmt(2) ?? "--")，\(wr >= 0.5 ? "胜率尚可，重点控制单笔亏损。" : "胜率偏低，减少追高与频繁试错。")")
+            out.append("已平仓胜率 \(wr.pctLevel(1))，盈亏比 \(result?.stats.profitFactor?.fmt(2) ?? "--")，\(wr >= 50 ? "胜率尚可，重点控制单笔亏损。" : "胜率偏低，减少追高与频繁试错。")")
         }
         out.append(store.trades.count > 30 ? "累计 \(store.trades.count) 笔交易，频率偏高；可把操作集中到少数高确定性机会。" : "累计 \(store.trades.count) 笔交易，节奏偏克制。")
         return out
@@ -35,9 +35,9 @@ struct AssetAnalysisView: View {
                                 }
                             }
                         }.frame(height: 10)
-                        HStack { Text("现金").font(.system(size: 10.5)).foregroundStyle(Theme.textSub); Spacer(); Text("¥\(summary.cash.fmt(0)) · \(cashPct.pct(1))").font(.system(size: 10.5, design: .monospaced)).foregroundStyle(Theme.text) }
+                        HStack { Text("现金").font(.system(size: 10.5)).foregroundStyle(Theme.textSub); Spacer(); Text("¥\(summary.cash.fmt(0)) · \(cashPct.pctLevel(1))").font(.system(size: 10.5, design: .monospaced)).foregroundStyle(Theme.text) }
                         ForEach(summary.positions.sorted { ($0.weight ?? 0) > ($1.weight ?? 0) }.prefix(5)) { p in
-                            HStack { Text(p.name).font(.system(size: 11)).foregroundStyle(Theme.text); Spacer(); Text((p.weight ?? 0).pct(1)).font(.system(size: 10.5, design: .monospaced)).foregroundStyle(Theme.accent) }
+                            HStack { Text(p.name).font(.system(size: 11)).foregroundStyle(Theme.text); Spacer(); Text((p.weight ?? 0).pctLevel(1)).font(.system(size: 10.5, design: .monospaced)).foregroundStyle(Theme.accent) }
                         }
                     }
                 }
@@ -51,7 +51,7 @@ struct AssetAnalysisView: View {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                             kv("累计收益", m.totalReturn.pct(), Theme.trendColor(m.totalReturn))
                             kv("年化收益", m.annualReturn.pct(), Theme.trendColor(m.annualReturn))
-                            kv("最大回撤", m.maxDrawdown.pct(), Theme.up)
+                            kv("最大回撤", m.maxDrawdown.pct(), Theme.down)
                             kv("夏普比率", m.sharpe.fmt(2), Theme.text)
                             kv("卡玛比率", m.calmar?.fmt(2) ?? "--", Theme.text)
                             kv("超额收益", m.excessReturn.pct(), Theme.trendColor(m.excessReturn))
@@ -162,6 +162,8 @@ struct AdviceCenterView: View {
 
 struct IndexAnalysisView: View {
     @State private var rows: [IndexAnalysisRow] = []
+    @State private var loading = true
+    @State private var loadError: String?
 
     private var aRows: [IndexAnalysisRow] { rows.filter { $0.region == "A股" } }
     private var usRows: [IndexAnalysisRow] { rows.filter { $0.region != "A股" } }
@@ -169,6 +171,7 @@ struct IndexAnalysisView: View {
     private var bear: Int { aRows.filter { $0.bias == "偏空" }.count }
     private var neutral: Int { aRows.count - bull - bear }
     private var avgScore: Double { aRows.isEmpty ? 0 : Double(aRows.reduce(0) { $0 + $1.score }) / Double(aRows.count) }
+    private var asOf: String { aRows.compactMap { $0.date.isEmpty ? nil : $0.date }.max() ?? "" }
 
     private var summaryText: String {
         if bull >= 6 { return "多数 A 股指数转多，可逐步提高仓位，但仍以 MA20 为防守。" }
@@ -179,12 +182,21 @@ struct IndexAnalysisView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                if rows.isEmpty {
+                if rows.isEmpty && loading {
                     ProgressView("加载 15 个指数…")
                         .frame(maxWidth: .infinity)
                         .padding(.top, 100)
+                } else if rows.isEmpty {
+                    VStack(spacing: 12) {
+                        ContentUnavailableView("指数数据暂不可用", systemImage: "chart.line.uptrend.xyaxis",
+                                               description: Text(loadError ?? "指数日线没有返回，稍后重试。"))
+                        Button("重试") { Task { await load() } }
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .padding(.top, 60)
                 } else {
-                Card(title: "A股主要宽基 · 综合结论", subtitle: "共 \(aRows.count) 个指数") {
+                Card(title: "A股主要宽基 · 综合结论", subtitle: "\(aRows.count) 个指数" + (asOf.isEmpty ? "" : " · 截至 \(asOf)")) {
                     HStack(alignment: .top) {
                         Text(summaryText).font(.system(size: 12)).foregroundStyle(Theme.text).lineSpacing(2)
                         Spacer()
@@ -209,7 +221,16 @@ struct IndexAnalysisView: View {
         .background(Theme.bg.ignoresSafeArea())
         .navigationTitle("指数分析")
         .navigationBarTitleDisplayMode(.inline)
-        .task { rows = await MarketService.shared.indexAnalysis() }
+        .task { await load() }
+    }
+
+    private func load() async {
+        loading = true
+        loadError = nil
+        let result = await MarketService.shared.indexAnalysis()
+        rows = result
+        if result.isEmpty { loadError = "指数行情没有返回，检查网络后重试。" }
+        loading = false
     }
 
     private func sectionTitle(_ text: String) -> some View {
@@ -217,7 +238,7 @@ struct IndexAnalysisView: View {
     }
 
     private func indexCard(_ x: IndexAnalysisRow) -> some View {
-        Card(title: "\(x.name) · \(x.style)", subtitle: x.code) {
+        Card(title: "\(x.name) · \(x.style)", subtitle: x.date.isEmpty ? x.code : "\(x.code) · \(x.date)") {
             HStack {
                 Text(x.price.fmt()).font(.system(size: 24, weight: .bold, design: .rounded)).foregroundStyle(Theme.text)
                 Spacer()
@@ -239,10 +260,10 @@ struct IndexAnalysisView: View {
                 metric("RSI14", x.rsi.fmt(1), Theme.text)
                 metric("MACD", x.macdHist.fmt(2), (x.macdHist ?? 0) >= 0 ? Theme.up : Theme.down)
                 metric("20日波动", (x.vol20 ?? 0).fmt(2) + "%", Theme.textSub)
-                metric("支撑", x.support.fmt(), Theme.up)
-                metric("压力", x.resistance.fmt(), Theme.down)
-                metric("52周高", x.high52.fmt(), Theme.down)
-                metric("52周低", x.low52.fmt(), Theme.up)
+                metric("支撑", x.support.fmt(), Theme.down)
+                metric("压力", x.resistance.fmt(), Theme.up)
+                metric("52周高", x.high52.fmt(), Theme.up)
+                metric("52周低", x.low52.fmt(), Theme.down)
             }
             .padding(.top, 6)
             Text(x.desc).font(.system(size: 9.5)).foregroundStyle(Theme.textSub).lineSpacing(2).padding(.top, 6)

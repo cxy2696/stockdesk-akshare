@@ -99,7 +99,7 @@ xcrun simctl launch booted com.stockdesk.app
 - **交易决策**：HMM 5 日市场预测；持仓评级好/中/差、操作、买区、止损、目标、盈亏比与原因。
 - **市场预测**：独立页展示 HMM 未来 5 日状态条件收益、上涨概率、状态概率与转移矩阵；不依赖 Mac 后端。
 - **因子筛选**：横截面动量、价值、规模、流动性、资金、稳定性因子；按板块/最低分过滤，显示每个因子的覆盖率，点候选进个股。数据源缺失的因子不会伪造数值。
-- **量化模型**：5 个 A 股核心指数 HMM 切换；个股仓位/买卖建议；行业临界、关键标的、细分行业渗流、随机重排稳健性；九转模型卡片与综合评分卡（HMM 42% / 渗流 38% / 九转 20%），版本显示 v2.2.0
+- **量化模型**：5 个 A 股核心指数 HMM 切换；个股仓位/买卖建议；行业临界、关键标的、细分行业渗流、随机重排稳健性；九转模型卡片与综合评分卡（HMM 42% / 渗流 38% / 九转 20%），显示模型口径 v2.2.0、样本截止日与刷新时间；下一状态取转移矩阵，止损清仓、股数方向与仓位目标一致
 - **指数分析**：A 股宽基与海外指数的多周期、均线、RSI、MACD、支撑压力与偏多/偏空评分
 - **九转怎么看**：建仓结构 9 根（收盘价对比 4 日前）、倒计时 13 根（对比 2 日前高/低）；9/9 只说明这一段动能衰竭，不是反转保证。买结构完成后等放量收阳或收复 5 日线再试仓，卖结构完成且跌破 5 日线先减一半；7/9 只观察
 - **稳定性**：资产快照本地缓存，启动先展示上次资产再刷新
@@ -179,7 +179,7 @@ StockDesk for iOS is a fully standalone SwiftUI app, now at **4.1.2 (36)**. It d
 - 100% / 120% / 150% font scaling; 150% uses a single-column HUB
 - Built-in Chinese / English switch in Settings
 - Full-page image sharing via the system share sheet (WeChat, Notes, Files)
-- HMM, percolation and TD models with per-stock position guidance and a transparent composite score (model registry v2.2.0)
+- HMM, percolation and TD models with per-stock position guidance and a transparent composite score (model registry v2.2.0); the model screen shows sample cut-off / refresh time and keeps the last good result when a refresh partially fails
 - Local-only storage; no login and no uploads
 
 ### Install

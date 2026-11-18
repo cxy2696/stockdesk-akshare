@@ -82,6 +82,31 @@ def test_watchlist_crud(client):
     assert client.get("/api/watchlist").json()["data"] == []
 
 
+def test_watchlist_decisions_are_a_separate_payload(client, monkeypatch):
+    import backend.api as api_module
+
+    monkeypatch.setattr(api_module.decision, "stock_plan",
+                        lambda code: {"code": code, "rating": "好", "tier": "确认"})
+    client.post("/api/watchlist", json={"code": "600519", "name": "贵州茅台"})
+    response = client.get("/api/watchlist/decisions")
+    assert response.status_code == 200
+    payload = response.json()["data"]
+    assert payload["600519"]["rating"] == "好"
+
+
+def test_forecast_endpoint_is_independent_of_the_decision_scan(client, monkeypatch):
+    import backend.api as api_module
+
+    monkeypatch.setattr(api_module.decision, "forecast_overview", lambda: {
+        "market": {"label": "震荡", "score": 50, "breadth": {"up": 1, "down": 2}},
+        "forecast": {"state": "震荡", "expected_5d": 0.0},
+        "universe_total": 3,
+    })
+    response = client.get("/api/market/forecast")
+    assert response.status_code == 200
+    assert response.json()["data"]["forecast"]["state"] == "震荡"
+
+
 def test_backtest_metadata(client):
     strategies = client.get("/api/backtest/strategies").json()["data"]
     assert len(strategies) >= 9

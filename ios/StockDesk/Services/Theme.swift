@@ -68,6 +68,12 @@ enum Theme {
         guard let v, v != 0 else { return "minus" }
         return v > 0 ? "arrow.up.right" : "arrow.down.right"
     }
+
+    /// Semantic colour for the three HMM states, shared by models, forecast
+    /// and decision screens so the same state never changes colour.
+    static func stateColor(_ state: String) -> Color {
+        state == "强势" ? up : state == "弱势" ? down : amber
+    }
 }
 
 extension Color {
@@ -163,22 +169,40 @@ extension View {
 }
 
 extension Double {
+    /// Number of decimal places the formatter will actually show.
+    private func roundedAwayFromZero(_ digits: Int) -> Double {
+        guard isFinite else { return self }
+        let step = pow(10.0, -Double(max(0, digits)))
+        return abs(self) < step / 2 ? 0 : self
+    }
+
     func fmt(_ digits: Int = 2) -> String {
         guard isFinite else { return "--" }
         let f = NumberFormatter()
         f.numberStyle = .decimal
         f.minimumFractionDigits = digits
         f.maximumFractionDigits = digits
-        return f.string(from: NSNumber(value: self)) ?? "--"
+        return f.string(from: NSNumber(value: roundedAwayFromZero(digits))) ?? "--"
     }
 
+    /// Signed percentage for changes (returns, day moves). Values that round
+    /// to zero are rendered as `0.00%`, never `-0.00%` or `+0.00%`.
     func pct(_ digits: Int = 2) -> String {
         guard isFinite else { return "--" }
-        return (self > 0 ? "+" : "") + String(format: "%.\(digits)f%%", self)
+        let value = roundedAwayFromZero(digits)
+        return (value > 0 ? "+" : "") + String(format: "%.\(digits)f%%", value)
+    }
+
+    /// Unsigned percentage for levels (weights, breadth, win rate, ratios).
+    func pctLevel(_ digits: Int = 1) -> String {
+        guard isFinite else { return "--" }
+        return String(format: "%.\(digits)f%%", roundedAwayFromZero(digits))
     }
 
     func signed(_ digits: Int = 2) -> String {
-        (self > 0 ? "+" : "") + fmt(digits)
+        guard isFinite else { return "--" }
+        let value = roundedAwayFromZero(digits)
+        return (value > 0 ? "+" : "") + fmt(digits)
     }
 }
 
@@ -191,15 +215,20 @@ extension Optional where Wrapped == Double {
         guard let v = self else { return "--" }
         return v.pct(digits)
     }
+    func pctLevel(_ digits: Int = 1) -> String {
+        guard let v = self else { return "--" }
+        return v.pctLevel(digits)
+    }
 }
 
 func shortMoney(_ v: Double?) -> String {
     guard let v, v.isFinite else { return "--" }
-    let abs = Swift.abs(v)
-    if abs >= 1e12 { return String(format: "%.2f万亿", v / 1e12) }
-    if abs >= 1e8 { return String(format: "%.2f亿", v / 1e8) }
-    if abs >= 1e4 { return String(format: "%.2f万", v / 1e4) }
-    return String(format: "%.0f", v)
+    let value = abs(v) < 0.5 ? 0 : v
+    let abs = Swift.abs(value)
+    if abs >= 1e12 { return String(format: "%.2f万亿", value / 1e12) }
+    if abs >= 1e8 { return String(format: "%.2f亿", value / 1e8) }
+    if abs >= 1e4 { return String(format: "%.2f万", value / 1e4) }
+    return String(format: "%.0f", value)
 }
 
 extension View {

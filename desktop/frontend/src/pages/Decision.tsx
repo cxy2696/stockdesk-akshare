@@ -87,13 +87,13 @@ export default function Decision() {
     {
       title: '买入区间',
       dataIndex: 'buy_zone',
-      width: 112,
-      render: (z: number[]) => <span className="num small">{z?.[0] ?? '--'} – {z?.[1] ?? '--'}</span>,
+      width: 132,
+      render: (z: number[]) => <span className="num small" style={{ whiteSpace: 'nowrap' }}>{z?.[0] ?? '--'} – {z?.[1] ?? '--'}</span>,
     },
     {
       title: '止损 / 目标',
       width: 118,
-      render: (_: any, r: any) => <span className="num small"><span className="down">{fmt.price(r.stop)}</span> / <span className="up">{fmt.price(r.target)}</span></span>,
+      render: (_: any, r: any) => <span className="num small" style={{ whiteSpace: 'nowrap' }}><span className="down">{fmt.price(r.stop)}</span> / <span className="up">{fmt.price(r.target)}</span></span>,
     },
     {
       title: '盈亏比',
@@ -124,7 +124,7 @@ export default function Decision() {
     <div>
       <Card
         title={<span>今日决策 <Tag color="blue" style={{ marginLeft: 8 }}><CompassOutlined /> {m.label ?? '--'}</Tag></span>}
-        desc={`市场温度 ${m.score ?? '--'} · 扫描 ${data.scanned ?? '--'} 只 · 命中 ${data.matched ?? '--'} 只`}
+        desc={`市场温度 ${m.score ?? '--'} · 扫描 ${data.scanned ?? '--'} 只 · 命中 ${data.matched ?? data.candidates?.length ?? '--'} 只${data.partial ? `（${data.pending ?? 0} 只复核未完成）` : ''}`}
         style={{ marginBottom: 14 }}
       >
         <div className="decision-brief">

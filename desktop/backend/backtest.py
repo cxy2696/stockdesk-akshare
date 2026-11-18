@@ -245,7 +245,7 @@ def _index_series(code: str) -> tuple[pd.Series, str]:
     meta = next((x for x in INDEXES if x["code"] == code), None)
     if meta is None:
         return pd.Series(dtype=float), ""
-    rows = market.klines(code, limit=3000, adjust="", secid_override=meta["secid"])
+    rows = market.klines(code, limit=3000, adjust="", secid_override=meta["secid"], allow_akshare=False)
     if not rows:
         return pd.Series(dtype=float), meta["name"]
     s = pd.Series({r["date"]: r["close"] for r in rows if r.get("close")})

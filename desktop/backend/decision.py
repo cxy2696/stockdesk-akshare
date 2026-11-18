@@ -17,12 +17,22 @@ import math
 import random
 import statistics
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from . import db, market, models, state, td
 
 CACHE_TTL = 300
+# Only the best pre-scores get an expensive 160-bar K-line check.  The table
+# returns at most 24 rows, so 32 covers the display with a small failure
+# buffer; scanning all 80 made the first decision/forecast paint wait on 80
+# serialised quote requests.
+SHORTLIST_LIMIT = 32
+MAX_CANDIDATES = 24
+# Cap the K-line verification wall time.  A slow quote host must not keep the
+# page on a skeleton for minutes; whatever finished is returned and the rest
+# is reported as pending.  The 8-worker pool continues in the background.
+SCAN_DEADLINE_S = 18.0
 PLAN_LABELS = {
     "执行": "状态与趋势允许，可按计划分批",
     "确认": "方向成立但尚未完全确认，等回调或小仓",
@@ -56,8 +66,21 @@ def _normal_cdf(x: float) -> float:
 
 
 def _market_context() -> dict:
+    """Prefer the already-computed full market state, else use the light one.
+
+    The full state fetches five index K-line histories and two board lists.
+    Decision/forecast only need the verdict, score, breadth and turnover; when
+    the daily page has not populated the full cache yet, the light state gives
+    those fields immediately instead of blocking the page on the K-line host.
+    """
     try:
-        return state.market_state()
+        # A full snapshot up to half an hour old is still a better context
+        # than a light state that may have no cached breadth at all; the daily
+        # page refreshes it every two minutes in normal use.
+        cached = db.cache_get("market:state", 1800)
+        if cached:
+            return cached
+        return state.market_state(light=True)
     except Exception:
         return {}
 
@@ -69,15 +92,20 @@ def _model_context() -> dict:
         return {}
 
 
-def market_forecast() -> dict:
+def market_forecast(ctx: dict | None = None, snap: dict | None = None) -> dict:
     """HMM-conditional five-day market forecast.
 
     ``stats.mean`` is the historical daily log return in percent for each
     state.  Multiplying by five is an estimate, not a promise.  The five-day
     state distribution is obtained from P^5, then the state means are mixed.
+
+    ``ctx``/``snap`` let a caller that already fetched the market state or the
+    model snapshot reuse them instead of paying for the same cached work twice.
     """
-    ctx = _market_context()
-    snap = _model_context()
+    if ctx is None:
+        ctx = _market_context()
+    if snap is None:
+        snap = _model_context()
     hmm = (snap or {}).get("hmm") or {}
     fallback = {
         "state": (ctx.get("verdict") or {}).get("label") or "震荡",
@@ -304,7 +332,7 @@ def _plan_from_klines(code: str, name: str, price: float, rows: list[dict],
 def stock_plan(code: str) -> dict:
     code = str(code).strip()
     key = f"decision:stock:v2:{code}"
-    cached = db.cache_get(key, 120)
+    cached = db.cache_get(key, CACHE_TTL)
     if cached:
         return cached
     q = market.quote(code) or {}
@@ -436,14 +464,28 @@ def overview(scan: int = 300, seed: int | None = None) -> dict:
         seed = random.randrange(1, 2_000_000_000)
     rng = random.Random(seed)
     sample = rows if scan >= total else rng.sample(rows, scan)
-    shortlist = sorted(sample, key=_pre_score, reverse=True)[:min(80, len(sample))]
+    shortlist = sorted(sample, key=_pre_score, reverse=True)[:min(SHORTLIST_LIMIT, len(sample))]
     ctx = _market_context()
     label = (ctx.get("verdict") or {}).get("label") or "震荡"
     candidates: list[dict] = []
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        for p in ex.map(lambda r: _plan_for_spot(r, label), shortlist):
+    ex = ThreadPoolExecutor(max_workers=8)
+    futures = [ex.submit(lambda r=r: _plan_for_spot(r, label)) for r in shortlist]
+    unfinished = 0
+    try:
+        for fut in as_completed(futures, timeout=SCAN_DEADLINE_S):
+            try:
+                p = fut.result()
+            except Exception:
+                p = None
             if p:
                 candidates.append(p)
+    except TimeoutError:
+        pass
+    finally:
+        unfinished = sum(1 for f in futures if not f.done())
+        for f in futures:
+            f.cancel()
+        ex.shutdown(wait=False, cancel_futures=True)
     rating_rank = {"好": 0, "中": 1, "差": 2}
     tier_rank = {"执行": 0, "确认": 1, "预警": 2, "观察": 3}
     candidates.sort(key=lambda c: (
@@ -452,7 +494,7 @@ def overview(scan: int = 300, seed: int | None = None) -> dict:
         -(float(c.get("score") or 0)),
         -(float(c.get("risk_reward") or 0)),
     ))
-    candidates = candidates[:24]
+    candidates = candidates[:MAX_CANDIDATES]
     out = {
         "ts": time.time(),
         "market": {
@@ -468,7 +510,11 @@ def overview(scan: int = 300, seed: int | None = None) -> dict:
         "all_total": len((market.fetch_spot(ttl=300) or {}).get("rows") or []),
         "sampled_all": scan >= total,
         "sample_seed": seed,
+        "matched": len(candidates),
         "shortlist": len(shortlist),
+        "partial": unfinished > 0,
+        "pending": unfinished,
+        "deadline_s": SCAN_DEADLINE_S,
         "method": "random.sample → snapshot pre-score → 160-bar K-line plan",
         "tier_guide": PLAN_LABELS,
         "rating_guide": RATING_TEXT,
@@ -477,3 +523,35 @@ def overview(scan: int = 300, seed: int | None = None) -> dict:
         "updated": time.time(),
     }
     return out
+
+
+def forecast_overview() -> dict:
+    """Fast market-forecast payload.
+
+    The forecast page only needs the regime, the five-day distribution and the
+    current market context.  It used to call ``overview`` just for those fields,
+    which also scanned 300 stocks and fetched K-line histories; on a slow quote
+    host that left the page on a skeleton for minutes.  This path keeps the
+    same market/forecast contract without the candidate scan.
+    """
+    ctx = _market_context()
+    # Never trigger a fresh full-market snapshot just to print a universe
+    # count; use whatever is cached (the field is informational only).
+    try:
+        spot = market.cached_spot() or {}
+    except Exception:
+        spot = {}
+    return {
+        "ts": time.time(),
+        "market": {
+            "label": (ctx.get("verdict") or {}).get("label") or "震荡",
+            "score": ctx.get("score"),
+            "breadth": ctx.get("breadth"),
+            "turnover": ctx.get("turnover"),
+            "verdict": ctx.get("verdict"),
+        },
+        "forecast": market_forecast(ctx=ctx),
+        "universe_total": len(spot.get("rows") or []),
+        "method": "state.market_state → HMM transition^5",
+        "updated": time.time(),
+    }

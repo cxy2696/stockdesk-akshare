@@ -78,8 +78,22 @@ HMM 的输入是五个 A 股指数的日对数收益，输出弱势 / 震荡 / �
 | `percolation.cpp` | union-find 四邻接格点分析；支持非正方形/最后一行不满；只把真实矩形边界计为 `spanning` |
 | `hmm.cpp` | 单变量 Gaussian HMM 的缩放前向/后向 Baum-Welch；输入归一化、方差下限、收敛判定与有限值检查 |
 | `bindings.cpp` | 唯一接触 Python 的层：numpy 维度/形状/类型校验，输出固定 shape 的 numpy 数组 |
+| `selftest.cpp` | 纯 C++ 自测：固定/随机格点对照 BFS、批量一致性、HMM 确定性、广度/覆盖率审计 |
+| `bench.cpp` | 纯 C++ 微基准：单格点、批量格点、HMM、广度 census、覆盖率审计 |
+| `CMakeLists.txt` | 脱离 CPython 的静态库 + CTest + ASan/UBSan 构建入口 |
 
-`backend/native.py` 只报告 `C++ / NumPy fallback` 状态；`models.py` 在原生调用抛异常时自动回退到 NumPy，并读取真实的 `converged` 字段，而不是假报 `True`。pybind 绑定在纯计算期间释放 GIL，渗流格点全程使用 uint8 numpy 连续内存，Monte-Carlo 重排/自助抽样通过 `grid_batch` 一次进入 C++，批量路径复用 union-find 工作区，5 个指数的 HMM 并行拟合。模型快照带 `trace`（算法/引擎/种子/规模/格点摘要/HMM 收敛诊断），用于复现和对账。因子筛选输出 `cross-sectional-factor-v2` trace、类别/因子覆盖率；缺失类别按可用类别权重重新归一，不把缺失值当作 0 分。回归测试 `tests/test_native.py` 覆盖 C++/NumPy parity、空/满/非方形格点、NaN/坏矩阵/坏迭代次数、线程安全和回退契约。
+`backend/native.py` 只报告 `C++ / NumPy fallback` 状态；`models.py` 在原生调用抛异常时自动回退到 NumPy，并读取真实的 `converged` 字段，而不是假报 `True`。pybind 绑定在纯计算期间释放 GIL，渗流格点全程使用 uint8 numpy 连续内存，Monte-Carlo 重排/自助抽样通过 `grid_batch` 一次进入 C++，批量路径复用 union-find 工作区，5 个指数的 HMM 并行拟合。1.2.4 起渗流使用 32 位并查集和根节点列表，HMM 对生产配置 k=3 做编译期特化并预计算 `B×beta`；核心可单独用 CMake 编译、CTest 自测和 `native_bench` 计时。模型快照带 `trace`（算法/引擎/种子/规模/格点摘要/HMM 收敛诊断），用于复现和对账。桌面端新增 `backend/evaluation.py`：对单指数做滚动 220 日 HMM 重训，每 5 个交易日取一次因果状态和 5 日预测，与实际 5 日收益比较，输出命中率、相关性、分状态表现和模型仓位净值；结果缓存 30 分钟并在后台刷新。因子筛选输出 `cross-sectional-factor-v2` trace、类别/因子覆盖率；缺失类别按可用类别权重重新归一，不把缺失值当作 0 分。回归测试 `tests/test_native.py` 覆盖 C++/NumPy parity（含 k=2/3/4）、空/满/非方形格点、NaN/坏矩阵/坏迭代次数、线程安全和回退契约；`native_selftest` 额外覆盖 C++ 侧的随机格点 BFS 对照与批量一致性。
+
+### 桌面端效率与信息层级
+
+- 主导航分「工作台 / 研究 / 工具」并全部展示，不删减板块；HUD 右侧保留原 7 个模块并新增历史测评。研究台作为汇总入口，市场预测、量化模型、因子、板块、指数和地域仍可直接进入。
+- 量化模型页把 HMM/渗流/九转/行业/边界放进可展开的「模型明细与诊断」，首屏只保留结论、目标仓位和可执行建议；每日策略保留分层 `More` 折叠。
+- 缓存：`market_state`、指数分析、每日策略和历史测评都采用 stale-while-revalidate（先返回旧结果、后台刷新）；启动线程预热快照、轻量状态、每日策略、指数分析和历史测评。
+- 新增 `backend/evaluation.py` 和 `/api/models/history`，以滚动窗口重训 HMM 并检验 5 日方向，结果带缓存和 `stale/age` 标记；页面见「历史测评」。
+
+### 策略回测
+
+组合回测分三种模式：推荐组合（自选+持仓池、60 日动量、HMM 状态仓位、20 日换仓）、自定义持仓（权重、买入持有或再平衡）和交易记录回放（真实流水、T+1/现金检查）。三者都以收盘信号、次日开盘成交，计佣金/印花税/滑点，默认上证指数基准；单股规则回测保留。
 
 ### 全市场覆盖契约
 

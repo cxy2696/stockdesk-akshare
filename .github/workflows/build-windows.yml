@@ -59,6 +59,18 @@ jobs:
           $meta = Invoke-RestMethod "http://127.0.0.1:8899/api/models/meta" -TimeoutSec 30
           if (-not $meta.ok) { throw "models meta endpoint failed" }
           if ($meta.data.models.PSObject.Properties.Name -contains "kdj") { throw "KDJ must be removed from registry" }
+          # New pages must be present in the packaged SPA and new APIs bundled.
+          foreach ($route in @("/backtest", "/evaluation", "/research")) {
+            $status = (Invoke-WebRequest "http://127.0.0.1:8899$route" -UseBasicParsing -TimeoutSec 10).StatusCode
+            if ($status -ne 200) { throw "page $route failed: $status" }
+          }
+          $btBody = @{ mode = "custom"; holdings = @(@{ code = "600519"; weight = 50 }, @{ code = "000858"; weight = 50 }); start = "2024-01-01"; capital = 1000000 } | ConvertTo-Json -Depth 5
+          $bt = Invoke-RestMethod "http://127.0.0.1:8899/api/backtest/portfolio" -Method Post -ContentType "application/json" -Body $btBody -TimeoutSec 90
+          if (-not $bt.ok -or -not $bt.data.metrics.days) { throw "portfolio backtest endpoint failed" }
+          Write-Host "portfolio backtest:" $bt.data.metrics.days "days"
+          $hist = Invoke-RestMethod "http://127.0.0.1:8899/api/models/history?code=000300&limit=1000" -TimeoutSec 90
+          if (-not $hist.ok -or -not $hist.data.samples) { throw "history evaluation endpoint failed" }
+          Write-Host "history samples:" $hist.data.samples
           if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
       - name: Report size
         shell: pwsh

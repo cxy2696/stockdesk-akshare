@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import time
 
+from . import native
+
 MODEL_VERSION = "2.7.0"
+NATIVE_VERSION = native.VERSION or "1.2.4"
 
 MODELS = {
     "hmm": {
@@ -54,7 +57,7 @@ MODELS = {
         ),
     },
     "native": {
-        "version": "1.2.2",
+        "version": NATIVE_VERSION,
         "name": "C++ market/model core",
         "params": {"grid": "union-find", "hmm": "diag-Gaussian Baum-Welch",
                    "census": "breadth/coverage audit"},

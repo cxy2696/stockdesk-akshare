@@ -156,7 +156,7 @@ struct AnalyticsView: View {
                 VStack(spacing: 0) {
                     StatLine(title: "平均盈利", value: r.stats.avgWin.signed(), valueColor: Theme.up)
                     StatLine(title: "平均亏损", value: r.stats.avgLoss.signed(), valueColor: Theme.down)
-                    StatLine(title: "波动率", value: r.metrics.volatility.pct())
+                    StatLine(title: "波动率", value: r.metrics.volatility.pctLevel(2))
                 }
             }
         }

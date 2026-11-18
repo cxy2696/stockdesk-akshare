@@ -738,8 +738,10 @@ actor MarketService {
         st.turnover = (spot?.rows ?? []).reduce(0) { $0 + ($1.amount ?? 0) }
 
         var trends: [IndexTrend] = []
+        var asOf = ""
         for (i, def) in Self.indexDefs.enumerated() {
             let rows = (try? await indexKlines(def.code, limit: 160)) ?? []
+            if asOf.isEmpty { asOf = rows.last?.date ?? "" }
             let closes = rows.map(\.close)
             let ma5 = closes.count >= 5 ? closes.suffix(5).reduce(0, +) / 5 : nil
             let ma10 = closes.count >= 10 ? closes.suffix(10).reduce(0, +) / 10 : nil
@@ -797,6 +799,7 @@ actor MarketService {
             ))
         }
         st.indices = trends
+        st.asOf = asOf
 
         let up = br.up, down = br.down
         let ratio = Double(up) / Double(max(up + down, 1))
@@ -815,7 +818,7 @@ actor MarketService {
         else { st.label = "弱势"; st.tone = "down" }
         st.reasons = [
             "上涨 \(up) 家 / 下跌 \(down) 家，赚钱效应\(ratio > 0.55 ? "较好" : (ratio > 0.45 ? "一般" : "偏弱"))",
-            "主要指数平均 \(String(format: "%+.2f", avg))%，\(above)/5 站上 20 日线",
+            "主要指数平均 \(String(format: "%+.2f", avg))%，\(above)/\(max(trends.count, 1)) 站上 20 日线",
             "涨停 \(br.limitUp) 家 / 跌停 \(br.limitDown) 家",
             "全市场成交额约 \(Int(st.turnover / 1e8)) 亿元",
         ]

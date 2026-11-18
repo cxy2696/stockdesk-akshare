@@ -89,7 +89,7 @@ enum QuantModels {
 
     static func percent(_ value: Double?, _ digits: Int = 1) -> String {
         guard let value, value.isFinite else { return "--" }
-        return value.fmt(digits) + "%"
+        return value.pctLevel(digits)
     }
 
     static func money(_ value: Double?) -> String {
@@ -140,7 +140,7 @@ enum QuantModels {
                 score: hmmScore,
                 weight: 0.42,
                 quality: hmmQuality,
-                detail: "\(h.state) · 后验 \(confidenceText) · 预计 \(num(h.expectedDays, 1)) 天",
+                detail: "\(h.state) · 后验 \(confidenceText) · 预计 \(num(h.expectedDays, 1)) 个交易日",
                 available: true
             ))
             weighted += Double(hmmScore) * 0.42
@@ -385,7 +385,11 @@ enum QuantModels {
     }
 
     static func percolation(_ rows: [Quote]) -> PercolationSnapshot? {
+        // Stable code order keeps the lattice reproducible across refreshes;
+        // the quote source itself returns rows sorted by amount, which changes
+        // cluster geometry from one snapshot to the next.
         let valid = rows.filter { ($0.price ?? 0) > 0 && ($0.amount ?? 0) > 0 && !$0.name.contains("退") && !$0.name.uppercased().contains("ST") }
+            .sorted { $0.code < $1.code }
         let n = valid.count
         guard n > 100 else { return nil }
         let cols = Int(ceil(sqrt(Double(n))))
@@ -414,25 +418,41 @@ enum QuantModels {
         let largeSet = Set(largest)
         var cells = [Int](repeating: 0, count: grid.count)
         for i in 0..<n { cells[i] = largeSet.contains(i) ? 2 : (grid[i] == 1 ? 1 : 0) }
+        // Random-layout baseline. The old implementation rotated the lattice,
+        // which preserves most clusters and is not a reshuffle at all. Spread
+        // the same number of advancing stocks over the full lattice instead.
         var robust: [Double] = []
-        for offset in [7, 17, 29] {
+        for seed in [UInt64(11), 23, 37] {
             var g = [Int](repeating: 0, count: grid.count)
-            for i in 0..<n { g[i] = grid[(i + offset) % n] }
+            var positions = Array(0..<n)
+            var state = seed
+            func next() -> UInt64 {
+                state = state &* 6364136223846793005 &+ 1442695040888963407
+                return state
+            }
+            if n > 1 {
+                for i in stride(from: n - 1, through: 1, by: -1) {
+                    let j = Int(next() % UInt64(i + 1))
+                    positions.swapAt(i, j)
+                }
+            }
+            for i in 0..<up { g[positions[i]] = 1 }
             let comps = components(g, cols: cols)
             robust.append(Double(comps.max() ?? 0) / Double(max(up, 1)))
         }
         let grouped = Dictionary(grouping: valid) { $0.industry?.isEmpty == false ? $0.industry! : "其他" }
         var industries: [IndustryPercolation] = []
         for (name, group) in grouped where group.count >= 8 && name != "其他" {
-            let gc = Int(ceil(sqrt(Double(group.count))))
+            let members = group.sorted { $0.code < $1.code }
+            let gc = Int(ceil(sqrt(Double(members.count))))
             var g = [Int](repeating: 0, count: gc * gc)
             var upCount = 0
-            for (i, q) in group.enumerated() where (q.pct ?? 0) > 0 { g[i] = 1; upCount += 1 }
+            for (i, q) in members.enumerated() where (q.pct ?? 0) > 0 { g[i] = 1; upCount += 1 }
             let comps = components(g, cols: gc)
             let giant = Double(comps.max() ?? 0) / Double(max(upCount, 1))
             let st = giant >= percThreshold ? "超临界 · 扩散" : (giant >= percThreshold - 0.08 ? "临界附近" : "亚临界 · 分裂")
-            let leader = group.max { ($0.pct ?? -999) < ($1.pct ?? -999) }
-            industries.append(IndustryPercolation(name: name, count: group.count, ratio: Double(upCount) / Double(group.count), giant: giant, status: st, leader: leader?.name ?? "--", leaderPct: leader?.pct))
+            let leader = members.max { ($0.pct ?? -999) < ($1.pct ?? -999) }
+            industries.append(IndustryPercolation(name: name, count: members.count, ratio: Double(upCount) / Double(members.count), giant: giant, status: st, leader: leader?.name ?? "--", leaderPct: leader?.pct))
         }
         industries.sort { $0.count > $1.count }
         return PercolationSnapshot(total: n, up: up, ratio: ratio, threshold: percThreshold, largest: largest.count, giantOccupied: giantOcc, clusters: clusters.count, status: status, cells: cells, cols: cols, robustnessMean: robust.reduce(0, +) / 3, robustnessMin: robust.min() ?? 0, robustnessMax: robust.max() ?? 0, industries: Array(industries.prefix(20)), note: "将股票按代码顺序映射为二维格点，上涨=占据；统计最大 4 邻接连通簇。仅衡量广度扩散，不代表真实空间关系。")

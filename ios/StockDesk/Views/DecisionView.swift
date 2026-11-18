@@ -5,7 +5,11 @@ struct DecisionView: View {
     @State private var forecast: MarketForecast?
     @State private var decisions: [StockDecision] = []
     @State private var loading = true
+    @State private var decisionsLoading = true
     @State private var updated = ""
+    @State private var sampleDate = ""
+    @State private var sampleCount = 0
+    @State private var loadError: String?
     @AppStorage("stockdesk.decision.scan") private var scanLimit = 8
     @Environment(\.horizontalSizeClass) private var hSize
 
@@ -22,34 +26,56 @@ struct DecisionView: View {
                     }
                     .pickerStyle(.segmented)
                     .frame(maxWidth: isPad ? 520 : .infinity)
+
                     if let f = forecast {
-                        Card(title: "市场预测 · 未来 5 日", subtitle: "HMM 状态转移 × 同状态历史收益") {
+                        Card(title: "市场预测 · 未来 5 日", subtitle: "沪深300 · HMM 转移 × 状态历史收益") {
                             HStack(spacing: 10) {
-                                metric("5 日估算", f.expected5d.map { $0.pct(2) } ?? "--", color: (f.expected5d ?? 0) >= 0 ? Theme.up : Theme.down)
+                                metric("5 日估算", f.expected5d.map { ($0 * 100).pct(2) } ?? "--", color: moveColor(f.expected5d))
                                 metric("上涨概率", f.probUp.map { ($0 * 100).fmt(0) + "%" } ?? "--")
-                                metric("当前状态", f.state)
+                                metric("当前状态", f.state, color: Theme.stateColor(f.state))
                             }
+                            Text(sampleLine)
+                                .font(.system(size: 8.5)).foregroundStyle(Theme.textDim)
                             ForEach(Array(f.nextProbs.prefix(3)), id: \.0) { item in
                                 HStack(spacing: 8) {
                                     Text(item.0).font(.system(size: 10)).foregroundStyle(Theme.textSub).frame(width: 42, alignment: .leading)
                                     GeometryReader { geo in
                                         ZStack(alignment: .leading) {
                                             Capsule().fill(Theme.cardSoft).frame(height: 6)
-                                            Capsule().fill(item.0 == "强势" ? Theme.up : item.0 == "弱势" ? Theme.down : Theme.accent)
+                                            Capsule().fill(Theme.stateColor(item.0))
                                                 .frame(width: geo.size.width * max(0.02, min(1, item.1)), height: 6)
                                         }
                                     }
                                     .frame(height: 6)
-                                    Text((item.1 * 100).fmt(1) + "%").font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.textDim).frame(width: 42, alignment: .trailing)
+                                    Text((item.1 * 100).pctLevel(1)).font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.textDim).frame(width: 42, alignment: .trailing)
                                 }
                             }
                             Text(f.caveat).font(.system(size: 9.5)).foregroundStyle(Theme.textDim).lineSpacing(2)
                         }
+                    } else {
+                        Card(title: "市场预测暂时不可用", subtitle: "沪深300 日线样本不足") {
+                            Text(loadError ?? "指数日线没有返回，稍后重试或下拉刷新。")
+                                .font(.system(size: 10.5)).foregroundStyle(Theme.textDim).lineSpacing(2)
+                            Button {
+                                Task { await load() }
+                            } label: {
+                                Text("重新计算").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.accent)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 2)
+                        }
                     }
 
                     Card(title: "持仓好坏判断", subtitle: "\(decisions.count) 只 · 按评级好→中→差") {
-                        if decisions.isEmpty {
-                            Text("暂无持仓，或行情不足 30 个交易日。").font(.system(size: 11)).foregroundStyle(Theme.textDim)
+                        if decisionsLoading && decisions.isEmpty {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                Text("正在评估持仓与自选，最多 \(scanLimit) 只…")
+                                    .font(.system(size: 10)).foregroundStyle(Theme.textDim)
+                            }
+                        } else if decisions.isEmpty {
+                            Text("暂无持仓，或行情不足 30 个交易日。")
+                                .font(.system(size: 11)).foregroundStyle(Theme.textDim)
                         }
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: isPad ? 2 : 1), spacing: 10) {
                             ForEach(decisions.sorted { rank($0.rating) < rank($1.rating) }) { d in
@@ -62,7 +88,8 @@ struct DecisionView: View {
                         Text("1. 预测为正、概率 >55%：按每日策略的中上仓位执行。\n2. 预测接近 0、概率 45%–55%：只做结构性机会。\n3. 预测为负、概率 <45%：降低仓位，保留现金。\n个股先看评级与买区，跌破止损先减/清；“好”不等于一定上涨。")
                             .font(.system(size: 10.5)).foregroundStyle(Theme.textSub).lineSpacing(3)
                     }
-                    Text("v\(AppInfo.version) · " + (updated.isEmpty ? "" : updated)).font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
+                    Text("v\(AppInfo.version) · 模型 v2.2.0" + (updated.isEmpty ? "" : " · " + updated))
+                        .font(.system(size: 8, design: .monospaced)).foregroundStyle(Theme.textDim)
                 }
             }
             .padding(14)
@@ -73,6 +100,11 @@ struct DecisionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
         .task(id: scanLimit) { await load() }
+    }
+
+    private var sampleLine: String {
+        guard sampleCount > 0 else { return "样本来不及返回，先显示上一次结果。" }
+        return "样本：沪深300 \(sampleCount) 根日线" + (sampleDate.isEmpty ? "" : " · 截至 \(sampleDate) 收盘")
     }
 
     private func decisionTile(_ d: StockDecision) -> some View {
@@ -111,7 +143,8 @@ struct DecisionView: View {
 
     private func load() async {
         loading = true
-        defer { loading = false }
+        decisionsLoading = true
+        loadError = nil
         async let marketResult = timed(8, fallback: MarketState()) {
             await MarketService.shared.marketState()
         }
@@ -127,6 +160,15 @@ struct DecisionView: View {
             hmm = QuantModels.hmm(rets)
         }
         forecast = DecisionEngine.forecast(hmm)
+        if forecast == nil {
+            loadError = "沪深300 日线样本不足（\(kl.count) 根），市场预测暂不可用。"
+        }
+        sampleDate = kl.last?.date ?? ""
+        sampleCount = kl.count
+        // Paint the market forecast immediately; the per-stock K-line scan can
+        // take several seconds and must not hold the whole page behind a spinner.
+        loading = false
+
         var out: [StockDecision] = []
         var targets: [(String, String, Double)] = []
         var seen = Set<String>()
@@ -154,6 +196,7 @@ struct DecisionView: View {
             }
         }
         decisions = out
+        decisionsLoading = false
         let df = DateFormatter(); df.dateFormat = "HH:mm:ss"
         updated = df.string(from: Date())
     }
@@ -177,6 +220,11 @@ struct DecisionView: View {
             Text(value).font(.system(size: 18, weight: .bold, design: .rounded)).foregroundStyle(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func moveColor(_ v: Double?) -> Color {
+        guard let v, abs(v) > 0.00005 else { return Theme.textSub }
+        return v > 0 ? Theme.up : Theme.down
     }
 
     private func kv(_ label: String, _ value: String) -> some View {

@@ -470,6 +470,7 @@ struct MarketState {
     var score: Int = 50
     var label = "震荡"
     var tone = "flat"
+    var asOf = ""
     var reasons: [String] = []
     var indices: [IndexTrend] = []
     var breadth = Breadth()

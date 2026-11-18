@@ -58,6 +58,29 @@ def warm_spot():
         # larger universe snapshot so the first screen is not blank.
         market.indices()
         market.fetch_spot(ttl=0)
+        from backend import state as state_module
+        try:
+            state_module.market_state(light=True)
+        except Exception:
+            pass
+        # Warm the screens that are slow on a cold network: order matters,
+        # but every call is best-effort so one failed host never stops the rest.
+        from backend import daily, evaluation, state
+
+        # Keep warm-up sequential.  akshare's US-index adapter embeds a
+        # libmini_racer V8 isolate and is not safe to initialise from several
+        # threads at once; doing so crashed the packaged app on first launch.
+        # Evaluation and the index table are warmed first because they are the
+        # new/slow screens; the daily brief runs last.
+        for name, fn in (
+            ("evaluation", evaluation.model_history),
+            ("index", state.index_analysis),
+            ("daily", daily.daily_brief),
+        ):
+            try:
+                fn()
+            except Exception as e:
+                print(f"[stockdesk] {name} warm-up skipped:", e)
         print("[stockdesk] market snapshot warmed")
     except Exception as e:
         print("[stockdesk] warm-up skipped:", e)

@@ -56,7 +56,9 @@ EM_UT = "fa5fd1943c7b386f172d6893dbfba10b"
 # spot cache: 5927 stocks ~ 3MB payload
 SPOT_TTL = 180          # seconds
 QUOTE_TTL = 20
-KLINE_TTL = 600
+KLINE_TTL = 600         # intraday / fallback TTL
+KLINE_MISS_TTL = 300    # don't retry a symbol whose history just failed
+QUOTE_MISS_TTL = 60     # don't retry a blocked quote on every table refresh
 INDEX_TTL = 30
 
 DEFAULT_CAPITAL = 200_000.0

@@ -17,7 +17,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 
 from . import clock, db, native
-from .config import EM_HIS, EM_LIST, EM_QUOTE, EM_UT, INDEXES, KLINE_TTL, QUOTE_TTL, SPOT_TTL
+from .config import (EM_HIS, EM_LIST, EM_QUOTE, EM_UT, INDEXES, KLINE_MISS_TTL,
+                     KLINE_TTL, QUOTE_MISS_TTL, QUOTE_TTL, SPOT_TTL)
 from .net import prefer_ipv4_eastmoney
 
 # Eastmoney TLS is reachable over IPv4 on networks where its IPv6 route is
@@ -31,9 +32,16 @@ SPOT_FIELDS = "f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f
 FS_A = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
 SPOT_KEY = "spot:v7"
 SPOT_SCHEMA = 7
+SPOT_MIN_ROWS = 1000
 UNIVERSE_EXTRA_KEY = "universe:extras:v1"
 
-_spot_lock = __import__("threading").Lock()
+_spot_lock = threading.Lock()
+_SPOT_REFRESH_LOCK = threading.Lock()
+_SPOT_REFRESHING = False
+# How old a cached full-market snapshot may be while a background refresh is
+# running.  Without this, every page waited minutes on a stale snapshot once
+# the 3-minute TTL expired, which is what made the tabs look blank.
+_SPOT_MAX_STALE = 6 * 3600
 
 
 _EM_STATE = {"fails": 0, "last": 0.0, "down_until": 0.0}
@@ -644,6 +652,48 @@ def _cached_snapshot(ttl: float) -> dict | None:
     return None
 
 
+def _stale_snapshot(max_age: float) -> dict | None:
+    """Return the last schema-current snapshot regardless of its TTL."""
+    cached = db.cache_get(SPOT_KEY)
+    if not cached or cached.get("schema") != SPOT_SCHEMA:
+        return None
+    # A partial snapshot that still covers the market (rows exist, some
+    # quotes missing) is far more useful than blocking the page for minutes.
+    # Tiny/empty partials are rejected so a failed first fetch retries.
+    if len(cached.get("rows") or []) < SPOT_MIN_ROWS:
+        return None
+    age = db.cache_age(SPOT_KEY)
+    if age is not None and age > max_age:
+        return None
+    return cached
+
+
+def cached_spot(max_age: float = _SPOT_MAX_STALE) -> dict | None:
+    """Read the last usable snapshot without triggering a network refresh."""
+    return _stale_snapshot(max_age)
+
+
+def _refresh_spot_worker() -> None:
+    global _SPOT_REFRESHING
+    try:
+        with _spot_lock:
+            _fetch_spot_unlocked(ttl=0)
+    except Exception:
+        pass
+    finally:
+        with _SPOT_REFRESH_LOCK:
+            _SPOT_REFRESHING = False
+
+
+def _start_spot_refresh() -> None:
+    global _SPOT_REFRESHING
+    with _SPOT_REFRESH_LOCK:
+        if _SPOT_REFRESHING:
+            return
+        _SPOT_REFRESHING = True
+    threading.Thread(target=_refresh_spot_worker, name="spot-refresh", daemon=True).start()
+
+
 def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
     """Full A-share snapshot: every code represented, never silently dropped.
 
@@ -652,15 +702,31 @@ def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
     quote_status. The cache stores the coverage contract (expected/captured/
     missing/status) so callers can distinguish a complete snapshot from a
     partial one instead of relying on a magic minimum count.
+
+    A stale-but-usable snapshot is returned immediately while one background
+    thread refreshes it.  The old synchronous refresh made every page block
+    for minutes whenever the quote host was slow.
     """
     cached = _cached_snapshot(ttl)
     if cached:
         cached["date"] = clock.last_session_date()
+        cached["stale"] = False
         return cached
+
+    stale = _stale_snapshot(_SPOT_MAX_STALE)
+    if stale:
+        _start_spot_refresh()
+        age = db.cache_age(SPOT_KEY) or 0
+        payload = dict(stale)
+        payload["stale"] = True
+        payload["cache_age"] = round(age, 1)
+        return payload
+
     with _spot_lock:
         cached = _cached_snapshot(ttl)
         if cached:
             cached["date"] = clock.last_session_date()
+            cached["stale"] = False
             return cached
         return _fetch_spot_unlocked(ttl, progress)
 
@@ -728,7 +794,7 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
         if progress:
             progress(min(99, int(len(seen) / max(total, 1) * 100)))
 
-    if len(seen) < 1000:
+    if len(seen) < SPOT_MIN_ROWS:
         return _akshare_spot()
 
     # Merge everything known: bundled/extra universe, Eastmoney rows and Sina
@@ -828,13 +894,26 @@ def quote(code: str) -> dict | None:
     cached = db.cache_get(key, QUOTE_TTL)
     if cached:
         return cached
+    miss_key = f"{key}:miss"
+    if db.cache_get(miss_key, QUOTE_MISS_TTL):
+        return None
+
+    def fallback() -> dict | None:
+        q = _sina_quote(code)
+        if q:
+            db.cache_delete(miss_key)
+            db.cache_set(key, q)
+        else:
+            db.cache_set(miss_key, {"miss": True})
+        return q
+
     try:
         d = _http_json(
             f"{EM_QUOTE}/stock/get?secid={secid(code)}&fltt=2&invt=2&fields=f43,f44,f45,f46,f47,f48,f57,f58,f60,f107,f116,f117,f162,f167,f168,f169,f170,f171,f50"
         )
         x = (d or {}).get("data")
         if not x:
-            return _sina_quote(code)
+            return fallback()
         out = {
             "code": str(x.get("f57") or code),
             "name": x.get("f58") or "",
@@ -862,7 +941,7 @@ def quote(code: str) -> dict | None:
         db.cache_set(key, out)
         return out
     except Exception:
-        return _sina_quote(code)
+        return fallback()
 
 
 def quotes(codes: list[str]) -> dict[str, dict]:
@@ -875,6 +954,20 @@ def quotes(codes: list[str]) -> dict[str, dict]:
         if cached:
             out[c] = cached
     needed = [c for c in codes if not out.get(c)]
+
+    # The full snapshot already contains every quote field the watchlist
+    # renders.  Use a recently cached snapshot before issuing one HTTP request
+    # per missing symbol; a 20-name watchlist otherwise spent ~10 s just on
+    # quote round-trips while the snapshot sat in the same SQLite cache.
+    if needed:
+        spot = _stale_snapshot(900)
+        if spot:
+            by_code = {r.get("code"): r for r in spot.get("rows") or []}
+            for c in needed:
+                row = by_code.get(c)
+                if row and row.get("price") is not None:
+                    out[c] = row
+            needed = [c for c in codes if not out.get(c)]
 
     def work(c):
         return c, quote(c)
@@ -971,14 +1064,18 @@ def _sina_klines(code: str, period: str, limit: int, adjust: str, secid_override
     return rows[-max(10, int(limit)):]
 
 
-def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qfq", secid_override: str | None = None) -> list[dict]:
+def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qfq",
+           secid_override: str | None = None, allow_akshare: bool = True) -> list[dict]:
     adjust = adjust if adjust in ("", "qfq", "hfq") else "qfq"
     fqt = {"": 0, "qfq": 1, "hfq": 2}[adjust]
     key = f"kline:{secid_override or code}:{period}:{adjust}:{limit}"
-    ttl = KLINE_TTL if period in ("daily", "weekly", "monthly") else 60
+    ttl = clock.kline_ttl() if period in ("daily", "weekly", "monthly") else min(60, KLINE_TTL)
     cached = db.cache_get(key, ttl)
     if cached:
         return cached
+    miss_key = f"{key}:miss"
+    if db.cache_get(miss_key, KLINE_MISS_TTL):
+        return []
     klt = _PERIOD.get(period, 101)
     end = time.strftime("%Y%m%d")
     start = "19900101"
@@ -1015,13 +1112,19 @@ def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qf
     rows = rows[-max(10, int(limit)):]
     if not rows:
         rows = _sina_klines(code, period, limit, adjust, secid_override)
+    if not rows and allow_akshare:
+        rows = _akshare_klines(code, period, limit, adjust, secid_override)
     if not rows:
-        return _akshare_klines(code, period, limit, adjust, secid_override)
+        # All three sources failed.  Remember the miss briefly instead of
+        # re-running the same slow timeout + fallback chain on every refresh.
+        db.cache_set(miss_key, {"miss": True})
+        return []
     if rows and any((r["close"] or 0) < 0 for r in rows):
         # forward-adjusted history can go negative on heavily-dividend stocks;
         # fall back to unadjusted prices for display
         return klines(code, period=period, limit=limit, adjust="", secid_override=secid_override)
     if rows:
+        db.cache_delete(miss_key)
         db.cache_set(key, rows)
     return rows
 
@@ -1144,8 +1247,11 @@ def market_breadth() -> dict:
     violation; the Python reference is used when the optional extension is not
     built. Suspended and missing rows are no longer folded into "flat".
     """
-    spot = db.cache_get(SPOT_KEY, 600)
+    spot = db.cache_get(SPOT_KEY)
     if not spot:
+        return {}
+    age = db.cache_age(SPOT_KEY) or 0
+    if age > _SPOT_MAX_STALE:
         return {}
     rows = spot.get("rows", [])
     pct = np.asarray([np.nan if r.get("pct") is None else float(r["pct"]) for r in rows], dtype=float)
@@ -1174,6 +1280,8 @@ def market_breadth() -> dict:
         "expected": spot.get("expected", len(rows)),
         "complete": bool(spot.get("complete", False)),
         "unpriced": spot.get("unpriced", 0),
+        "stale": age > SPOT_TTL,
+        "age": round(age, 1),
         "ts": spot.get("ts"),
     }
 

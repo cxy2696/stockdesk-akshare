@@ -34,7 +34,7 @@ def _index_levels():
     out = []
     for code, name, sec in (("000001", "上证指数", "1.000001"), ("000300", "沪深300", "1.000300")):
         try:
-            rows = market.klines(code, limit=160, adjust="", secid_override=sec)
+            rows = market.klines(code, limit=160, adjust="", secid_override=sec, allow_akshare=False)
             if len(rows) < 25:
                 continue
             closes = [r["close"] for r in rows]
@@ -121,12 +121,20 @@ def daily_brief() -> dict:
     cached = db.cache_get(_CACHE_KEY)
     if cached:
         age = time.time() - float(cached.get("ts") or 0)
-        if age > 120:
+        stale = age > 120
+        if stale:
             with _REFRESH_LOCK:
                 if not _REFRESHING:
                     _REFRESHING = True
                     __import__("threading").Thread(target=_refresh_in_background, daemon=True).start()
-        return cached
+        # Tell the page whether it is looking at a snapshot that is already
+        # being refreshed; otherwise "已更新" is shown for a two-hour-old brief
+        # until the next three-minute poll.
+        payload = dict(cached)
+        payload["stale"] = stale
+        payload["age"] = round(age, 1)
+        payload["refreshing"] = bool(_REFRESHING)
+        return payload
     return _compute_daily()
 
 
@@ -188,6 +196,9 @@ def _compute_daily() -> dict:
     result = {
         "date": time.strftime("%Y-%m-%d"),
         "ts": time.time(),
+        "stale": False,
+        "age": 0,
+        "refreshing": False,
         "status": m.get("status"),
         "indices": idx,
         "breadth": b,

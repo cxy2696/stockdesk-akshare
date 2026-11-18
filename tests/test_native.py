@@ -11,7 +11,7 @@ import threading
 import numpy as np
 import pytest
 
-from backend import models, native
+from backend import model_registry, models, native
 
 pytestmark = pytest.mark.skipif(not native.NATIVE, reason="C++ extension not built")
 
@@ -53,7 +53,8 @@ def reference_component(grid: list[int], cols: int):
 
 def test_version_and_status():
     assert native.status()["backend"] == "C++"
-    assert native.native.__version__ == "1.2.2"
+    assert native.native.__version__ == "1.2.4"
+    assert model_registry.MODELS["native"]["version"] == native.VERSION
 
 
 @pytest.mark.parametrize("cols", [1, 2, 3, 4, 5, 7, 12])
@@ -127,6 +128,30 @@ def test_hmm_matches_numpy_fallback(monkeypatch):
         np.testing.assert_allclose(np.asarray(cpp[key]), np.asarray(py[key]), rtol=1e-6, atol=1e-7)
     assert cpp["converged"] == py["converged"]
     assert cpp["iterations"] == py["iterations"] == 8
+
+
+@pytest.mark.parametrize("k", [2, 4])
+def test_hmm_other_k_matches_numpy_fallback(monkeypatch, k):
+    rng = np.random.default_rng(41 + k)
+    n = 180
+    x = rng.normal(size=n)
+    mu = np.linspace(-1.0, 1.0, k)
+    var = np.ones(k)
+    pi = np.full(k, 1.0 / k)
+    A = np.full((k, k), 0.12 / max(k - 1, 1))
+    np.fill_diagonal(A, 0.88)
+
+    cpp = models._baum_welch(x, mu, var, pi, A, 40)
+    monkeypatch.setattr(native, "NATIVE", False)
+    py = models._baum_welch(x, mu, var, pi, A, 40)
+
+    for key in ("mu", "var", "pi", "A", "gamma", "loglik"):
+        # k>3 uses the runtime-k fallback; reciprocal/summation order keeps
+        # the difference at a few ulps rather than bit-identical output.
+        np.testing.assert_allclose(np.asarray(cpp[key]), np.asarray(py[key]),
+                                   rtol=2e-5, atol=5e-6)
+    assert cpp["iterations"] == py["iterations"]
+    assert cpp["converged"] == py["converged"]
 
 
 def test_hmm_shapes_and_single_iteration():

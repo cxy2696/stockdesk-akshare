@@ -109,7 +109,7 @@ struct DashboardView: View {
                     sub: "卖出落地收益")
             KpiTile(title: "累计收益率", value: s.totalPct.pct(), color: Theme.trendColor(s.totalPct),
                     sub: "初始资产 ¥\(s.startCapital.fmt())")
-            KpiTile(title: "现金仓位", value: s.total > 0 ? String(format: "%.1f%%", s.cash / s.total * 100) : "--",
+            KpiTile(title: "现金仓位", value: s.total > 0 ? (s.cash / s.total * 100).pctLevel(1) : "--",
                     color: Theme.text, sub: "可用 ¥\(s.cash.fmt())")
         }
     }

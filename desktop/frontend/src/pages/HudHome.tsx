@@ -5,7 +5,7 @@ import {
   BellOutlined, CalendarOutlined, ExperimentOutlined, FundOutlined,
   MailOutlined, PieChartOutlined, SearchOutlined, SettingOutlined,
   StarOutlined, ThunderboltOutlined, EnvironmentOutlined, NodeIndexOutlined, LineChartOutlined, ReadOutlined,
-  CompassOutlined, RadarChartOutlined, FilterOutlined,
+  CompassOutlined, RadarChartOutlined, FilterOutlined, HistoryOutlined,
 } from '@ant-design/icons'
 import { api } from '../api'
 import { useAdmin } from '../admin'
@@ -19,11 +19,12 @@ const LEFT = [
 
 const RIGHT = [
   { key: '/decision', label: '交易决策', en: 'Decision', icon: <CompassOutlined /> },
+  { key: '/evaluation', label: '历史测评', en: 'Evaluation', icon: <HistoryOutlined /> },
   { key: '/forecast', label: '市场预测', en: 'Forecast', icon: <RadarChartOutlined /> },
   { key: '/backtest', label: '策略回测', en: 'Backtest', icon: <ExperimentOutlined /> },
   { key: '/factors', label: '因子筛选', en: 'Factors', icon: <FilterOutlined /> },
   { key: '/regions', label: '地域', en: 'Regions', icon: <EnvironmentOutlined /> },
-  { key: '/industry-news', label: '指数分析', en: 'Index Analysis', icon: <LineChartOutlined /> },
+  { key: '/index-analysis', label: '指数分析', en: 'Index Analysis', icon: <LineChartOutlined /> },
   { key: '/models', label: '量化模型', en: 'Quant Models', icon: <NodeIndexOutlined /> },
 ]
 
@@ -101,7 +102,7 @@ export default function HudHome({ overview }: { overview: any }) {
 
   const todayPnl = (summary?.positions ?? []).reduce((a: number, p: any) => a + (p.today_pnl ?? 0), 0)
   const positions = summary?.positions ?? []
-  const assetLevel = Math.max(1, String(Math.floor(Math.max(0, summary?.cash ?? 0))).length)
+  const assetLevel = Math.max(1, String(Math.floor(Math.max(0, summary?.total ?? 0))).length)
   const temp = state?.score ?? 0
   const tempColor = temp >= 58 ? 'var(--up)' : temp >= 42 ? 'var(--amber)' : 'var(--down)'
 
@@ -160,7 +161,7 @@ export default function HudHome({ overview }: { overview: any }) {
         <div className="hud-profile-main">
           <div className="hud-profile-name">{admin.name} <span>{lang === 'en' ? 'Administrator' : '管理员'}</span></div>
           <div className="hud-profile-id">UID: {admin.uid} · {lang === 'en' ? 'Asset level' : '资产等级'} {assetLevel}</div>
-          <div className="hud-profile-bar"><i style={{ width: '62%' }} /></div>
+          <div className="hud-profile-bar"><i style={{ width: `${Math.min(100, assetLevel * 10)}%` }} /></div>
           <div className="hud-profile-foot"><span>{lang === 'en' ? 'Total assets' : '总资产'} ¥{fmt.money(summary?.total)}</span><b className={trendClass(summary?.total_pct)}>{fmt.pct(summary?.total_pct)}</b></div>
         </div>
       </div>

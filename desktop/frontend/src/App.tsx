@@ -19,6 +19,8 @@ import {
   MoonOutlined,
   SunOutlined,
   ThunderboltOutlined,
+  HistoryOutlined,
+  NodeIndexOutlined,
   ArrowLeftOutlined,
   ShareAltOutlined,
 } from '@ant-design/icons'
@@ -47,6 +49,8 @@ const Anomalies = lazy(() => import('./pages/Anomalies'))
 const IndexAnalysis = lazy(() => import('./pages/IndexAnalysis'))
 const HubMap = lazy(() => import('./pages/HubMap'))
 const Models = lazy(() => import('./pages/Models'))
+const Evaluation = lazy(() => import('./pages/Evaluation'))
+const Research = lazy(() => import('./pages/Research'))
 
 const UI_VERSION = __APP_VERSION__
 
@@ -55,6 +59,8 @@ const EN_NAV: Record<string, { label: string; title: string; sub: string }> = {
   '/daily': { label: 'Daily Plan', title: 'Daily Plan', sub: 'Market · position sizing · candidates' },
   '/decision': { label: 'Decision', title: 'Trade Decision', sub: 'Buy zone · stop · target · rating' },
   '/forecast': { label: 'Forecast', title: 'Market Forecast', sub: '5-day regime-conditional outlook' },
+  '/evaluation': { label: 'Evaluation', title: 'Model Evaluation', sub: 'Walk-forward hit rate and equity' },
+  '/research': { label: 'Research', title: 'Research', sub: 'Models · factors · sectors · index · regions' },
   '/watchlist': { label: 'Watchlist', title: 'Watchlist', sub: 'Symbols you follow' },
   '/portfolio': { label: 'Portfolio', title: 'Portfolio', sub: 'Positions · analysis · advice · trades' },
   '/analytics': { label: 'Review', title: 'Performance Review', sub: 'NAV · drawdown · statistics' },
@@ -63,18 +69,34 @@ const EN_NAV: Record<string, { label: string; title: string; sub: string }> = {
   '/screener': { label: 'Sectors', title: 'Sector Tracker', sub: 'Boards · mood · heatmap' },
 }
 
-const NAV = [
-  { key: '/', label: '总览', icon: <AppstoreOutlined />, title: '投资总览', sub: '资产、持仓与今日市场' },
-  { key: '/daily', label: '每日策略', icon: <CalendarOutlined />, title: '每日策略', sub: '每日行情 · 仓位建议 · 标的推荐' },
-  { key: '/decision', label: '交易决策', icon: <CompassOutlined />, title: '交易决策', sub: '买入区间 · 止损 · 目标 · 评级与原因' },
-  { key: '/forecast', label: '市场预测', icon: <RadarChartOutlined />, title: '市场预测', sub: '未来 5 日状态条件收益 · 上涨概率' },
-  { key: '/watchlist', label: '自选行情', icon: <StarOutlined />, title: '自选行情', sub: '关注的标的与分时走势' },
-  { key: '/portfolio', label: '持仓管理', icon: <ProfileOutlined />, title: '持仓管理', sub: '持仓 · 资产分析 · 投资建议 · 交易流水' },
-  { key: '/analytics', label: '收益复盘', icon: <PieChartOutlined />, title: '收益复盘', sub: '净值曲线 · 回撤 · 交易统计' },
+const NAV_CORE = [
+  { key: '/', label: '总览', icon: <HomeOutlined />, title: '投资总览', sub: '资产、持仓与今日市场' },
+  { key: '/daily', label: '每日策略', icon: <CalendarOutlined />, title: '每日策略', sub: '今日结论 · 仓位 · 标的' },
+  { key: '/decision', label: '交易决策', icon: <CompassOutlined />, title: '交易决策', sub: '买区 · 止损 · 目标 · 评级' },
+  { key: '/evaluation', label: '历史测评', icon: <HistoryOutlined />, title: '历史测评', sub: '模型滚动检验 · 命中率 · 净值对比' },
+  { key: '/portfolio', label: '持仓管理', icon: <ProfileOutlined />, title: '持仓管理', sub: '持仓 · 交易流水 · 资产与建议' },
+  { key: '/analytics', label: '收益复盘', icon: <PieChartOutlined />, title: '收益复盘', sub: '净值 · 回撤 · 交易统计' },
   { key: '/backtest', label: '策略回测', icon: <ExperimentOutlined />, title: '策略回测', sub: '用历史数据检验交易规则' },
+]
+
+const NAV_RESEARCH = [
+  { key: '/research', label: '研究台', icon: <NodeIndexOutlined />, title: '研究台', sub: '市场结论 · 模型 · 因子 · 板块 · 指数' },
+  { key: '/forecast', label: '市场预测', icon: <RadarChartOutlined />, title: '市场预测', sub: '未来 5 日状态条件收益 · 上涨概率' },
+  { key: '/models', label: '量化模型', icon: <ThunderboltOutlined />, title: '量化模型', sub: 'HMM · 渗流 · 九转 · 行业与仓位' },
   { key: '/factors', label: '因子筛选', icon: <FilterOutlined />, title: '因子筛选', sub: '因子分类 · 覆盖率 · 横截面打分' },
   { key: '/screener', label: '板块跟踪', icon: <FundOutlined />, title: '板块跟踪', sub: '板块 · 市场情绪 · 个股热图' },
+  { key: '/index-analysis', label: '指数分析', icon: <LineChartOutlined />, title: '指数分析', sub: 'A股主要宽基 · 海外指数 · 操作结论' },
+  { key: '/regions', label: '地域', icon: <CompassOutlined />, title: '地域', sub: '中国上市公司分布 · 省份龙头' },
 ]
+
+const NAV_TOOLS = [
+  { key: '/watchlist', label: '自选行情', icon: <StarOutlined />, title: '自选行情', sub: '关注的标的与分时走势' },
+  { key: '/guide', label: '使用指南', icon: <ReadOutlined />, title: '使用指南', sub: '安装 · 第一次打开 · 每天的使用顺序' },
+  { key: '/settings', label: '设置', icon: <SettingOutlined />, title: '设置', sub: '账户资产 · 数据与缓存' },
+]
+
+const NAV = [...NAV_CORE, ...NAV_RESEARCH, ...NAV_TOOLS]
+
 
 export default function App() {
   const loc = useLocation()
@@ -126,6 +148,8 @@ export default function App() {
       if (loc.pathname === '/advice-center') return { title: 'Portfolio', sub: 'Advice merged into Portfolio' }
       if (loc.pathname === '/index-analysis' || loc.pathname === '/industry-news') return { title: 'Index Analysis', sub: 'A-share and global indices · conclusions' }
       if (loc.pathname === '/models') return { title: 'Quant Models', sub: 'HMM · percolation · position plans' }
+      if (loc.pathname === '/evaluation') return { title: 'Model Evaluation', sub: 'Walk-forward hit rate and equity' }
+      if (loc.pathname === '/research') return { title: 'Research', sub: 'From market conclusion to one research direction' }
       if (loc.pathname === '/decision') return { title: 'Trade Decision', sub: 'Buy zone · stop · target · rating' }
       if (loc.pathname === '/forecast') return { title: 'Market Forecast', sub: '5-day regime-conditional outlook' }
       if (loc.pathname === '/industry-news') return { title: 'Index Analysis', sub: 'A-share and global indices · conclusions' }
@@ -141,6 +165,8 @@ export default function App() {
     if (loc.pathname === '/advice-center') return { title: '持仓管理', sub: '投资建议已并入持仓管理' }
     if (loc.pathname === '/index-analysis' || loc.pathname === '/industry-news') return { title: '指数分析', sub: 'A股主要宽基 · 海外指数 · 操作结论' }
     if (loc.pathname === '/models') return { title: '量化模型', sub: 'HMM · 渗流 · 九转 · 行业关注 · 仓位建议' }
+    if (loc.pathname === '/evaluation') return { title: '历史测评', sub: '滚动检验 · 命中率 · 净值对比' }
+    if (loc.pathname === '/research') return { title: '研究台', sub: '模型 · 因子 · 板块 · 指数 · 地域' }
     if (loc.pathname === '/decision') return { title: '交易决策', sub: '买入区间 · 止损 · 目标 · 评级与原因' }
     if (loc.pathname === '/forecast') return { title: '市场预测', sub: '未来 5 日状态条件收益 · 上涨概率' }
     return NAV.find((n) => n.key === loc.pathname) ?? { title: 'StockDesk', sub: '' }
@@ -148,6 +174,13 @@ export default function App() {
 
   const breadth = overview?.breadth
   const status = overview?.status
+
+  const navLink = (n: (typeof NAV)[number]) => (
+    <Link key={n.key} to={n.key} className={`nav-item ${loc.pathname === n.key ? 'active' : ''}`}>
+      {n.icon}
+      <span>{lang === 'en' ? EN_NAV[n.key]?.label ?? n.label : n.label}</span>
+    </Link>
+  )
 
   return (
     <div className={`shell hud-mode font-scale-${Math.round(scale * 100)}`}>
@@ -161,24 +194,12 @@ export default function App() {
         </div>
 
         <div className="nav-group-label">{lang === 'en' ? 'WORKSPACE' : '工作台'}</div>
-        {NAV.map((n) => (
-          <Link key={n.key} to={n.key} className={`nav-item ${loc.pathname === n.key ? 'active' : ''}`}>
-            {n.icon}
-            <span>{lang === 'en' ? EN_NAV[n.key]?.label ?? n.label : n.label}</span>
-          </Link>
-        ))}
+        {NAV_CORE.map(navLink)}
+        <div className="nav-group-label">{lang === 'en' ? 'RESEARCH' : '研究'}</div>
+        {NAV_RESEARCH.map(navLink)}
 
         <div className="nav-group-label">{lang === 'en' ? 'TOOLS' : '工具'}</div>
-        <Link to="/guide" className={`nav-item ${loc.pathname === '/guide' ? 'active' : ''}`}>
-          <ReadOutlined />
-          <span>{lang === 'en' ? 'Guide' : '使用指南'}</span>
-        </Link>
-        <Tooltip title="布局与数据设置" placement="right">
-          <Link to="/settings" className={`nav-item ${loc.pathname === '/settings' ? 'active' : ''}`}>
-            <SettingOutlined />
-            <span>设置</span>
-          </Link>
-        </Tooltip>
+        {NAV_TOOLS.map(navLink)}
 
         <div className="sider-foot">
           <div>
@@ -275,6 +296,8 @@ export default function App() {
               <Route path="/regions" element={<HubMap />} />
               <Route path="/industry-news" element={<IndexAnalysis />} />
               <Route path="/models" element={<Models />} />
+              <Route path="/evaluation" element={<Evaluation />} />
+              <Route path="/research" element={<Research />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </Suspense>

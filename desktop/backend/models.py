@@ -397,9 +397,9 @@ def _largest_component_batch(grids: np.ndarray, cols: int) -> tuple[list[int], l
     sizes: list[int] = []
     spans: list[bool] = []
     for grid in batch:
-        largest = _largest_component(grid, cols)
+        largest, _, spanning = _largest_component(grid, cols, collect_all=True)
         sizes.append(len(largest))
-        spans.append(False)
+        spans.append(spanning)
     return sizes, spans
 
 
@@ -483,25 +483,33 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True, lig
         ci_width = 0.0
         stability = 1.0
     else:
-        occ_idx = np.flatnonzero(grid[:n])
-        vals = [int(grid[i]) for i in occ_idx]
-        robust_grids = np.zeros((3, cols * cols), dtype=np.uint8)
+        # Random-layout baseline: keep the same number of advancing stocks but
+        # spread them over the full lattice. The previous version shuffled the
+        # occupied indices among themselves, which is a no-op (all values are
+        # 1), so the "random" baseline was identical to the real lattice and
+        # p_value was always 1.
+        #
+        # Robustness (3 random layouts) and bootstrap (12 resamples) go through
+        # one batched native call instead of two; the union-find workspace is
+        # then allocated and reset once.
+        mc_grids = np.zeros((15, cols * cols), dtype=np.uint8)
         for i, seed in enumerate((11, 23, 37)):
-            random.Random(seed).shuffle(vals)
-            robust_grids[i, occ_idx] = vals
-        robust_sizes, _ = _largest_component_batch(robust_grids, cols)
-        robust = [round(size / max(occ, 1), 4) for size in robust_sizes]
-        baseline = sum(robust) / len(robust)
-        p_value = sum(1 for x in robust if x >= giant_occ) / len(robust)
+            positions = random.Random(seed).sample(range(n), occ)
+            mc_grids[i, positions] = 1
 
-        boot_grids = np.zeros((12, cols * cols), dtype=np.uint8)
         boot_occ = []
         for i, seed in enumerate(range(12)):
             rnd = random.Random(1000 + seed)
             sample = rnd.choices([1, 0], weights=[max(occ, 1), max(n - occ, 1)], k=n)
-            boot_grids[i, :n] = sample
+            mc_grids[3 + i, :n] = sample
             boot_occ.append(max(sum(sample), 1))
-        boot_sizes, _ = _largest_component_batch(boot_grids, cols)
+
+        mc_sizes, _ = _largest_component_batch(mc_grids, cols)
+        robust_sizes = mc_sizes[:3]
+        boot_sizes = mc_sizes[3:]
+        robust = [round(size / max(occ, 1), 4) for size in robust_sizes]
+        baseline = sum(robust) / len(robust)
+        p_value = sum(1 for x in robust if x >= giant_occ) / len(robust)
         boot = [size / boot_occ[i] for i, size in enumerate(boot_sizes)]
         boot_sorted = sorted(boot)
         ci_low = round(boot_sorted[1], 4)
@@ -895,14 +903,9 @@ def _compute_model_snapshot() -> dict:
     def load(item):
         code, name, sec = item
         try:
-            kl = market.klines(code, "daily", 420, "", sec)
+            kl = market.klines(code, "daily", 420, "", sec, allow_akshare=False)
         except Exception:
             kl = []
-        if not kl:
-            try:
-                kl = market._akshare_klines(code, "daily", 420, "", sec)
-            except Exception:
-                kl = []
         return code, name, kl
 
     with ThreadPoolExecutor(max_workers=5) as ex:

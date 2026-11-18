@@ -82,6 +82,7 @@ def _breadth_snapshot():
 def test_breadth_native_and_fallback_match(monkeypatch):
     snapshot = _breadth_snapshot()
     monkeypatch.setattr(market.db, "cache_get", lambda key, ttl=None: snapshot)
+    monkeypatch.setattr(market.db, "cache_age", lambda key: 1.0)
     if not native.NATIVE:
         expected = market._breadth_reference(snapshot["rows"])
         assert market.market_breadth()["up"] == expected["up"]
@@ -161,3 +162,43 @@ def test_missing_row_is_classified_as_suspended_from_old_kline(monkeypatch):
     assert snapshot["suspended"] == 1
     assert snapshot["data_complete"] is True
     assert snapshot["fully_quoted"] is False
+
+
+def test_stale_complete_snapshot_is_served_while_refreshing(monkeypatch):
+    stale = {"schema": market.SPOT_SCHEMA, "complete": True, "expected": 1001,
+             "rows": [{"code": f"{i:06d}", "price": 10.0, "pct": 0.0} for i in range(1001)]}
+
+    def fake_get(key, ttl=None):
+        return stale if ttl is None else None
+
+    monkeypatch.setattr(market.db, "cache_get", fake_get)
+    monkeypatch.setattr(market.db, "cache_age", lambda key: 400.0)
+    started = []
+    monkeypatch.setattr(market, "_start_spot_refresh", lambda: started.append(1))
+    out = market.fetch_spot(ttl=180)
+    assert out["stale"] is True
+    assert out["cache_age"] == 400.0
+    assert started == [1]
+
+
+def test_kline_negative_cache_skips_the_network(monkeypatch):
+    calls = []
+
+    def fake_cache_get(key, ttl=None):
+        return {"miss": True} if key.endswith(":miss") else None
+
+    monkeypatch.setattr(market.db, "cache_get", fake_cache_get)
+    monkeypatch.setattr(market, "_http_json", lambda *a, **k: calls.append(1))
+    assert market.klines("000001", limit=160) == []
+    assert calls == []
+
+
+def test_kline_ttl_tracks_the_session(monkeypatch):
+    from backend import clock
+
+    monkeypatch.setattr(clock, "market_status", lambda: {"open": True})
+    assert clock.kline_ttl() == 120
+    monkeypatch.setattr(clock, "market_status", lambda: {"open": False, "label": "午间休市"})
+    assert clock.kline_ttl() == 900
+    monkeypatch.setattr(clock, "market_status", lambda: {"open": False, "label": "已收盘"})
+    assert 60 <= clock.kline_ttl() <= 12 * 3600
