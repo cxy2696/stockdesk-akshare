@@ -96,7 +96,7 @@ HMM 的输入是五个 A 股指数的日对数收益，输出弱势 / 震荡 / �
 - `data_status.py` 从真实缓存快照生成快照日期、更新时间、覆盖/缺失/未定价、每类缓存年龄和调度器状态；`source_health.py` 只记录真实调用结果，不把“已配置”当成“健康”。
 - 新增 `/api/data/status`、`/api/data/sources`、`/api/data/coverage`、`/api/data/refresh`；顶部数据条常驻显示，每 30 秒刷新。
 - `scheduler.py` 在 FastAPI lifespan 启动单线程后台任务，交易时段快刷、收盘后慢刷，顺序执行避免 akshare/libmini_racer 并发；手动刷新通过排队执行。
-- 快照/ K 线新增腾讯独立源；新闻增加新浪滚动新闻兜底；板块保留东财、Sina、THS 多级兜底。
+- 全市场快照保留东财→新浪→akshare 回退；个股/指数报价和 K 线新增腾讯独立源；新闻增加新浪滚动新闻兜底；概念板块增加 Sina newFLJK 独立兜底。
 
 ### 策略回测
 
