@@ -14,7 +14,7 @@
 
 ### C++ 核心 1.2.5
 
-- HMM 生产配置 k=3 的 emission/forward/backward/xi 循环显式展开，native_bench HMM kernel 约 0.157→0.144 ms；C++/NumPy parity 与 CTest 全部通过。
+- HMM 生产配置 k=3 的 emission/forward/backward/xi 循环显式展开，native_bench HMM kernel 约 0.157→0.136 ms；C++/NumPy parity 与 CTest 全部通过。
 
 ### C++ 核心 1.2.4
 
@@ -34,7 +34,7 @@
 - 修复：启动预热改为顺序执行并串行化 akshare 的美股指数适配器，避免 libmini_racer 在多线程初始化时崩溃。
 - 数据层：新增快照/更新时间/覆盖/来源数据条与 `/api/data/status`、`/api/data/sources`、`/api/data/coverage`、`/api/data/refresh`；快照、K 线和新闻增加新浪/腾讯/akshare 多级兜底，后台调度器按交易时段顺序刷新。
 - 界面：移除所有折叠面板，`More` 改为平铺分区；省份列表全部展开，模型/每日策略等长页面通过标题、卡片和间距分层。
-- 测试：新增历史测评与组合回测测试，`pytest` 共 82 项通过；重新构建 macOS App/DMG 并验证包内 C++ 1.2.5；Windows exe 已由 Windows CI 重建并通过 health、前端、组合回测和历史测评冒烟。
+- 测试：新增历史测评与组合回测测试，`pytest` 共 82 项通过；重新构建 macOS App/DMG 并验证包内 C++ 1.2.5；Windows exe 已由 Windows CI（run 44328955508）重建并通过 health、前端、组合回测、历史测评和 5581/5581 全市场数据状态冒烟。
 
 ### 显示与数据可用性
 

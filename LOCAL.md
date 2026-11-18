@@ -26,7 +26,7 @@
 - 模型快照带 `trace`：算法名、布局、引擎、种子、输入规模、格点 SHA-256 摘要、HMM 样本/重启/迭代/收敛状态，结果可复现对账。
 - C++ 计算期间释放 GIL；渗流格点从 Python 到 C++ 全程使用 uint8 numpy 连续内存，避免逐次列表转换；HMM 每轮只计算一次归一化项。
 - 1.2.3：HMM M 步合并权重/均值统计并预计算方差倒数；渗流最大簇按根节点扫描并保留平局顺序；本机基准约快 20%。
-- 1.2.5：HMM k=3 内部循环展开，HMM kernel 约 0.157→0.144 ms；1.2.4：HMM 增加 k=3 编译期特化、B×beta 预计算、倒数归一化与 t 序 M 步；渗流改为 32 位并查集、复用工作区和根节点列表；新增 CMake/CTest 自测与独立 C++ 基准。本机 HMM 约快 45%、单格点约快 25%。
+- 1.2.5：HMM k=3 内部循环展开，HMM kernel 约 0.157→0.136 ms；1.2.4：HMM 增加 k=3 编译期特化、B×beta 预计算、倒数归一化与 t 序 M 步；渗流改为 32 位并查集、复用工作区和根节点列表；新增 CMake/CTest 自测与独立 C++ 基准。本机 HMM 约快 45%、单格点约快 25%。
 - 去冗余：渗流不再维护重复 sizes 数组，HMM 原地更新 pi；随机基准改为在完整格点重排上涨股，并合并 robust/bootstrap 为一次 native batch。
 
 **界面**
@@ -78,13 +78,13 @@
 | 冷启动首屏 | 概览和轻量状态不再同步抓完整快照；指数缓存单飞，HUD 2–6 秒出数据 |
 | `ruff check desktop/backend us tests --select F,E9` | 通过 |
 | C++ 核心自测 | `ctest` 1/1 通过；ASan/UBSan selftest 通过 |
-| `python scripts/native_bench.py` | HMM 约 0.19 ms、单格点约 0.024 ms（Apple Silicon 本机） |
+| `python scripts/native_bench.py` | HMM kernel 约 0.136 ms（1.2.4 同机约 0.157 ms）、单格点约 0.017 ms（Apple Silicon 本机） |
 | `python scripts/api_smoke.py http://127.0.0.1:8765` | 47 个只读 + 3 个写接口 + SPA 通过 |
 | `python scripts/coverage_check.py http://127.0.0.1:8765` | 正常行情源下 5,581/5,581，missing=0，duplicates=0；限流时 data_complete=false |
-| macOS DMG 启动 | 1.17.0，C++ 1.2.4，rflux 0.7.0，5,581 行覆盖、data_complete=true、停牌 2 只 |
+| macOS DMG 启动 | 1.17.0，C++ 1.2.5，rflux 0.7.0，5,581 行覆盖、missing=0、未定价 4，data_complete=false（不把未定价行伪装成完整） |
 | 独立安装 | 全新 `HOME` + 新数据目录启动，默认资产 200,000，未读取现有账户；18 个路由无横向溢出/控制台错误 |
 | iOS 模拟器 | `build_ios.sh` 构建成功，iPhone/iPad 页面已验证 |
-| Windows | 本轮源码 GitHub Actions 构建（run 44319589490）；exe 启动、health 1.17.0/C++、前端资源、组合回测 696 日、历史测评 155 期冒烟通过 |
+| Windows | 本轮源码 GitHub Actions 构建（run 44328955508）；exe 启动、health 1.17.0/C++、前端资源、组合回测 696 日、历史测评 155 期、数据状态 5581/5581/scheduler=true 冒烟通过 |
 
 ## 产物
 
