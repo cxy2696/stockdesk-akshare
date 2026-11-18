@@ -17,8 +17,19 @@ from .config import APP_VERSION
 router = APIRouter()
 
 
+def _json_safe(value):
+    """Convert NaN/Inf to null so one bad metric cannot 500 a whole page."""
+    if isinstance(value, float):
+        return value if np.isfinite(value) else None
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return value
+
+
 def ok(data):
-    return {"ok": True, "data": data}
+    return {"ok": True, "data": _json_safe(data)}
 
 
 def fail(msg: str, code: int = 400):
