@@ -10,7 +10,7 @@
 #   ./build/native-cpp/native_bench
 #
 cmake_minimum_required(VERSION 3.16)
-project(stockdesk_native VERSION 1.3.0 LANGUAGES CXX)
+project(stockdesk_native VERSION 1.4.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,6 +35,9 @@ add_library(stockdesk_native STATIC
     hmm.cpp
     census.cpp
     factor.cpp
+    indicators.cpp
+    risk.cpp
+    chips.cpp
 )
 target_include_directories(stockdesk_native PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

@@ -53,7 +53,7 @@ def reference_component(grid: list[int], cols: int):
 
 def test_version_and_status():
     assert native.status()["backend"] == "C++"
-    assert native.native.__version__ == "1.3.0"
+    assert native.native.__version__ == "1.4.0"
     assert model_registry.MODELS["native"]["version"] == native.VERSION
 
 
@@ -248,3 +248,21 @@ def test_factor_composite_kernel():
     assert list(got["category_hits"]) == [1, 1, 1, 1]
     assert list(got["factor_hits"]) == [1, 2, 2, 2]
     assert abs(float(got["composite"][0]) - (-0.8416212336)) < 1e-6
+
+
+def test_indicators_and_risk_kernel():
+    closes = np.asarray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], dtype=float)
+    ma = native.native.moving_average(closes, 3)
+    assert list(ma[-3:]) == [13.0, 14.0, 15.0]
+    rsi = native.native.rsi(closes, 14)
+    assert float(rsi[-1]) == 100.0
+    td = native.native.td_counts(closes, closes, closes)
+    assert int(td["buy"][-1]) == 0
+    nav = np.asarray([1.0, 1.1, 1.05, 1.2], dtype=float)
+    bench = np.asarray([1.0, 1.02, 1.0, 1.05], dtype=float)
+    risk = native.native.risk_metrics(nav, bench)
+    assert abs(float(risk["total_return"]) - 0.2) < 1e-9
+    assert abs(float(risk["max_drawdown"]) - (1.05 / 1.1 - 1.0)) < 1e-9
+    levels = native.native.fibonacci(closes, closes, closes)["levels"]
+    assert len(levels) == 7
+    assert abs(float(levels[0]) - 16.0) < 1e-9

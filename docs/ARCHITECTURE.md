@@ -12,6 +12,9 @@ migration can continue without pretending the rewrite is finished.
 | Breadth census | C++17 | `backend/native_core/census.cpp` |
 | Universe coverage audit | C++17 | `backend/native_core/census.cpp` |
 | Cross-sectional factor rank/composite/percentile | C++17 | `backend/native_core/factor.cpp` |
+| MA / RSI / MACD / TD setup+countdown | C++17 | `backend/native_core/indicators.cpp` |
+| Portfolio risk metrics | C++17 | `backend/native_core/risk.cpp` |
+| Chip distribution / Fibonacci | C++17 | `backend/native_core/chips.cpp` |
 | Python binding / validation | C++17 + pybind11 | `backend/native_core/bindings.cpp` |
 | Data source adapters, caching, FastAPI routes | Python | `backend/*.py` |
 | Desktop UI | React/TypeScript | `frontend/src` |
@@ -48,10 +51,7 @@ packaged build uses the C++ kernel.
 
 ## Next native migrations
 
-1. Technical indicators (MA/RSI/MACD/TD) into `indicators.cpp`.
-2. Portfolio returns/risk (volatility, drawdown, Sharpe, beta/alpha) into
-   `risk.cpp`.
-3. Streaming quote normalisation and snapshot assembly into C++.
+1. Streaming quote normalisation and snapshot assembly into C++.
 4. Optional native HTTP service; Python remains a thin launcher/FFI adapter.
 
 Each step must keep the Python fallback and parity tests until the native path

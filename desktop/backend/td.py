@@ -16,6 +16,10 @@ from __future__ import annotations
 
 from typing import Iterable
 
+import numpy as np
+
+from . import native
+
 SETUP_LEN = 9
 COUNTDOWN_LEN = 13
 
@@ -120,16 +124,28 @@ def td_sequence(closes: list[float], highs: list[float] | None = None,
     if len(l) != n:
         l = c
 
-    buy, sell, buy9, sell9 = _setup_counts(c)
-    b = buy[-1]
-    s = sell[-1]
-    last_buy9 = buy9[-1]
-    last_sell9 = sell9[-1]
+    if native.NATIVE:
+        # C++ owns the mechanical setup/countdown state machine.  Labels,
+        # freshness and plain-language interpretation remain here.
+        tc = native.native.td_counts(np.asarray(c, dtype=float),
+                                     np.asarray(h, dtype=float),
+                                     np.asarray(l, dtype=float))
+        buy, sell = [int(x) for x in tc["buy"]], [int(x) for x in tc["sell"]]
+        b, s = buy[-1], sell[-1]
+        last_buy9 = int(tc["last_buy9"]) if tc["last_buy9"] >= 0 else None
+        last_sell9 = int(tc["last_sell9"]) if tc["last_sell9"] >= 0 else None
+        cb, cb_done = int(tc["buy_countdown"]), bool(tc["buy_countdown_done"])
+        cs, cs_done = int(tc["sell_countdown"]), bool(tc["sell_countdown_done"])
+        cb_idx = int(tc["buy_countdown_last"]) if tc["buy_countdown_last"] >= 0 else None
+        cs_idx = int(tc["sell_countdown_last"]) if tc["sell_countdown_last"] >= 0 else None
+    else:
+        buy, sell, buy9, sell9 = _setup_counts(c)
+        b, s = buy[-1], sell[-1]
+        last_buy9, last_sell9 = buy9[-1], sell9[-1]
+        cb, cb_done, cb_idx = _countdown(c, h, l, last_buy9, "buy")
+        cs, cs_done, cs_idx = _countdown(c, h, l, last_sell9, "sell")
     bars_since_buy9 = (n - 1 - last_buy9) if last_buy9 is not None else None
     bars_since_sell9 = (n - 1 - last_sell9) if last_sell9 is not None else None
-
-    cb, cb_done, cb_idx = _countdown(c, h, l, last_buy9, "buy")
-    cs, cs_done, cs_idx = _countdown(c, h, l, last_sell9, "sell")
 
     # Prefer the freshest completed structure.  A setup that finished more
     # than 20 bars ago is background information, not a live signal.

@@ -51,6 +51,62 @@ struct FactorResult {
     std::vector<double> percentile;      // 0..1, NaN when unavailable
 };
 
+struct MacdResult {
+    std::vector<double> dif;
+    std::vector<double> dea;
+    std::vector<double> hist;
+};
+
+struct TdCounts {
+    std::vector<int> buy;
+    std::vector<int> sell;
+    int last_buy9 = -1;
+    int last_sell9 = -1;
+    int buy_countdown = 0;
+    int sell_countdown = 0;
+    bool buy_countdown_done = false;
+    bool sell_countdown_done = false;
+    int buy_countdown_last = -1;
+    int sell_countdown_last = -1;
+};
+
+struct RiskResult {
+    double total_return = 0.0;
+    double annual_return = 0.0;
+    double volatility = 0.0;
+    double sharpe = 0.0;
+    double max_drawdown = 0.0;
+    double benchmark_return = 0.0;
+    double beta = 0.0;
+    double alpha = 0.0;
+    bool has_beta = false;
+};
+
+struct ChipsResult {
+    std::vector<double> weights;
+    std::vector<double> centers;
+    double avg_cost = 0.0;
+    double profit_ratio = 0.0;
+    double cost_low = 0.0;
+    double cost_high = 0.0;
+    double support = 0.0;
+    double resistance = 0.0;
+    double peak = 0.0;
+    double low = 0.0;
+    double high = 0.0;
+};
+
+struct FibResult {
+    double low = 0.0;
+    double high = 0.0;
+    double current = 0.0;
+    double position = 0.0;
+    double ma20 = 0.0;
+    double ma60 = 0.0;
+    double rsi = 50.0;
+    std::vector<double> levels;  // 7 levels, high -> low
+};
+
 struct HmmResult {
     std::vector<double> mu;     // k means
     std::vector<double> var;    // k variances
@@ -92,6 +148,17 @@ CoverageResult coverage_audit(const long long *codes, std::size_t n,
 /// `std::vector<double>` for A in row-major k*k order. Throws
 /// std::invalid_argument for malformed/non-finite inputs and
 /// std::runtime_error if the iteration produces non-finite parameters.
+std::vector<double> moving_average(const double *closes, std::size_t n, std::size_t window);
+std::vector<double> rsi(const double *closes, std::size_t n, std::size_t period);
+MacdResult macd(const double *closes, std::size_t n, int fast = 12, int slow = 26, int signal = 9);
+TdCounts td_counts(const double *closes, const double *highs, const double *lows, std::size_t n);
+RiskResult risk_metrics(const double *nav, std::size_t n, const double *bench, std::size_t m,
+                        double annual_days = 244.0);
+ChipsResult chips(const double *highs, const double *lows, const double *closes,
+                  const double *volumes, std::size_t n, std::size_t buckets = 56);
+FibResult fibonacci(const double *highs, const double *lows, const double *closes,
+                     std::size_t n);
+
 /// Cross-sectional factor rank/composite/percentile kernel.
 ///
 /// `values` is row-major rows*factors with NaN for missing observations.

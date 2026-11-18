@@ -5,7 +5,8 @@ import math
 from collections import defaultdict
 from datetime import date, timedelta
 
-from . import db, market, technical
+from . import db, market, native, technical
+import numpy as np
 
 FEE_KEYS = {"commission": "佣金", "stamp": "印花税", "transfer": "过户费", "other": "其他"}
 
@@ -368,24 +369,43 @@ def equity_curve(benchmark: str = "000300") -> dict:
 
     days = len(nav)
     final_nav = nav[-1]["nav"] if nav else 1.0
-    total_ret = final_nav - 1
-    years = max(days / 244, 1 / 244)
-    annual = (final_nav ** (1 / years) - 1) if final_nav > 0 else -1
-    rets = [nav[i]["nav"] / nav[i - 1]["nav"] - 1 for i in range(1, days)]
-    mean_r = sum(rets) / len(rets) if rets else 0.0
-    vol = (sum((r - mean_r) ** 2 for r in rets) / len(rets)) ** 0.5 * math.sqrt(244) if len(rets) > 1 else 0.0
-    sharpe = (mean_r * 244) / vol if vol > 0 else 0.0
-    mdd = min((x["dd"] for x in dd_series), default=0.0) / 100
-    bench_ret = (bench_series[-1]["bench"] - 1) if bench_series else 0.0
-    bench_rets = [bench_series[i]["bench"] / bench_series[i - 1]["bench"] - 1 for i in range(1, len(bench_series))]
-    beta = None
-    if len(rets) > 1 and len(bench_rets) == len(rets):
-        mb = sum(bench_rets) / len(bench_rets)
-        cov = sum((rets[i] - mean_r) * (bench_rets[i] - mb) for i in range(len(rets))) / len(rets)
-        vb = sum((b - mb) ** 2 for b in bench_rets) / len(bench_rets)
-        beta = cov / vb if vb else None
-    bench_annual = ((1 + bench_ret) ** (1 / years) - 1) if bench_ret > -1 else -1
-    alpha = (annual - (beta or 0) * bench_annual) if beta is not None else None
+    if native.NATIVE and len(nav) >= 2:
+        # C++ owns the risk math; Python only supplies aligned NAV/benchmark
+        # series and formats the response for the UI.
+        rr = native.native.risk_metrics(
+            np.asarray([x["nav"] for x in nav], dtype=float),
+            np.asarray([x["bench"] for x in bench_series], dtype=float),
+        )
+        total_ret = float(rr["total_return"])
+        annual = float(rr["annual_return"])
+        mdd = float(rr["max_drawdown"])
+        vol = float(rr["volatility"])
+        sharpe = float(rr["sharpe"])
+        bench_ret = float(rr["benchmark_return"])
+        beta = float(rr["beta"]) if rr["has_beta"] else None
+        alpha = float(rr["alpha"]) if rr["has_beta"] else None
+        years = max(days / 244, 1 / 244)
+    else:
+        days = len(nav)
+        final_nav = nav[-1]["nav"] if nav else 1.0
+        total_ret = final_nav - 1
+        years = max(days / 244, 1 / 244)
+        annual = (final_nav ** (1 / years) - 1) if final_nav > 0 else -1
+        rets = [nav[i]["nav"] / nav[i - 1]["nav"] - 1 for i in range(1, days)]
+        mean_r = sum(rets) / len(rets) if rets else 0.0
+        vol = (sum((r - mean_r) ** 2 for r in rets) / len(rets)) ** 0.5 * math.sqrt(244) if len(rets) > 1 else 0.0
+        sharpe = (mean_r * 244) / vol if vol > 0 else 0.0
+        mdd = min((x["dd"] for x in dd_series), default=0.0) / 100
+        bench_ret = (bench_series[-1]["bench"] - 1) if bench_series else 0.0
+        bench_rets = [bench_series[i]["bench"] / bench_series[i - 1]["bench"] - 1 for i in range(1, len(bench_series))]
+        beta = None
+        if len(rets) > 1 and len(bench_rets) == len(rets):
+            mb = sum(bench_rets) / len(bench_rets)
+            cov = sum((rets[i] - mean_r) * (bench_rets[i] - mb) for i in range(len(rets))) / len(rets)
+            vb = sum((b - mb) ** 2 for b in bench_rets) / len(bench_rets)
+            beta = cov / vb if vb else None
+        bench_annual = ((1 + bench_ret) ** (1 / years) - 1) if bench_ret > -1 else -1
+        alpha = (annual - (beta or 0) * bench_annual) if beta is not None else None
 
     metrics = {
         "total_return": round(total_ret * 100, 2),

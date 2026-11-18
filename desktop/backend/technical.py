@@ -1,7 +1,8 @@
 """Chip distribution (筹码分布) and Fibonacci retracement levels (黄金分割)."""
 from __future__ import annotations
 
-from . import db, market
+from . import db, market, native
+import numpy as np
 
 
 def _rows(code: str, days: int) -> list[dict]:
@@ -75,6 +76,40 @@ def chips(code: str, days: int = 120, buckets: int = 56) -> dict:
     rows = _rows(code, days)
     if not rows:
         return {}
+    current = rows[-1]["close"]
+    if native.NATIVE:
+        try:
+            h = np.asarray([r["high"] for r in rows], dtype=float)
+            l = np.asarray([r["low"] for r in rows], dtype=float)
+            c = np.asarray([r["close"] for r in rows], dtype=float)
+            v = np.asarray([(r.get("volume") or 0.0) for r in rows], dtype=float)
+            nr = native.native.chips(h, l, c, v, buckets)
+            centers = [float(x) for x in nr["centers"]]
+            dist = [float(x) for x in nr["weights"]]
+            total = sum(dist) or 1.0
+            avg_cost = float(nr["avg_cost"])
+            profit = float(nr["profit_ratio"])
+            p_low, p_high = float(nr["cost_low"]), float(nr["cost_high"])
+            support, resistance = float(nr["support"]), float(nr["resistance"])
+            peak = float(nr["peak"])
+            concentration = (p_high - p_low) / ((p_high + p_low) / 2) * 100 if p_high + p_low else 0.0
+            analysis = _chip_analysis(rows, current, avg_cost, profit, concentration,
+                                      support, resistance, p_low, p_high, peak)
+            result = {
+                "code": code, "days": len(rows), "current": round(current, 2),
+                "avg_cost": round(avg_cost, 2), "profit_ratio": round(profit, 1),
+                "concentration": round(concentration, 1),
+                "cost_low": round(p_low, 2), "cost_high": round(p_high, 2),
+                "support": round(support, 2), "resistance": round(resistance, 2),
+                "range": [round(float(nr["low"]), 2), round(float(nr["high"]), 2)],
+                "peak": round(peak, 2), "analysis": analysis,
+                "buckets": [{"price": round(cc, 2), "weight": round(ww, 1),
+                             "pct": round(ww / total * 100, 2)} for cc, ww in zip(centers, dist)],
+            }
+            db.cache_set(key, result)
+            return result
+        except Exception:
+            pass
     current = rows[-1]["close"]
     lo = min(r["low"] for r in rows if r["low"])
     hi = max(r["high"] for r in rows if r["high"])
@@ -158,6 +193,49 @@ def fibonacci(code: str, days: int = 120) -> dict:
     rows = _rows(code, days)
     if not rows:
         return {}
+    current = rows[-1]["close"]
+    lo = min(r["low"] for r in rows if r["low"])
+    hi = max(r["high"] for r in rows if r["high"])
+    span = hi - lo
+    if native.NATIVE:
+        try:
+            h = np.asarray([r["high"] for r in rows], dtype=float)
+            l = np.asarray([r["low"] for r in rows], dtype=float)
+            c = np.asarray([r["close"] for r in rows], dtype=float)
+            nr = native.native.fibonacci(h, l, c)
+            current, lo, hi = float(nr["current"]), float(nr["low"]), float(nr["high"])
+            span = hi - lo
+            prices = [float(x) for x in nr["levels"]]
+            levels = []
+            for (ratio, name, note, action), price in zip(RATIOS, prices):
+                kind = "支撑" if price <= current else "压力"
+                dist = (price / current - 1) * 100 if current else 0
+                levels.append({"ratio": ratio, "name": name, "price": round(price, 2),
+                               "kind": kind, "distance": round(dist, 2), "note": note, "action": action})
+            ma20, ma60 = float(nr["ma20"]), float(nr["ma60"])
+            rsi = float(nr["rsi"])
+            position = float(nr["position"])
+            if current > ma20 > ma60: trend = "多头排列"
+            elif current < ma20 < ma60: trend = "空头排列"
+            else: trend = "震荡整理"
+            if position >= 0.764:
+                zone, advice = "高位区", "接近前高，追高性价比低；回踩 0.382/0.5 且缩量企稳再考虑"
+            elif position >= 0.5:
+                zone, advice = "中高位", "处于回撤中继，关注 0.5 与 0.618 的支撑力度"
+            elif position >= 0.236:
+                zone, advice = "中低位", "已回吐较多涨幅，等待 0.618 附近企稳信号，跌破 0.786 需谨慎"
+            else:
+                zone, advice = "低位区", "接近前低，趋势偏弱；仅在前低附近出现放量止跌时再关注"
+            result = {"code": code, "days": len(rows), "current": round(current, 2),
+                      "low": round(lo, 2), "high": round(hi, 2),
+                      "position": round(position * 100, 1), "zone": zone, "advice": advice,
+                      "levels": levels, "trend": trend, "ma20": round(ma20, 2),
+                      "ma60": round(ma60, 2), "rsi": round(rsi, 1),
+                      "disclaimer": "黄金分割与筹码分布均为技术参考，不构成投资建议。"}
+            db.cache_set(key, result)
+            return result
+        except Exception:
+            pass
     current = rows[-1]["close"]
     lo = min(r["low"] for r in rows if r["low"])
     hi = max(r["high"] for r in rows if r["high"])
