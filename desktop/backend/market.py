@@ -246,10 +246,15 @@ def _sina_industry_flow() -> list[dict]:
                "MoneyFlow.ssl_bkzj_bk?page=1&num=100&sort=netamount&asc=0&fenlei=0")
         req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
         rows = json.loads(urllib.request.urlopen(req, timeout=15).read().decode("utf-8", "ignore"))
+        catalog = sina_industry_catalog()
         out = []
         for r in rows:
+            name = r.get("name") or ""
+            leader_symbol = str(r.get("ts_symbol") or "")
             out.append({
-                "name": r.get("name") or "",
+                "name": name,
+                "code": r.get("category") or None,
+                "leader_code": leader_symbol[-6:] if leader_symbol[-6:].isdigit() else None,
                 "pct": round((_num(r.get("avg_changeratio")) or 0) * 100, 2),
                 "inflow": _num(r.get("netamount")),
                 "inflow_raw": _num(r.get("inamount")),
@@ -357,15 +362,26 @@ def _sina_market_center(deadline: float | None = None) -> dict[str, dict]:
             return []
 
     if deadline is None:
-        deadline = time.monotonic() + 20.0
+        deadline = time.monotonic() + 25.0
     out: dict[str, dict] = {}
     try:
-        with ThreadPoolExecutor(max_workers=8) as ex:
-            futures = [ex.submit(page, n) for n in range(1, 71)]
+        with ThreadPoolExecutor(max_workers=12) as ex:
+            futures = [ex.submit(page, n) for n in range(1, 61)]
+            results = []
             try:
-                results = [f.result() for f in as_completed(futures, timeout=max(0.1, deadline - time.monotonic()))]
+                # Keep every page that arrived before the deadline; the old
+                # implementation discarded all pages when one slow request
+                # raised TimeoutError, turning a mostly good snapshot into a
+                # batch fallback with no PE/cap/industry fields.
+                for fut in as_completed(futures, timeout=max(0.1, deadline - time.monotonic())):
+                    try:
+                        chunk = fut.result()
+                    except Exception:
+                        continue
+                    if chunk:
+                        results.append(chunk)
             except TimeoutError:
-                results = []
+                pass
             finally:
                 for fut in futures:
                     fut.cancel()
@@ -409,6 +425,162 @@ def _sina_market_center(deadline: float | None = None) -> dict[str, dict]:
 _QUOTE_KEYS = ("name", "price", "pct", "chg", "open", "high", "low", "prev_close",
                "volume", "amount", "amplitude", "turnover", "pe", "pb", "mcap", "fcap",
                "volume_ratio", "speed", "pct60", "pct_ytd", "pct5m", "industry")
+
+
+_SINA_NODE_URL = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+                  "Market_Center.getHQNodeData?page={page}&num=100&sort=symbol&asc=1&node={node}&symbol=&_s_r_a=page")
+
+
+def sina_industry_catalog() -> list[dict]:
+    """Sina's 84-industry catalog: node code, name and advertised member count."""
+    cached = db.cache_get("industry:sina:catalog:v1", 6 * 3600)
+    if cached:
+        return cached
+    try:
+        url = "https://money.finance.sina.com.cn/q/view/newFLJK.php?param=industry"
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
+        text = urllib.request.urlopen(req, timeout=10).read().decode("gbk", "ignore")
+        payload = json.loads(text.split("=", 1)[1].strip().rstrip(";")) if "=" in text else {}
+        out = []
+        for code, raw in payload.items():
+            p = str(raw).split(",")
+            if len(p) < 3 or not p[1]:
+                continue
+            out.append({"code": code, "name": p[1], "count": int(_num(p[2]) or 0)})
+        if out:
+            db.cache_set("industry:sina:catalog:v1", out)
+        return out
+    except Exception:
+        return []
+
+
+def sina_node_members(node: str, limit: int = 100, pages: int = 2) -> list[dict]:
+    """Members of a Sina industry/concept node, independent of Eastmoney."""
+    out: list[dict] = []
+    for page in range(1, max(1, pages) + 1):
+        try:
+            req = urllib.request.Request(_SINA_NODE_URL.format(page=page, node=node),
+                                         headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
+            rows = json.loads(urllib.request.urlopen(req, timeout=10).read().decode("utf-8", "ignore"))
+            if not isinstance(rows, list) or not rows:
+                break
+            for r in rows:
+                code = str(r.get("code") or "")[-6:]
+                if not code.isdigit():
+                    continue
+                out.append({
+                    "code": code, "name": str(r.get("name") or ""),
+                    "price": _num(r.get("trade")), "pct": _num(r.get("changepercent")),
+                    "amount": _num(r.get("amount")),
+                    "mcap": round(_num(r.get("mktcap")) * 1e4, 2) if _num(r.get("mktcap")) is not None else None,
+                    "industry": "",
+                })
+                if len(out) >= limit:
+                    return out
+            if len(rows) < 100:
+                break
+        except Exception:
+            break
+    return out
+
+
+def _build_sina_industry_map() -> dict:
+    """Stock -> Sina industry mapping, with node members.
+
+    The Eastmoney snapshot carries f100 industry, but Sina's fallback does not.
+    Build a real mapping from Sina's own industry nodes so heatmap, factor and
+    board pages do not fall back to "沪市主板/深市主板" as if they were industries.
+    """
+    cached = db.cache_get("industry:sina:map:v1", 6 * 3600)
+    if cached and cached.get("by_code"):
+        return cached
+    catalog = sina_industry_catalog()
+    if not catalog:
+        return {"by_code": {}, "by_name": {}, "members": {}, "catalog": []}
+
+    def load(item):
+        code, name, count = item["code"], item["name"], item["count"]
+        pages = max(1, min(3, (count + 99) // 100))
+        return code, name, sina_node_members(code, limit=300, pages=pages)
+
+    by_code: dict[str, str] = {}
+    by_name: dict[str, str] = {}
+    members: dict[str, list[str]] = {}
+    try:
+        with ThreadPoolExecutor(max_workers=24) as ex:
+            for code, name, rows in ex.map(load, catalog):
+                by_name[name] = code
+                members[code] = [r["code"] for r in rows]
+                for r in rows:
+                    by_code[r["code"]] = name
+    except Exception:
+        pass
+    result = {"by_code": by_code, "by_name": by_name, "members": members,
+              "catalog": catalog, "updated": time.time(), "source": "sina"}
+    if by_code:
+        db.cache_set("industry:sina:map:v1", result)
+    return result
+
+
+_INDUSTRY_MAP_BUILDING = False
+_INDUSTRY_MAP_LOCK = threading.Lock()
+_EMPTY_INDUSTRY_MAP = {"by_code": {}, "by_name": {}, "members": {}, "catalog": []}
+
+
+def sina_industry_map(wait: bool = False) -> dict:
+    """Return the cached map; build it in the background on first use.
+
+    Fetching 84 Sina industry nodes takes tens of seconds on a cold cache.  A
+    page must not block that long, so the first call starts a daemon builder and
+    returns empty; callers fall back to market grouping until the DB cache is
+    populated.  ``wait=True`` is used by the background builder itself.
+    """
+    global _INDUSTRY_MAP_BUILDING
+    cached = db.cache_get("industry:sina:map:v1", 6 * 3600)
+    if cached and cached.get("by_code"):
+        return cached
+    if wait:
+        return _build_sina_industry_map()
+    bundled = None
+    try:
+        bundled = json.loads((Path(__file__).resolve().parent / "data" / "industry_map.json").read_text("utf-8"))
+    except Exception:
+        bundled = None
+    if bundled and bundled.get("by_code"):
+        # Serve the packaged mapping immediately; refresh it in the background
+        # so a cold install does not fall back to market grouping for minutes.
+        with _INDUSTRY_MAP_LOCK:
+            if not _INDUSTRY_MAP_BUILDING:
+                _INDUSTRY_MAP_BUILDING = True
+
+                def warm():
+                    global _INDUSTRY_MAP_BUILDING
+                    try:
+                        _build_sina_industry_map()
+                    finally:
+                        with _INDUSTRY_MAP_LOCK:
+                            _INDUSTRY_MAP_BUILDING = False
+
+                threading.Thread(target=warm, name="sina-industry-map", daemon=True).start()
+        return bundled
+    with _INDUSTRY_MAP_LOCK:
+        if not _INDUSTRY_MAP_BUILDING:
+            _INDUSTRY_MAP_BUILDING = True
+
+            def run():
+                global _INDUSTRY_MAP_BUILDING
+                try:
+                    _build_sina_industry_map()
+                finally:
+                    with _INDUSTRY_MAP_LOCK:
+                        _INDUSTRY_MAP_BUILDING = False
+
+            threading.Thread(target=run, name="sina-industry-map", daemon=True).start()
+    return dict(_EMPTY_INDUSTRY_MAP)
+
+
+def industry_name(code: str) -> str:
+    return str((sina_industry_map().get("by_code") or {}).get(str(code)) or "")
 
 
 def _blank_spot_row(code: str, name: str = "") -> dict:
@@ -635,10 +807,16 @@ def _akshare_spot(force: bool = False) -> dict:
     prev = db.cache_get(SPOT_KEY) or {}
     prev_rows = {str(r.get("code")): r for r in prev.get("rows") or []}
     for code, _name in universe:
+        old = prev_rows.get(code)
         if code not in quotes:
-            old = prev_rows.get(code)
             if old and old.get("price") is not None:
                 quotes[code] = old
+            continue
+        if old:
+            q = quotes[code]
+            for field in ("mcap", "fcap", "pe", "pb", "turnover", "pct60", "pct_ytd", "industry"):
+                if q.get(field) is None and old.get(field) is not None:
+                    q[field] = old.get(field)
     flow = _fund_flow()
     out = _assemble_snapshot({}, universe, quotes, flow,
                              em_total=0, pages_failed=0, sources=[source, "universe"],

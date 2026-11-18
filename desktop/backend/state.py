@@ -467,7 +467,7 @@ def _board_rows(kind: str = "industry") -> list[dict]:
 
 def _board_rows_inner(kind: str = "industry") -> list[dict]:
     # Cache the raw list for 30 s so one page does not fetch it five times.
-    cache_key = f"boards:rows:v2:{kind}"
+    cache_key = f"boards:rows:v4:{kind}"
     cached = db.cache_get(cache_key, 30)
     if cached:
         return cached
@@ -504,7 +504,7 @@ def _board_rows_inner(kind: str = "industry") -> list[dict]:
             if not name:
                 continue
             out.append({
-                "code": f"SINA{i}", "name": name,
+                "code": r.get("code") or f"SINA{i}", "name": name,
                 "pct": r.get("pct"), "inflow": r.get("inflow"),
                 "up": None, "down": None,
                 "leader": r.get("leader"), "leader_code": None,
@@ -512,6 +512,28 @@ def _board_rows_inner(kind: str = "industry") -> list[dict]:
             })
         if not out:
             out = _ths_industry_flow()
+        # Attach real breadth/leader codes to the Sina industry rows from the
+        # cached snapshot.  Previously the fallback table only had name/pct and
+        # every detail drawer said "no constituent data".
+        imap = market.sina_industry_map()
+        if imap.get("by_name"):
+            spot = market.cached_spot() or {}
+            by_code = {r.get("code"): r for r in spot.get("rows") or []}
+            for b in out:
+                node = imap["by_name"].get(b.get("name") or "")
+                if node:
+                    b["code"] = node
+                codes = imap.get("members", {}).get(node or "", [])
+                pcts = [by_code[c].get("pct") for c in codes if c in by_code and by_code[c].get("pct") is not None]
+                if pcts:
+                    b["up"] = sum(1 for p in pcts if p > 0)
+                    b["down"] = sum(1 for p in pcts if p < 0)
+                    b["companies"] = len(pcts)
+                leaders = sorted((by_code[c] for c in codes if c in by_code), key=lambda x: x.get("pct") or -999, reverse=True)
+                if leaders:
+                    b["leader"] = leaders[0].get("name") or b.get("leader")
+                    b["leader_code"] = leaders[0].get("code")
+                    b["leader_pct"] = leaders[0].get("pct")
     if not out and kind == "concept":
         out = _sina_concept_rows()
     if out:
@@ -552,9 +574,28 @@ def board_detail(code: str) -> dict:
         if meta:
             break
     if not code.startswith("BK"):
-        # Sina industry-flow fallback has no constituent list; return its meta
-        # immediately instead of waiting for another blocked Eastmoney call.
-        result = {"meta": meta or {"code": code, "name": code}, "stocks": [], "updated": time.time()}
+        # Sina industry/concept nodes expose their members directly; use that
+        # rather than leaving the drawer empty when Eastmoney is unavailable.
+        stocks = market.sina_node_members(code, limit=80, pages=1)
+        spot = market.cached_spot() or {}
+        by_code = {r.get("code"): r for r in spot.get("rows") or []}
+        for st in stocks:
+            live = by_code.get(st.get("code")) or {}
+            st["price"] = live.get("price") or st.get("price")
+            st["pct"] = live.get("pct") if live.get("pct") is not None else st.get("pct")
+            st["mcap"] = live.get("mcap") or st.get("mcap")
+            st["industry"] = live.get("industry") or st.get("industry") or (meta or {}).get("name") or ""
+        stocks.sort(key=lambda x: x.get("pct") or -999, reverse=True)
+        if stocks and meta:
+            meta = dict(meta)
+            pcts = [x.get("pct") for x in stocks if x.get("pct") is not None]
+            meta["count"] = len(stocks)
+            meta["up"] = sum(1 for p in pcts if p > 0)
+            meta["down"] = sum(1 for p in pcts if p < 0)
+            meta["leader"] = stocks[0].get("name")
+            meta["leader_code"] = stocks[0].get("code")
+            meta["leader_pct"] = stocks[0].get("pct")
+        result = {"meta": meta or {"code": code, "name": code}, "stocks": stocks, "updated": time.time()}
         db.cache_set(key, result)
         return result
     url = (
@@ -580,7 +621,9 @@ def board_detail(code: str) -> dict:
 
 
 def heatmap(groups_limit: int = 40, per_group: int = 30) -> dict:
-    key = f"market:heatmap:{groups_limit}:{per_group}"
+    imap = market.sina_industry_map()
+    map_ready = bool(imap.get("by_code"))
+    key = f"market:heatmap:{groups_limit}:{per_group}:{int(map_ready)}"
     cached = db.cache_get(key, 120)
     if cached:
         return cached
@@ -593,13 +636,13 @@ def heatmap(groups_limit: int = 40, per_group: int = 30) -> dict:
     rows = (spot or {}).get("rows", [])
     buckets: dict[str, list[dict]] = {}
     for r in rows:
-        if not r.get("mcap") or not r.get("price") or r.get("pct") is None:
+        if not r.get("price") or r.get("pct") is None:
             continue
-        ind = r.get("industry") or r.get("market") or "其他"
+        ind = r.get("industry") or (imap.get("by_code") or {}).get(str(r.get("code"))) or "未分类"
         buckets.setdefault(ind, []).append({
             "code": r["code"],
             "name": r["name"],
-            "value": round((r["mcap"] or 0) / 1e8, 2),
+            "value": round((r.get("mcap") or r.get("amount") or 0) / 1e8, 2),
             "pct": r.get("pct"),
             "price": r.get("price"),
         })
@@ -617,7 +660,10 @@ def heatmap(groups_limit: int = 40, per_group: int = 30) -> dict:
             "children": items[:per_group],
         })
     groups.sort(key=lambda g: g["value"], reverse=True)
-    result = {"groups": groups[:groups_limit], "updated": time.time(), "total": len(rows)}
+    unclassified = next((g["value"] for g in groups if g["name"] == "未分类"), 0)
+    groups = [g for g in groups if g["name"] != "未分类"]
+    result = {"groups": groups[:groups_limit], "updated": time.time(), "total": len(rows),
+              "unclassified": unclassified}
     db.cache_set(key, result)
     return result
 
