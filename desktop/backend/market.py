@@ -1755,13 +1755,56 @@ def financials(code: str, periods: int = 8) -> list[dict]:
     return rows
 
 
+def _sina_company_profile(code: str) -> dict:
+    """Last-resort company profile from Sina's public company page.
+
+    Eastmoney F10 can be rate-limited and CNInfo needs an Accept-Enckey that its
+    bundled JS signer occasionally cannot produce inside PyInstaller.  Sina's
+    HTML table needs neither, so the company card remains populated.
+    """
+    import html as _html
+    import re as _re
+
+    try:
+        url = f"https://vip.stock.finance.sina.com.cn/corp/go.php/vCI_CorpInfo/stockid/{code}.phtml"
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
+        raw = urllib.request.urlopen(req, timeout=12).read().decode("gbk", "ignore")
+        fields = {}
+        for label, value in _re.findall(r'<td class="ct">([^<]+)</td>\s*<td[^>]*>(.*?)</td>', raw, _re.S):
+            key = _html.unescape(label).strip().rstrip("：:")
+            val = _html.unescape(_re.sub(r"<[^>]+>", " ", value)).strip()
+            if key and val:
+                fields[key] = _re.sub(r"\s+", " ", val)
+        if not fields:
+            return {}
+        def pick(*names):
+            for n in names:
+                if fields.get(n):
+                    return fields[n]
+            return None
+        return {
+            "org_name": pick("公司名称"), "industry": pick("所属行业"),
+            "reg_capital": _num(pick("注册资本")), "employees": None,
+            "found_date": (pick("成立日期") or "")[:10], "listing_date": (pick("上市日期") or "")[:10],
+            "profile": pick("公司简介"), "scope": pick("经营范围"), "main_business": pick("主营业务"),
+            "website": pick("公司网址"), "email": pick("电子信箱"), "phone": pick("联系电话"),
+            "chairman": pick("法人代表"), "secretary": None, "legal_person": pick("法人代表"),
+            "reg_number": None, "address": pick("注册地址"), "source": "sina",
+        }
+    except Exception:
+        return {}
+
+
 def profile(code: str) -> dict:
-    key = f"profile:{code}"
+    key = f"profile:v3:{code}"
     cached = db.cache_get(key, 86400 * 7)
     if cached is not None:
-        if cached:
+        # A previous partial fallback may contain only an industry name.  It is
+        # truthy but useless for the company card, so retry instead of serving
+        # it for seven days.
+        if cached.get("org_name") and (cached.get("main_business") or cached.get("profile") or cached.get("scope")):
             return cached
-        db.cache_delete(key)  # never serve a permanently empty profile
+        db.cache_delete(key)
     url = (
         "https://datacenter.eastmoney.com/securities/api/data/v1/get"
         "?reportName=RPT_F10_BASIC_ORGINFO"
@@ -1794,10 +1837,13 @@ def profile(code: str) -> dict:
                 "legal_person": x.get("LEGAL_PERSON"),
                 "reg_number": x.get("REG_NUM"),
                 "address": x.get("REG_ADDRESS"),
+                "source": "eastmoney",
             }
     except Exception:
         pass
-    if not out:
+    # Merge CNInfo when Eastmoney only returned a name/industry shell.  The
+    # common failure is a partial F10 response, not a completely empty one.
+    if not out or not out.get("main_business") or not (out.get("profile") or out.get("scope")):
         # Eastmoney F10 can be rate-limited; CNInfo is an independent F10
         # source and keeps the company-profile card usable.
         try:
@@ -1811,7 +1857,7 @@ def profile(code: str) -> dict:
                         if v is not None and str(v).strip() and str(v).strip() != "nan":
                             return str(v).strip()
                     return None
-                out = {
+                fb = {
                     "org_name": pick("公司名称"),
                     "industry": pick("所属行业"),
                     "reg_capital": _num(pick("注册资金")),
@@ -1829,9 +1875,24 @@ def profile(code: str) -> dict:
                     "legal_person": pick("法人代表"),
                     "reg_number": None,
                     "address": pick("注册地址"),
+                    "source": "cninfo",
                 }
+                for k, v in fb.items():
+                    if v and not out.get(k):
+                        out[k] = v
+                if out:
+                    out["source"] = "eastmoney+cninfo" if out.get("source") == "eastmoney" else "cninfo"
         except Exception:
             pass
+    if not out or not out.get("main_business") or not (out.get("profile") or out.get("scope")):
+        fb = _sina_company_profile(code)
+        for k, v in (fb or {}).items():
+            if v and not out.get(k):
+                out[k] = v
+        if fb and out:
+            out["source"] = "eastmoney+sina" if out.get("source") == "eastmoney" else (fb.get("source") or "sina")
+    if not out.get("industry"):
+        out["industry"] = industry_name(code)
     if out:
         db.cache_set(key, out)
     return out
@@ -1842,9 +1903,12 @@ def concepts(code: str) -> list[str]:
     key = f"concepts:{code}"
     cached = db.cache_get(key, 86400 * 7)
     if cached is not None:
-        if cached:
+        # A previous partial fallback may contain only an industry name.  It is
+        # truthy but useless for the company card, so retry instead of serving
+        # it for seven days.
+        if cached.get("org_name") and (cached.get("main_business") or cached.get("profile") or cached.get("scope")):
             return cached
-        db.cache_delete(key)  # never serve a permanently empty profile
+        db.cache_delete(key)
     url = (
         "https://datacenter.eastmoney.com/securities/api/data/v1/get"
         "?reportName=RPT_F10_CORETHEME_BOARDTYPE"
@@ -1862,6 +1926,10 @@ def concepts(code: str) -> list[str]:
                 names.append(n)
     except Exception:
         pass
+    if not names:
+        ind = industry_name(code)
+        if ind:
+            names = [ind]
     db.cache_set(key, names)
     return names
 

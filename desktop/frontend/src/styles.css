@@ -4155,3 +4155,23 @@ html, body { overflow-x: hidden; }
 }
 .special-region-strip .chip { cursor: pointer; border: 0; }
 .special-region-strip .chip.active { background: var(--accent); color: #111; }
+
+/* Model diagnostics: makes over/under-fit visible without consuming a whole row. */
+.model-health {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 10px;
+  background: var(--border-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.model-health > div { background: var(--card-2); padding: 8px 11px; display: flex; flex-direction: column; gap: 2px; }
+.model-health span { font-size: calc(9.5px * var(--fs, 1)); color: var(--text-dim); }
+.model-health b { font-family: SF Mono, monospace; font-size: calc(16px * var(--fs, 1)); color: var(--text); }
+.model-health b small { font-size: 9px; color: var(--text-dim); }
+.model-health b.warn { color: var(--accent); }
+.model-health em { font-style: normal; font-size: calc(9px * var(--fs, 1)); color: var(--text-sub); }
+.model-health .model-health-note { grid-column: 1 / -1; font-size: calc(10px * var(--fs, 1)); color: var(--text-sub); line-height: 1.7; }
+@media (max-width: 900px) { .model-health { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

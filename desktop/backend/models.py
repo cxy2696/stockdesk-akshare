@@ -237,10 +237,16 @@ def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["sta
         100 * (float(probs[0]) * 0.85 + next_day_switch * 0.35 + (1 - conf) * 0.15)
         + (8 if sep is not None and sep < 0.4 else 0)
     ))))
+    # Shrink toward neutral when the fit is weak.  A non-converged or
+    # overlapping HMM should not produce a high-conviction 85% exposure just
+    # because one posterior probability happened to be 0.8.
+    fit_reliability = max(0.35, min(1.0, quality / 70.0))
+    calibrated_conf = 0.5 + (conf - 0.5) * fit_reliability
     exposure = [0.25, 0.50, 0.75][min(current, 2)]
     exposure += (conf - 0.5) * 0.20
     if current == 0:
         exposure -= 0.08
+    exposure = 0.5 + (exposure - 0.5) * fit_reliability
     exposure = round(max(0.10, min(0.90, exposure)), 2)
     next_entropy = float(-(A[current] * np.log(np.maximum(A[current], 1e-12))).sum() / math.log(k))
 
@@ -264,6 +270,8 @@ def _hmm(x: np.ndarray, k: int = int(model_registry.MODELS["hmm"]["params"]["sta
         "state_separation": sep,
         "separation_label": separation_label,
         "quality": quality,
+        "fit_reliability": round(fit_reliability, 3),
+        "calibrated_confidence": round(calibrated_conf, 4),
         "risk_score": risk_score,
         "suggested_exposure": exposure,
         "transition_entropy": round(next_entropy, 3),
@@ -879,7 +887,7 @@ def model_snapshot() -> dict:
     the page usable, with the timestamp visible.
     """
     global _MODEL_REFRESHING
-    cached = db.cache_get("market:models:v9")
+    cached = db.cache_get("market:models:v10")
     if cached:
         age = time.time() - float(cached.get("ts") or 0)
         if age > 600:
@@ -892,7 +900,7 @@ def model_snapshot() -> dict:
 
 
 def _compute_model_snapshot() -> dict:
-    cached = db.cache_get("market:models:v9", 600)
+    cached = db.cache_get("market:models:v10", 600)
     if cached:
         return cached
     rows = (market.fetch_spot(ttl=600) or {}).get("rows") or []
@@ -969,5 +977,5 @@ def _compute_model_snapshot() -> dict:
         "conclusion": conclusion,
         "model_meta": model_registry.meta(),
     }
-    db.cache_set("market:models:v9", out)
+    db.cache_set("market:models:v10", out)
     return out

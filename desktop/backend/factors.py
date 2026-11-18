@@ -47,6 +47,9 @@ FACTOR_SPECS = [
     {"name": "mom60", "label": "60日动量", "category": "momentum", "direction": 1,
      "horizon": "中长期", "source": "行情", "field": "pct60",
      "desc": "近 60 个交易日涨幅；越高代表中期趋势越强。"},
+    {"name": "intraday_mom", "label": "日内动量", "category": "momentum", "direction": 1,
+     "horizon": "短期", "source": "行情", "field": "open", "calc": "intraday",
+     "desc": "（现价-今开）/今开；衡量当日盘中承接，是快照源没有60日涨幅时的短期动量代理。"},
     {"name": "mom_ytd", "label": "年内涨幅", "category": "momentum", "direction": 1,
      "horizon": "长期", "source": "行情", "field": "pct_ytd",
      "desc": "年初至今涨幅；代表长期动量与资金偏好。"},
@@ -117,6 +120,11 @@ def _value(row: dict, spec: dict) -> float | None:
                 x = (high - low) / prev * 100.0
         if x is None:
             return None
+    elif calc == "intraday":
+        price, open_ = _num(row.get("price")), _num(row.get("open"))
+        if price is None or open_ is None or open_ <= 0:
+            return None
+        return (price - open_) / open_ * 100.0
     elif calc == "range_pos":
         price, high, low = _num(row.get("price")), _num(row.get("high")), _num(row.get("low"))
         if price is None or high is None or low is None or high <= low:
@@ -308,13 +316,16 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
         stocks.append({
             "code": row.get("code"), "name": name,
             "price": round(price, 2), "pct": _num(row.get("pct")),
-            "market": row.get("market"), "industry": row.get("industry"),
+            "market": row.get("market"),
+            "industry": row.get("industry") or market.industry_name(str(row.get("code") or "")),
             "pe": _num(row.get("pe")), "pb": _num(row.get("pb")),
             "turnover": _num(row.get("turnover")), "amount": amount,
             "main_inflow": _num(row.get("main_inflow")),
             "main_inflow_ratio": round((_num(row.get("main_inflow")) or 0) / amount * 100, 3) if amount else None,
             "pct60": _num(row.get("pct60")),
             "pct_ytd": _num(row.get("pct_ytd")),
+            "intraday": (round((price / float(row["open"]) - 1) * 100, 2)
+                         if _num(row.get("open")) and float(row["open"]) > 0 else None),
             "percentile": round(float(pct[i]), 4), "raw_score": round(raw_score, 1),
             "score": round(adjusted, 1), "reliability": round(reliability, 3),
             "coverage": round(category_hits[i] / max(len(cat_z), 1), 3),
@@ -360,6 +371,7 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
             "rank_transform": "normal-inverse-cdf",
             "missing_policy": "category-neutral-with-coverage",
             "momentum_coverage": next((f["coverage"] for f in factor_rows if f["name"] == "mom60"), None),
+            "intraday_momentum_coverage": next((f["coverage"] for f in factor_rows if f["name"] == "intraday_mom"), None),
             "flow_coverage": next((f["coverage"] for f in factor_rows if f["name"] == "flow_ratio"), None),
             "min_amount": min_amount,
             "exclude_st": bool(exclude_st),

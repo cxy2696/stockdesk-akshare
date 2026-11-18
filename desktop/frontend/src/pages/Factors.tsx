@@ -28,7 +28,7 @@ export default function Factors() {
   const [loading, setLoading] = useState(true)
   const [market, setMarket] = useState('全部')
   const [search, setSearch] = useState('')
-  const [minScore, setMinScore] = useState(50)
+  const [minScore, setMinScore] = useState(0)
 
   const load = async () => {
     setLoading(true)
@@ -109,7 +109,7 @@ export default function Factors() {
           <div><b>5. 分数含义</b><span>0–100 是横截面百分位，不是预期收益；历史 IC 需持久化每日快照，本页不伪造。</span></div>
           <div className="factor-trace muted mono">
             算法 {data.trace?.algorithm ?? '--'} · 快照 {data.trace?.snapshot_date ?? data.date ?? '--'} · {data.trace?.rows ?? data.total ?? '--'} 行 / {data.trace?.candidates ?? data.scanned ?? '--'} 只候选 · 来源 {data.source ?? '--'}
-            {data.trace?.momentum_coverage === 0 ? ' · 当前快照源不提供 60 日动量，动量因子已明确剔除' : ''}
+            {data.trace?.momentum_coverage === 0 ? ' · 快照源不提供 60 日动量；已用日内动量作为短期代理' : ''}
             {data.trace?.flow_coverage != null ? ` · 资金覆盖 ${(Number(data.trace.flow_coverage) * 100).toFixed(0)}%` : ''}
           </div>
         </div>
@@ -224,6 +224,7 @@ export default function Factors() {
               render: (v: number) => <span className="num muted" style={{ fontSize: 11 }}>{fmtZ(v)}</span>,
             })),
             { title: '60日动量', dataIndex: 'pct60', align: 'right', render: (v: number) => v == null ? <span className="muted small">源未提供</span> : <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+            { title: '日内动量', dataIndex: 'intraday', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{v == null ? '--' : fmt.pct(v)}</span> },
             { title: '资金占比', dataIndex: 'main_inflow_ratio', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{v == null ? '--' : `${v > 0 ? '+' : ''}${Number(v).toFixed(2)}%`}</span> },
             { title: '成交额', dataIndex: 'amount', align: 'right', render: (v: number) => <span className="num muted">{fmt.big(v)}</span> },
             { title: 'PE / PB', render: (_: any, r: any) => <span className="num small">{fmt.price(r.pe, 1)} / {fmt.price(r.pb, 2)}</span>, align: 'right' },

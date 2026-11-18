@@ -446,7 +446,7 @@ export default function StockDetail() {
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <Card className="company-profile" title="公司概况" desc="东方财富 / 巨潮 F10；接口缺失显示 --，长文本自动换行" pad={false}>
+        <Card className="company-profile" title="公司概况" desc={`来源：${prof.source === 'cninfo' ? '巨潮资讯' : prof.source === 'eastmoney+cninfo' ? '东方财富 + 巨潮兜底' : '东方财富 F10'}；缺失显示 --，长文本自动换行`} pad={false}>
           <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0 26px' }}>
             <StatLine k="公司全称" v={prof.org_name || '--'} />
             <StatLine k="所属行业" v={prof.industry || '--'} />

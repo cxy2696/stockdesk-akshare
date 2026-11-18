@@ -706,6 +706,16 @@ export default function Models() {
         </div>
       )}
 
+      {hmm ? (
+        <div className="model-health">
+          <div><span>HMM 拟合</span><b className={hmm.converged ? 'up' : 'warn'}>{hmm.converged ? '已收敛' : '未完全收敛'}</b><em>迭代 {hmm.iterations ?? '--'} 次</em></div>
+          <div><span>拟合质量</span><b>{hmm.quality ?? '--'}<small>/100</small></b><em>低于 60 会自动收缩仓位</em></div>
+          <div><span>BIC</span><b>{hmm.bic ?? '--'}</b><em>AIC {hmm.aic ?? '--'} · 越低越好</em></div>
+          <div><span>校准后置信</span><b>{hmm.calibrated_confidence != null ? `${Math.round(hmm.calibrated_confidence * 100)}%` : '--'}</b><em>原始 {hmm.confidence != null ? `${Math.round(hmm.confidence * 100)}%` : '--'}</em></div>
+          <div className="model-health-note">模型也会“知道自己不确定”：拟合质量低、状态重叠或未收敛时，建议仓位向 50% 收缩，避免把噪声当信号。因子筛选同样按覆盖率和可靠性收缩极端分数。</div>
+        </div>
+      ) : null}
+
       <div className="ensemble-grid">
         <div className="ensemble-score">
           <span>综合评分</span>

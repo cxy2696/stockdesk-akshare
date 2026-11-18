@@ -173,7 +173,7 @@ def market_td(code: str, limit: int = Query(220, ge=30, le=800)):
 @router.get("/api/market/industry-focus")
 def market_industry_focus():
     """Industry breadth + flow + key names from the cached model snapshot."""
-    snap = db.cache_get("market:models:v9", 900)
+    snap = db.cache_get("market:models:v10", 900)
     if snap:
         return ok({"focus": snap.get("industry_focus") or [], "td": snap.get("td") or {},
                    "conclusion": snap.get("conclusion") or {}, "cached": True})
@@ -341,7 +341,7 @@ def stock_detail(code: str):
     # Industry focus: use the cached model snapshot instead of triggering a
     # full-market recompute while the user is just opening a stock.
     try:
-        snap = db.cache_get("market:models:v9", 900)
+        snap = db.cache_get("market:models:v10", 900)
         if snap:
             ind = data.get("industry") or ""
             focus = next((x for x in (snap.get("industry_focus") or []) if x.get("name") == ind), None)
@@ -734,8 +734,15 @@ def factor_snapshot(limit: int = Query(100, ge=10, le=6000),
                     min_amount: float = Query(30_000_000, ge=0),
                     exclude_st: bool = Query(True)):
     """Cross-sectional factor screen + classification over the full snapshot."""
-    return ok(factor_lib.snapshot(limit=limit, min_amount=min_amount,
-                                  exclude_st=exclude_st))
+    key = f"factor:screen:{limit}:{min_amount}:{int(exclude_st)}"
+    cached = db.cache_get(key, 30)
+    if cached:
+        return ok(cached)
+    out = factor_lib.snapshot(limit=limit, min_amount=min_amount,
+                              exclude_st=exclude_st)
+    if out.get("ready"):
+        db.cache_set(key, out)
+    return ok(out)
 
 
 @router.get("/api/backtest/strategies")
