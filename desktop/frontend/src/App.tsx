@@ -189,8 +189,8 @@ export default function App() {
         <div className="brand">
           <div className="brand-logo">S</div>
           <div>
-            <div className="brand-title">复盘工具</div>
-            <div className="brand-sub">复盘 · 研究 · 交易</div>
+            <div className="brand-title">StockDesk</div>
+            <div className="brand-sub">PERSONAL INVESTING</div>
           </div>
         </div>
 

@@ -49,6 +49,8 @@ export default function StockDetail() {
   const [period, setPeriod] = useState('daily')
   const [adjust, setAdjust] = useState('qfq')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [reloadTick, setReloadTick] = useState(0)
   const [tradeOpen, setTradeOpen] = useState(false)
   const [showFib, setShowFib] = useState(true)
   const [showMACD, setShowMACD] = useState(true)
@@ -56,23 +58,29 @@ export default function StockDetail() {
 
   const loadAll = async () => {
     setLoading(true)
-    try {
-      const [d, k] = await Promise.all([
-        api.get<any>(`/api/market/stock/${code}`),
-        api.get<any>(`/api/market/kline/${code}?period=${period}&limit=320&adjust=${adjust}`),
-      ])
-      setData(d)
-      setKline(k)
-    } catch (e: any) {
-      message.error(e.message)
-    } finally {
-      setLoading(false)
+    setLoadError('')
+    // The quote/profile endpoint and the chart endpoint fail independently:
+    // a missing K-line must never blank the whole stock page.
+    const [d, k] = await Promise.allSettled([
+      api.get<any>(`/api/market/stock/${code}`),
+      api.get<any>(`/api/market/kline/${code}?period=${period}&limit=320&adjust=${adjust}`),
+    ])
+    if (d.status === 'fulfilled') {
+      setData(d.value)
+    } else {
+      setData(null)
+      setLoadError(d.reason?.message || '个股数据没有返回')
     }
+    if (k.status === 'fulfilled') setKline(k.value)
+    else setKline(null)
+    setLoading(false)
   }
 
   useEffect(() => {
+    setData(null)
+    setKline(null)
     loadAll()
-  }, [code])
+  }, [code, reloadTick])
 
   useEffect(() => {
     if (!data) return
@@ -147,6 +155,16 @@ export default function StockDetail() {
   )
 
   if (loading && !data) return <div className="card card-pad"><Skeleton active paragraph={{ rows: 10 }} /></div>
+  if (!data) {
+    return (
+      <Card title="个股详情">
+        <EmptyState text={loadError || '个股数据暂时没有返回，请稍后重试。'} icon="◌" />
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <Button type="primary" loading={loading} onClick={() => setReloadTick((n) => n + 1)}>重新加载</Button>
+        </div>
+      </Card>
+    )
+  }
 
   return (
     <div>
@@ -428,8 +446,8 @@ export default function StockDetail() {
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <Card title="公司概况" desc="东方财富 / 巨潮 F10" pad={false}>
-          <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0 26px' }}>
+        <Card className="company-profile" title="公司概况" desc="东方财富 / 巨潮 F10；接口缺失显示 --，长文本自动换行" pad={false}>
+          <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0 26px' }}>
             <StatLine k="公司全称" v={prof.org_name || '--'} />
             <StatLine k="所属行业" v={prof.industry || '--'} />
             <StatLine k="董事长" v={prof.chairman || '--'} />

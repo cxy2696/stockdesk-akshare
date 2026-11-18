@@ -271,7 +271,7 @@ def main():
                 pass
 
         webview.create_window(
-            "复盘工具 · 个人股票投资台",
+            "StockDesk · 个人股票投资台",
             url,
             width=1440,
             height=860,

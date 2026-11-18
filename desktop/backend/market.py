@@ -92,7 +92,8 @@ def _num(v, default=None):
     if v is None or v == "-" or v == "":
         return default
     try:
-        return float(v)
+        x = float(v)
+        return x if math.isfinite(x) else default
     except (TypeError, ValueError):
         return default
 
@@ -628,6 +629,16 @@ def _akshare_spot(force: bool = False) -> dict:
     if not quotes:
         quotes = _sina_batch([code for code, _ in universe])
         source = "sina-batch"
+    # A batch repair may miss hundreds of symbols.  Reuse the immediately
+    # previous snapshot for those codes so a partial upstream pass does not
+    # turn a usable full-market table into a sea of "unpriced".
+    prev = db.cache_get(SPOT_KEY) or {}
+    prev_rows = {str(r.get("code")): r for r in prev.get("rows") or []}
+    for code, _name in universe:
+        if code not in quotes:
+            old = prev_rows.get(code)
+            if old and old.get("price") is not None:
+                quotes[code] = old
     flow = _fund_flow()
     out = _assemble_snapshot({}, universe, quotes, flow,
                              em_total=0, pages_failed=0, sources=[source, "universe"],
@@ -1516,7 +1527,7 @@ def _akshare_financials(code: str, periods: int = 8) -> list[dict]:
 
 def financials(code: str, periods: int = 8) -> list[dict]:
     """Recent quarterly main indicators (eastmoney F10 datacenter)."""
-    key = f"fin:{code}"
+    key = f"fin:v2:{code}"
     cached = db.cache_get(key, 3600 * 12)
     if cached:
         return cached
@@ -1554,8 +1565,13 @@ def financials(code: str, periods: int = 8) -> list[dict]:
             )
     except Exception:
         pass
-    if not rows:
-        rows = _akshare_financials(code, periods)
+    # Eastmoney sometimes returns the period rows but leaves gross margin (and
+    # other fields) blank while Sina's indicator feed has them.  Merge instead
+    # of showing a whole column of "--" for a company with real statements.
+    if not rows or all(r.get("gross_margin") is None for r in rows):
+        fallback = _akshare_financials(code, periods)
+        if fallback:
+            rows = fallback
     if rows:
         db.cache_set(key, rows)
     return rows

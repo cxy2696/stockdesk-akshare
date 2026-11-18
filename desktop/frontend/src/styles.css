@@ -4137,3 +4137,21 @@ html, body { overflow-x: hidden; }
   line-height: 1.7;
   color: var(--text-sub);
 }
+
+/* Company profile values can be long addresses / URLs; never overflow the card. */
+.company-profile .stat-line { align-items: flex-start; }
+.company-profile .stat-line > span:last-child { overflow-wrap: anywhere; text-align: right; }
+
+.special-region-strip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+.special-region-strip .chip { cursor: pointer; border: 0; }
+.special-region-strip .chip.active { background: var(--accent); color: #111; }

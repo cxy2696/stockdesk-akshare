@@ -296,6 +296,15 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
             continue
         scores = {c: round(cat_z[c][i], 3) for c in cat_z if cat_z[c][i] is not None}
         factor_hits = sum(1 for f in selected if f["values"][i] is not None)
+        # Shrink extreme percentiles when the candidate has narrow coverage.
+        # This is an overfit guard: a high score built from two categories and
+        # few factors is moved toward neutral instead of being treated as a
+        # fully observed cross-section.
+        cat_cov = category_hits[i] / max(len(cat_z), 1)
+        fac_cov = factor_hits / max(len(selected_names), 1)
+        reliability = math.sqrt(max(0.0, min(1.0, cat_cov * fac_cov)))
+        raw_score = float(pct[i]) * 100.0
+        adjusted = 50.0 + (raw_score - 50.0) * reliability
         stocks.append({
             "code": row.get("code"), "name": name,
             "price": round(price, 2), "pct": _num(row.get("pct")),
@@ -306,7 +315,8 @@ def snapshot(limit: int = 100, min_amount: float = 30_000_000,
             "main_inflow_ratio": round((_num(row.get("main_inflow")) or 0) / amount * 100, 3) if amount else None,
             "pct60": _num(row.get("pct60")),
             "pct_ytd": _num(row.get("pct_ytd")),
-            "percentile": round(float(pct[i]), 4), "score": round(float(pct[i]) * 100, 1),
+            "percentile": round(float(pct[i]), 4), "raw_score": round(raw_score, 1),
+            "score": round(adjusted, 1), "reliability": round(reliability, 3),
             "coverage": round(category_hits[i] / max(len(cat_z), 1), 3),
             "factor_coverage": round(factor_hits / max(len(selected_names), 1), 3),
             "factor_hits": factor_hits,

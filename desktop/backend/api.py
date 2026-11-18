@@ -295,6 +295,21 @@ def stock_detail(code: str):
         data["name"] = data.get("name") or code
     data["profile"] = prof
     data["financials"] = fin
+    # Fill only missing quote fields from data already on hand.  A partial
+    # Sina snapshot should not turn a valid stock page into a wall of "--".
+    price = float(data.get("price") or 0)
+    bps = next((float(x["bps"]) for x in fin if x.get("bps")), None)
+    if data.get("pb") is None and price > 0 and bps:
+        data["pb"] = round(price / bps, 2)
+    if data.get("mcap") is None and price > 0 and prof.get("reg_capital"):
+        # reg_capital is 万元 in Eastmoney F10.
+        data["mcap"] = round(price * float(prof["reg_capital"]) * 1e4, 2)
+    if data.get("turnover") is None and data.get("volume") and price > 0:
+        # mcap/price gives total shares; fall back to free-float cap when present.
+        cap = float(data.get("fcap") or data.get("mcap") or 0)
+        shares = cap / price if cap > 0 else 0
+        if shares > 0:
+            data["turnover"] = round(float(data["volume"]) / shares * 100, 2)
     try:
         data["concepts"] = market.concepts(code)
     except Exception:

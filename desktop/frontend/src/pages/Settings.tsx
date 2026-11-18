@@ -333,9 +333,9 @@ export default function SettingsPage() {
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <Card title="关于 复盘工具">
+        <Card title="关于 StockDesk">
           <Descriptions size="small" column={2} colon={false} labelStyle={{ color: 'var(--text-sub)', width: 110 }} contentStyle={{ color: 'var(--text)' }}>
-            <Descriptions.Item label="应用">复盘工具 · 个人股票投资台</Descriptions.Item>
+            <Descriptions.Item label="应用">StockDesk · 个人股票投资台</Descriptions.Item>
             <Descriptions.Item label="版本">v{__APP_VERSION__}</Descriptions.Item>
             <Descriptions.Item label="定位">本地优先、单用户、离线可用的投资工作台</Descriptions.Item>
             <Descriptions.Item label="技术栈">FastAPI + React + ECharts</Descriptions.Item>

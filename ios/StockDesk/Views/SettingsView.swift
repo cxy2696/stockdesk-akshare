@@ -4,7 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject private var store: AppStore
     @AppStorage("stockdesk.theme") private var themeRaw = "hud"
     @AppStorage("stockdesk.orientation") private var orientation = "auto"
-    @AppStorage("stockdesk.admin.name") private var adminName = "复盘工具"
+    @AppStorage("stockdesk.admin.name") private var adminName = "StockDesk"
     @AppStorage("stockdesk.admin.uid") private var adminUid = "LOCAL-0001"
     @AppStorage("stockdesk.uiScale") private var uiScale = 1.0
     @AppStorage("stockdesk.lang") private var lang = "zh"
@@ -70,7 +70,7 @@ struct SettingsView: View {
                 HStack {
                     Text("名称").foregroundStyle(Theme.text)
                     Spacer()
-                    TextField("复盘工具", text: $adminName).multilineTextAlignment(.trailing).foregroundStyle(Theme.textSub)
+                    TextField("StockDesk", text: $adminName).multilineTextAlignment(.trailing).foregroundStyle(Theme.textSub)
                 }
                 HStack {
                     Text("UID").foregroundStyle(Theme.text)
@@ -115,7 +115,7 @@ struct SettingsView: View {
                         .background(Theme.accentGradient)
                         .clipShape(RoundedRectangle(cornerRadius: 9))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("复盘工具").font(.system(size: 15, weight: .semibold))
+                        Text("StockDesk").font(.system(size: 15, weight: .semibold))
                         Text("完全本地运行 · 无账号 · 无上传")
                             .font(.system(size: 11)).foregroundStyle(Theme.textDim)
                     }

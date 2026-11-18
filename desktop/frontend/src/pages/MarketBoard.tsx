@@ -182,6 +182,7 @@ function BoardsTab({ nav }: { nav: (p: string) => void }) {
 function MoodTab({ nav }: { nav: (p: string) => void }) {
   const [market, setMarket] = useState<any>(null)
   const [ranking, setRanking] = useState<any[]>([])
+  const [strongMode, setStrongMode] = useState<'all' | 'weak'>('all')
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
@@ -210,7 +211,10 @@ function MoodTab({ nav }: { nav: (p: string) => void }) {
   const b = market.breadth ?? {}
   const total = Math.max((b.up ?? 0) + (b.down ?? 0) + (b.flat ?? 0), 1)
   const tone = market.verdict?.tone === 'up' ? 'var(--up)' : market.verdict?.tone === 'down' ? 'var(--down)' : 'var(--text-sub)'
-  const strong = ranking.filter((x: any) => (x.pct ?? 0) > 0).slice(0, 10)
+  const strongAll = ranking.slice(0, 10)
+  const marketWeak = String(market.verdict?.label ?? '').includes('弱')
+  const weakStrong = ranking.filter((x: any) => (x.pct ?? 0) > 0 && (x.pct ?? 0) < 9.5 && (x.amount ?? 0) > 0).slice(0, 10)
+  const strong = strongMode === 'weak' ? weakStrong : strongAll
 
   return (
     <div>
@@ -259,7 +263,14 @@ function MoodTab({ nav }: { nav: (p: string) => void }) {
           </div>
         </Card>
 
-        <Card title="弱势盘里的强势股" desc={`全市场涨幅前列且保持红盘 · ${strong.length} 只 · 只观察，不追高`} pad={false}>
+        <Card
+          title={strongMode === 'weak' ? '弱势盘里的强势股' : '今日强势股'}
+          desc={strongMode === 'weak'
+            ? `仅在市场偏弱时观察：红盘、非涨停、成交额有效 · ${weakStrong.length} 只`
+            : `全市场涨幅榜前列 · ${strongAll.length} 只 · 今日强势逻辑，不等于弱势盘抗跌`}
+          extra={<Segmented size="small" value={strongMode} onChange={(v) => setStrongMode(v as 'all' | 'weak')} options={[{ label: '今日强势', value: 'all' }, { label: '弱势盘强势', value: 'weak' }]} />}
+          pad={false}
+        >
           <Table
             size="small"
             rowKey="code"
@@ -275,7 +286,9 @@ function MoodTab({ nav }: { nav: (p: string) => void }) {
             ]}
           />
           <div className="card-pad muted small" style={{ paddingTop: 8, lineHeight: 1.7 }}>
-            市场偏弱时只看仍红盘、成交额没有萎缩的少数股票；不是买入信号。等指数重新站上 MA20 或个股回踩不破再评估。
+            {strongMode === 'weak'
+              ? (marketWeak ? '弱势盘里仍红盘、成交额有效且未封涨停的少数股票；不是买入信号，等指数站稳 MA20 再评估。' : '当前市场不算弱势；“弱势盘里的强势股”只在弱势环境启用，可切回“今日强势”看涨幅榜。')
+              : '今日强势股只按当日涨幅排序，可能是情绪脉冲或涨停板；与“弱势盘里的强势股”是两套逻辑，不能混用。'}
           </div>
         </Card>
       </div>

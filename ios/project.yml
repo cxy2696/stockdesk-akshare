@@ -23,7 +23,7 @@ targets:
         PRODUCT_NAME: StockDesk
         MARKETING_VERSION: "4.2.0"
         CURRENT_PROJECT_VERSION: "37"
-        INFOPLIST_KEY_CFBundleDisplayName: 复盘工具
+        INFOPLIST_KEY_CFBundleDisplayName: StockDesk
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"

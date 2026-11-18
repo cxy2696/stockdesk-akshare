@@ -1318,6 +1318,22 @@ def company_distribution() -> dict:
     cached = db.cache_get("market:company-map:v1", 600)
     if cached:
         return cached
+    # Sina's compact area table answers in ~0.2 s; Eastmoney's push2 list often
+    # blocks for six seconds when rate-limited.  Prefer the fast independent
+    # source for first paint; the capped sample is explicitly labelled in UI.
+    direct = _sina_region_direct()
+    if direct:
+        capped = True
+        universe = 0
+        try:
+            spot = market.cached_spot() or {}
+            universe = int(spot.get("expected") or 0)
+        except Exception:
+            universe = 0
+        result = {"total": sum(x["count"] for x in direct), "total_universe": universe or None,
+                  "capped": capped, "source": "sina-area", "provinces": direct, "updated": time.time()}
+        db.cache_set("market:company-map:v1", result)
+        return result
     url = (
         "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3"
         "&fs=m:90+t:1&fields=f12,f14,f2,f3,f62,f104,f105,f106"

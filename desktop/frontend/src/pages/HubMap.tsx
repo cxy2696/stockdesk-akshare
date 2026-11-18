@@ -10,6 +10,8 @@ import { fmt, trendClass } from '../utils'
 import { useTheme } from '../ThemeContext'
 import chinaJson from '../assets/china.json'
 
+const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, transparent)`
+
 let registered = false
 function ensureMap() {
   if (registered) return
@@ -245,7 +247,32 @@ export default function HubMap() {
           label: { show: true, color: emphasisLabel, fontSize: 10 },
         },
         label: { show: false },
-        data: rows.map((r) => ({ name: r.name, value: r.count, selected: r.short === selected?.short })),
+        data: rows.map((r) => {
+          const special = ['台湾', '香港', '澳门'].includes(r.short)
+          return {
+            name: r.name,
+            value: r.count,
+            selected: r.short === selected?.short,
+            // Taiwan/HK/Macau are tiny relative to a country map.  Give them
+            // a persistent label + stronger border so Macau is not a 2-pixel
+            // invisible polygon; the quick buttons below are the primary way
+            // to select them when zoomed out.
+            label: special ? {
+              show: true,
+              formatter: r.short,
+              position: r.short === '澳门' ? 'left' : 'right',
+              distance: 4,
+              color: mode === 'light' ? '#374151' : '#D7DEE8',
+              fontSize: 9,
+              fontWeight: 500,
+            } : { show: false },
+            itemStyle: special ? {
+              areaColor: tint(colors.accent, mode === 'light' ? 22 : 35),
+              borderColor: colors.accent,
+              borderWidth: 1.4,
+            } : undefined,
+          }
+        }),
       }],
     }
   }, [rows, selected, mode, colors])
@@ -302,7 +329,21 @@ export default function HubMap() {
         </span>
       </div>
 
-      <Card title="地域分布地图" desc="颜色越亮 = 上市公司越多 · 滚轮缩放 / 拖拽平移 · 点击省份联动上方选择器">
+      <div className="special-region-strip">
+        <span className="muted small">地图快捷定位</span>
+        {rows.filter((r) => r.special).map((r) => (
+          <button
+            key={r.short}
+            className={`chip ${selected?.short === r.short ? 'active' : ''}`}
+            onClick={() => setSelectedShort(r.short)}
+            title={r.hasData ? `${r.short} · ${r.count} 家` : `${r.short} · 暂无 A 股注册样本`}
+          >
+            {r.short}{r.hasData ? ` · ${r.count}` : ' · 无 A 股样本'}
+          </button>
+        ))}
+        <span className="muted" style={{ fontSize: 10 }}>澳门面积很小，地图上可能只显示为点；用这里可直接选中。</span>
+      </div>
+      <Card title="地域分布地图" desc="颜色越亮 = 上市公司越多 · 滚轮缩放 / 拖拽平移 · 台湾/香港/澳门带常驻标注">
         <EChart option={mapOption} height={500} notMerge onEvents={mapEvents} />
       </Card>
 
