@@ -25,6 +25,37 @@ def fail(msg: str, code: int = 400):
     return JSONResponse({"ok": False, "error": msg}, status_code=code)
 
 
+# ================================================================ data health
+@router.get("/api/data/status")
+def data_status():
+    from . import data_status as ds
+    return ok(ds.snapshot())
+
+
+@router.get("/api/data/sources")
+def data_sources():
+    from . import data_status as ds
+    return ok(ds.snapshot()["sources"])
+
+
+@router.get("/api/data/coverage")
+def data_coverage():
+    return market_coverage()
+
+
+class RefreshIn(BaseModel):
+    target: str = "spot"
+
+
+@router.post("/api/data/refresh")
+def data_refresh(body: RefreshIn):
+    from . import data_status as ds
+    try:
+        return ok(ds.refresh(body.target))
+    except ValueError as exc:
+        return fail(str(exc))
+
+
 # ================================================================ market
 @router.get("/api/health")
 def health():

@@ -10,7 +10,6 @@ import argparse
 import hashlib
 import json
 import plistlib
-import sys
 import zipfile
 from pathlib import Path
 

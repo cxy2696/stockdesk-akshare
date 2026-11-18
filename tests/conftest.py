@@ -1,5 +1,9 @@
+import os
 import sys
 from pathlib import Path
+
+# Keep unit/API tests deterministic: the production scheduler is opt-in here.
+os.environ.setdefault("STOCKDESK_SCHEDULER", "0")
 
 import pytest
 

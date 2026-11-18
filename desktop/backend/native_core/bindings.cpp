@@ -164,7 +164,7 @@ py::dict baum_welch(py::array_t<double, py::array::c_style | py::array::forcecas
 
 PYBIND11_MODULE(_native, m) {
     m.doc() = "StockDesk C++ model core: lattice percolation + univariate Gaussian HMM";
-    m.attr("__version__") = "1.2.4";
+    m.attr("__version__") = "1.2.5";
     m.def("grid_largest", &grid_largest, py::arg("grid"), py::arg("cols"),
           "Largest four-neighbour lattice component (union-find).");
     m.def("grid_batch", &grid_batch, py::arg("grids"), py::arg("cols"),

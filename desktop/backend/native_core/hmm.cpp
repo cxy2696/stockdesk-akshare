@@ -120,9 +120,16 @@ HmmResult fit_hmm_impl(const double *x, std::size_t n,
         for (std::size_t t = 0; t < n; ++t) {
             const double xt = xp[t];
             double *bt = Bp + t * k;
-            for (std::size_t j = 0; j < k; ++j) {
-                const double d = xt - mu[j];
-                bt[j] = std::exp(log_coeff[j] + d * d * inv_half_var[j]) + kTiny;
+            if constexpr (FixedK == 3) {
+                const double d0 = xt - mu[0], d1 = xt - mu[1], d2 = xt - mu[2];
+                bt[0] = std::exp(log_coeff[0] + d0 * d0 * inv_half_var[0]) + kTiny;
+                bt[1] = std::exp(log_coeff[1] + d1 * d1 * inv_half_var[1]) + kTiny;
+                bt[2] = std::exp(log_coeff[2] + d2 * d2 * inv_half_var[2]) + kTiny;
+            } else {
+                for (std::size_t j = 0; j < k; ++j) {
+                    const double d = xt - mu[j];
+                    bt[j] = std::exp(log_coeff[j] + d * d * inv_half_var[j]) + kTiny;
+                }
             }
         }
 
@@ -139,16 +146,29 @@ HmmResult fit_hmm_impl(const double *x, std::size_t n,
             const double *prev = ap + (t - 1) * k;
             double *cur = ap + t * k;
             const double *bt = Bp + t * k;
-            for (std::size_t j = 0; j < k; ++j) {
+            if constexpr (FixedK == 3) {
+                const double p0 = prev[0], p1 = prev[1], p2 = prev[2];
+                cur[0] = (p0 * dp[0] + p1 * dp[3] + p2 * dp[6]) * bt[0];
+                cur[1] = (p0 * dp[1] + p1 * dp[4] + p2 * dp[7]) * bt[1];
+                cur[2] = (p0 * dp[2] + p1 * dp[5] + p2 * dp[8]) * bt[2];
+                const double sum = cur[0] + cur[1] + cur[2];
+                c[t] = std::max(sum, kTiny);
+                const double inv = 1.0 / c[t];
+                cur[0] *= inv;
+                cur[1] *= inv;
+                cur[2] *= inv;
+            } else {
+                for (std::size_t j = 0; j < k; ++j) {
+                    double sum = 0;
+                    for (std::size_t i = 0; i < k; ++i) sum += prev[i] * dp[i * k + j];
+                    cur[j] = sum * bt[j];
+                }
                 double sum = 0;
-                for (std::size_t i = 0; i < k; ++i) sum += prev[i] * dp[i * k + j];
-                cur[j] = sum * bt[j];
+                for (std::size_t j = 0; j < k; ++j) sum += cur[j];
+                c[t] = std::max(sum, kTiny);
+                const double inv = 1.0 / c[t];
+                for (std::size_t j = 0; j < k; ++j) cur[j] *= inv;
             }
-            double sum = 0;
-            for (std::size_t j = 0; j < k; ++j) sum += cur[j];
-            c[t] = std::max(sum, kTiny);
-            const double inv = 1.0 / c[t];
-            for (std::size_t j = 0; j < k; ++j) cur[j] *= inv;
         }
 
         // Backward pass.  Cache B*beta for the next bar once per t instead of
@@ -160,11 +180,17 @@ HmmResult fit_hmm_impl(const double *x, std::size_t n,
             for (std::size_t j = 0; j < k; ++j) bB[j] = bBn[j] * bn[j];
             const double inv_c = 1.0 / std::max(c[t + 1], kTiny);
             double *cur = bp + t * k;
-            for (std::size_t i = 0; i < k; ++i) {
-                const double *arow = dp + i * k;
-                double sum = 0;
-                for (std::size_t j = 0; j < k; ++j) sum += arow[j] * bB[j];
-                cur[i] = sum * inv_c;
+            if constexpr (FixedK == 3) {
+                cur[0] = (dp[0] * bB[0] + dp[1] * bB[1] + dp[2] * bB[2]) * inv_c;
+                cur[1] = (dp[3] * bB[0] + dp[4] * bB[1] + dp[5] * bB[2]) * inv_c;
+                cur[2] = (dp[6] * bB[0] + dp[7] * bB[1] + dp[8] * bB[2]) * inv_c;
+            } else {
+                for (std::size_t i = 0; i < k; ++i) {
+                    const double *arow = dp + i * k;
+                    double sum = 0;
+                    for (std::size_t j = 0; j < k; ++j) sum += arow[j] * bB[j];
+                    cur[i] = sum * inv_c;
+                }
             }
         }
 
@@ -191,19 +217,31 @@ HmmResult fit_hmm_impl(const double *x, std::size_t n,
             const double *bBn = Bp + (t + 1) * k;
             const double *bn = bp + (t + 1) * k;
             for (std::size_t j = 0; j < k; ++j) bB[j] = bBn[j] * bn[j];
-            double total = 0;
-            for (std::size_t i = 0; i < k; ++i) {
-                const double ai = at[i];
-                const double *arow = dp + i * k;
-                double *srow = scp + i * k;
-                for (std::size_t j = 0; j < k; ++j) {
-                    const double v = ai * arow[j] * bB[j];
-                    srow[j] = v;
-                    total += v;
+            if constexpr (FixedK == 3) {
+                const double a0 = at[0], a1 = at[1], a2 = at[2];
+                const double v00 = a0 * dp[0] * bB[0], v01 = a0 * dp[1] * bB[1], v02 = a0 * dp[2] * bB[2];
+                const double v10 = a1 * dp[3] * bB[0], v11 = a1 * dp[4] * bB[1], v12 = a1 * dp[5] * bB[2];
+                const double v20 = a2 * dp[6] * bB[0], v21 = a2 * dp[7] * bB[1], v22 = a2 * dp[8] * bB[2];
+                const double total = v00 + v01 + v02 + v10 + v11 + v12 + v20 + v21 + v22;
+                const double inv = 1.0 / std::max(total, kTiny);
+                xip[0] += v00 * inv; xip[1] += v01 * inv; xip[2] += v02 * inv;
+                xip[3] += v10 * inv; xip[4] += v11 * inv; xip[5] += v12 * inv;
+                xip[6] += v20 * inv; xip[7] += v21 * inv; xip[8] += v22 * inv;
+            } else {
+                double total = 0;
+                for (std::size_t i = 0; i < k; ++i) {
+                    const double ai = at[i];
+                    const double *arow = dp + i * k;
+                    double *srow = scp + i * k;
+                    for (std::size_t j = 0; j < k; ++j) {
+                        const double v = ai * arow[j] * bB[j];
+                        srow[j] = v;
+                        total += v;
+                    }
                 }
+                const double inv = 1.0 / std::max(total, kTiny);
+                for (std::size_t i = 0; i < k * k; ++i) xip[i] += scp[i] * inv;
             }
-            const double inv = 1.0 / std::max(total, kTiny);
-            for (std::size_t i = 0; i < k * k; ++i) xip[i] += scp[i] * inv;
         }
 
         // Initial-state distribution from the first posterior row. The old pi

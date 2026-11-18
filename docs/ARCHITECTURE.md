@@ -82,14 +82,21 @@ HMM 的输入是五个 A 股指数的日对数收益，输出弱势 / 震荡 / �
 | `bench.cpp` | 纯 C++ 微基准：单格点、批量格点、HMM、广度 census、覆盖率审计 |
 | `CMakeLists.txt` | 脱离 CPython 的静态库 + CTest + ASan/UBSan 构建入口 |
 
-`backend/native.py` 只报告 `C++ / NumPy fallback` 状态；`models.py` 在原生调用抛异常时自动回退到 NumPy，并读取真实的 `converged` 字段，而不是假报 `True`。pybind 绑定在纯计算期间释放 GIL，渗流格点全程使用 uint8 numpy 连续内存，Monte-Carlo 重排/自助抽样通过 `grid_batch` 一次进入 C++，批量路径复用 union-find 工作区，5 个指数的 HMM 并行拟合。1.2.4 起渗流使用 32 位并查集和根节点列表，HMM 对生产配置 k=3 做编译期特化并预计算 `B×beta`；核心可单独用 CMake 编译、CTest 自测和 `native_bench` 计时。模型快照带 `trace`（算法/引擎/种子/规模/格点摘要/HMM 收敛诊断），用于复现和对账。桌面端新增 `backend/evaluation.py`：对单指数做滚动 220 日 HMM 重训，每 5 个交易日取一次因果状态和 5 日预测，与实际 5 日收益比较，输出命中率、相关性、分状态表现和模型仓位净值；结果缓存 30 分钟并在后台刷新。因子筛选输出 `cross-sectional-factor-v2` trace、类别/因子覆盖率；缺失类别按可用类别权重重新归一，不把缺失值当作 0 分。回归测试 `tests/test_native.py` 覆盖 C++/NumPy parity（含 k=2/3/4）、空/满/非方形格点、NaN/坏矩阵/坏迭代次数、线程安全和回退契约；`native_selftest` 额外覆盖 C++ 侧的随机格点 BFS 对照与批量一致性。
+`backend/native.py` 只报告 `C++ / NumPy fallback` 状态；`models.py` 在原生调用抛异常时自动回退到 NumPy，并读取真实的 `converged` 字段，而不是假报 `True`。pybind 绑定在纯计算期间释放 GIL，渗流格点全程使用 uint8 numpy 连续内存，Monte-Carlo 重排/自助抽样通过 `grid_batch` 一次进入 C++，批量路径复用 union-find 工作区，5 个指数的 HMM 并行拟合。1.2.5 起 HMM k=3 内部循环展开；1.2.4 起渗流使用 32 位并查集和根节点列表，HMM 对生产配置 k=3 做编译期特化并预计算 `B×beta`；核心可单独用 CMake 编译、CTest 自测和 `native_bench` 计时。模型快照带 `trace`（算法/引擎/种子/规模/格点摘要/HMM 收敛诊断），用于复现和对账。桌面端新增 `backend/evaluation.py`：对单指数做滚动 220 日 HMM 重训，每 5 个交易日取一次因果状态和 5 日预测，与实际 5 日收益比较，输出命中率、相关性、分状态表现和模型仓位净值；结果缓存 30 分钟并在后台刷新。因子筛选输出 `cross-sectional-factor-v2` trace、类别/因子覆盖率；缺失类别按可用类别权重重新归一，不把缺失值当作 0 分。回归测试 `tests/test_native.py` 覆盖 C++/NumPy parity（含 k=2/3/4）、空/满/非方形格点、NaN/坏矩阵/坏迭代次数、线程安全和回退契约；`native_selftest` 额外覆盖 C++ 侧的随机格点 BFS 对照与批量一致性。
 
 ### 桌面端效率与信息层级
 
 - 主导航分「工作台 / 研究 / 工具」并全部展示，不删减板块；HUD 右侧保留原 7 个模块并新增历史测评。研究台作为汇总入口，市场预测、量化模型、因子、板块、指数和地域仍可直接进入。
-- 量化模型页把 HMM/渗流/九转/行业/边界放进可展开的「模型明细与诊断」，首屏只保留结论、目标仓位和可执行建议；每日策略保留分层 `More` 折叠。
-- 缓存：`market_state`、指数分析、每日策略和历史测评都采用 stale-while-revalidate（先返回旧结果、后台刷新）；启动线程预热快照、轻量状态、每日策略、指数分析和历史测评。
+- 所有页面不再使用折叠面板；`More` 改为平铺分区，HMM/渗流/九转/行业/边界与每日策略明细全部直接展示，通过标题、卡片和间距建立层级。
+- 缓存：`market_state`、指数分析、每日策略和历史测评都采用 stale-while-revalidate（先返回旧结果、后台刷新）；启动线程预热快照、轻量状态、每日策略、指数分析和历史测评；应用内调度器按交易时段持续刷新。
 - 新增 `backend/evaluation.py` 和 `/api/models/history`，以滚动窗口重训 HMM 并检验 5 日方向，结果带缓存和 `stale/age` 标记；页面见「历史测评」。
+
+### 数据新鲜度、来源与后台刷新
+
+- `data_status.py` 从真实缓存快照生成快照日期、更新时间、覆盖/缺失/未定价、每类缓存年龄和调度器状态；`source_health.py` 只记录真实调用结果，不把“已配置”当成“健康”。
+- 新增 `/api/data/status`、`/api/data/sources`、`/api/data/coverage`、`/api/data/refresh`；顶部数据条常驻显示，每 30 秒刷新。
+- `scheduler.py` 在 FastAPI lifespan 启动单线程后台任务，交易时段快刷、收盘后慢刷，顺序执行避免 akshare/libmini_racer 并发；手动刷新通过排队执行。
+- 快照/ K 线新增腾讯独立源；新闻增加新浪滚动新闻兜底；板块保留东财、Sina、THS 多级兜底。
 
 ### 策略回测
 

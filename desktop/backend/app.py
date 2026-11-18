@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import api, db, repo
+from . import api, db, repo, scheduler
 from .config import APP_VERSION, frontend_dist
 
 FRONT = frontend_dist()
@@ -22,7 +22,11 @@ async def _lifespan(_app: FastAPI):
     db.init()
     if not db.get_setting("account"):
         db.set_setting("account", repo.DEFAULT_ACCOUNT)
-    yield
+    scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.stop()
 
 
 def create() -> FastAPI:

@@ -71,6 +71,12 @@ jobs:
           $hist = Invoke-RestMethod "http://127.0.0.1:8899/api/models/history?code=000300&limit=1000" -TimeoutSec 90
           if (-not $hist.ok -or -not $hist.data.samples) { throw "history evaluation endpoint failed" }
           Write-Host "history samples:" $hist.data.samples
+          $ds = Invoke-RestMethod "http://127.0.0.1:8899/api/data/status" -TimeoutSec 15
+          if (-not $ds.ok -or -not $ds.data.coverage.present) { throw "data status endpoint failed" }
+          if ($ds.data.coverage.expected -lt 5000) { throw "full-market universe too small" }
+          Write-Host "data status:" $ds.data.freshness "coverage:" $ds.data.coverage.present "/" $ds.data.coverage.expected "scheduler:" $ds.data.scheduler.running
+          $src = Invoke-RestMethod "http://127.0.0.1:8899/api/data/sources" -TimeoutSec 15
+          if (-not $src.ok -or $src.data.Count -lt 3) { throw "data sources endpoint failed" }
           if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
       - name: Report size
         shell: pwsh

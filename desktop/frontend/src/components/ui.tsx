@@ -81,26 +81,24 @@ export function EmptyState({ text, icon }: { text: string; icon?: ReactNode }) {
 }
 
 
-/** A low-friction disclosure for advanced/diagnostic content. */
+/** A flat, always-visible section.  Content is never hidden behind a
+ * disclosure; diagnostic material remains separated by hierarchy instead. */
 export function More({
   title = '更多数据',
   desc,
   children,
-  open = false,
 }: {
   title?: ReactNode
   desc?: ReactNode
   children?: ReactNode
-  open?: boolean
 }) {
   return (
-    <details className="more-box" open={open}>
-      <summary>
+    <section className="more-box">
+      <div className="more-box-head">
         <span>{title}</span>
         {desc && <em>{desc}</em>}
-        <b className="more-toggle" aria-hidden="true" />
-      </summary>
+      </div>
       <div className="more-body">{children}</div>
-    </details>
+    </section>
   )
 }

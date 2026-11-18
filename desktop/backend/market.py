@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 
-from . import clock, db, native
+from . import clock, db, native, source_health
 from .config import (EM_HIS, EM_LIST, EM_QUOTE, EM_UT, INDEXES, KLINE_MISS_TTL,
                      KLINE_TTL, QUOTE_MISS_TTL, QUOTE_TTL, SPOT_TTL)
 from .net import prefer_ipv4_eastmoney
@@ -615,10 +615,11 @@ def _assemble_snapshot(seen: dict[str, dict], expected: list[tuple[str, str]],
     }
 
 
-def _akshare_spot() -> dict:
+def _akshare_spot(force: bool = False) -> dict:
     """Complete fallback universe with Sina quotes and Eastmoney-like fields."""
+    t0 = time.monotonic()
     cached = db.cache_get("spot:ak", 600)
-    if cached and cached.get("schema") == SPOT_SCHEMA:
+    if not force and cached and cached.get("schema") == SPOT_SCHEMA:
         cached["date"] = clock.last_session_date()
         return cached
     universe = universe_symbols()
@@ -632,9 +633,13 @@ def _akshare_spot() -> dict:
                              em_total=0, pages_failed=0, sources=[source, "universe"],
                              classify_suspended=True)
     if out["rows"]:
+        source_health.mark("sina", bool(quotes), time.monotonic() - t0)
+        source_health.mark("akshare", bool(out.get("data_complete")), time.monotonic() - t0)
         db.cache_set("spot:ak", out)
         db.cache_set(SPOT_KEY, out)
         _remember_universe(out["rows"])
+    else:
+        source_health.mark("sina", False, time.monotonic() - t0, "empty akshare spot")
     return out
 
 
@@ -677,7 +682,7 @@ def _refresh_spot_worker() -> None:
     global _SPOT_REFRESHING
     try:
         with _spot_lock:
-            _fetch_spot_unlocked(ttl=0)
+            _fetch_spot_unlocked(ttl=0, force=True)
     except Exception:
         pass
     finally:
@@ -731,7 +736,14 @@ def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
         return _fetch_spot_unlocked(ttl, progress)
 
 
-def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
+def fetch_spot_now(progress=None) -> dict:
+    """Synchronous full refresh, used by the scheduler/manual refresh only."""
+    with _spot_lock:
+        return _fetch_spot_unlocked(ttl=0, progress=progress, force=True)
+
+
+def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None, force: bool = False) -> dict:
+    t0 = time.monotonic()
     # A blocked quote host must not hold the first page for minutes: three
     # retries on every one of ~56 pages is a worst case of several minutes.
     # Bound the whole page sweep and let the Sina/static fallback repair what
@@ -758,7 +770,7 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
     data = (first or {}).get("data") or {}
     total = int(data.get("total") or 0)
     if not total:
-        return _akshare_spot()
+        return _akshare_spot(force=force)
 
     page_size = 100
     page_count = min(120, max(1, math.ceil(total / page_size)))
@@ -795,7 +807,7 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
             progress(min(99, int(len(seen) / max(total, 1) * 100)))
 
     if len(seen) < SPOT_MIN_ROWS:
-        return _akshare_spot()
+        return _akshare_spot(force=force)
 
     # Merge everything known: bundled/extra universe, Eastmoney rows and Sina
     # quotes discovered while repairing failed pages.
@@ -826,14 +838,67 @@ def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None) -> dict:
     if progress:
         progress(100)
     if out["rows"]:
+        source_health.mark("eastmoney", bool(seen), time.monotonic() - t0)
+        source_health.mark("sina", bool(quotes), time.monotonic() - t0)
         db.cache_set(SPOT_KEY, out)
         _remember_universe(out["rows"])
         return out
-    return _akshare_spot()
+    source_health.mark("eastmoney", False, time.monotonic() - t0, "no rows")
+    return _akshare_spot(force=force)
+
+
+def _tencent_symbol(code: str, secid_override: str | None = None) -> str:
+    sec = secid_override or secid(code)
+    if sec.startswith("1."):
+        return "sh" + code
+    if sec.startswith("0."):
+        return "sz" + code
+    if code.startswith(("4", "8", "92")):
+        return "bj" + code
+    return "sh" + code
+
+
+def _tencent_quote(code: str) -> dict | None:
+    """Tencent quote fallback when Eastmoney and Sina are both unavailable."""
+    t0 = time.monotonic()
+    try:
+        symbol = _tencent_symbol(code)
+        req = urllib.request.Request(
+            f"https://qt.gtimg.cn/q={symbol}",
+            headers={"User-Agent": UA, "Referer": "https://gu.qq.com/"},
+        )
+        text = urllib.request.urlopen(req, timeout=8).read().decode("gbk", "ignore")
+        payload = text.split('="', 1)[1].split('";', 1)[0] if '="' in text else ""
+        p = payload.split("~")
+        if len(p) < 35 or not p[0]:
+            raise ValueError("empty tencent quote")
+        price = _num(p[3])
+        prev = _num(p[4])
+        if not price or not prev:
+            raise ValueError("tencent quote has no price")
+        high, low, open_ = _num(p[33]), _num(p[34]), _num(p[5])
+        out = {
+            "code": code, "name": p[1], "price": price, "high": high, "low": low,
+            "open": open_, "volume": _num(p[6]), "amount": _num(p[37]),
+            "prev_close": prev, "pct": _num(p[32]) if _num(p[32]) is not None else round((price / prev - 1) * 100, 2),
+            "chg": _num(p[31]) if _num(p[31]) is not None else round(price - prev, 3),
+            "turnover": _num(p[38]), "pe": _num(p[39]), "pb": None,
+            "mcap": None, "fcap": None, "volume_ratio": None, "market": market_of(code),
+            "amplitude": _num(p[43]),
+            "ts": time.time(), "source": "tencent",
+        }
+        if out["amplitude"] is None and high and low and prev:
+            out["amplitude"] = round((high - low) / prev * 100, 2)
+        source_health.mark("tencent", True, time.monotonic() - t0)
+        return out
+    except Exception as exc:
+        source_health.mark("tencent", False, time.monotonic() - t0, str(exc))
+        return None
 
 
 def _sina_quote(code: str, prefix: str | None = None) -> dict | None:
     """Fallback quote when the Eastmoney push2 endpoint is rate-limited."""
+    t0 = time.monotonic()
     sec = secid(code)
     prefix = prefix or ("sh" if sec.startswith("1.") else "sz")
     if prefix == "auto" and code.startswith(("4", "8", "92")):
@@ -854,7 +919,7 @@ def _sina_quote(code: str, prefix: str | None = None) -> dict | None:
         if not price or not prev:
             return None
         high, low = _num(p[4]), _num(p[5])
-        return {
+        out = {
             "code": code, "name": p[0], "price": price, "high": high, "low": low,
             "open": _num(p[1]), "volume": _num(p[8]), "amount": _num(p[9]),
             "prev_close": prev, "pct": round((price / prev - 1) * 100, 2),
@@ -863,7 +928,10 @@ def _sina_quote(code: str, prefix: str | None = None) -> dict | None:
             "amplitude": round((high - low) / prev * 100, 2) if high and low and prev else None,
             "ts": time.time(), "source": "sina",
         }
-    except Exception:
+        source_health.mark("sina", True, time.monotonic() - t0)
+        return out
+    except Exception as exc:
+        source_health.mark("sina", False, time.monotonic() - t0, str(exc))
         return None
 
 
@@ -899,7 +967,7 @@ def quote(code: str) -> dict | None:
         return None
 
     def fallback() -> dict | None:
-        q = _sina_quote(code)
+        q = _sina_quote(code) or _tencent_quote(code)
         if q:
             db.cache_delete(miss_key)
             db.cache_set(key, q)
@@ -986,6 +1054,7 @@ _PERIOD = {"daily": 101, "weekly": 102, "monthly": 103, "60m": 60, "30m": 30, "1
 
 def _akshare_klines(code: str, period: str, limit: int, adjust: str, secid_override: str | None = None) -> list[dict]:
     """Sina fallback via akshare when the Eastmoney kline endpoint is limited."""
+    t0 = time.monotonic()
     try:
         import akshare as ak
         sec = secid_override or secid(code)
@@ -1014,10 +1083,14 @@ def _akshare_klines(code: str, period: str, limit: int, adjust: str, secid_overr
                 "volume": _num(r.get("volume"), 0), "amount": _num(r.get("amount"), 0),
                 "amplitude": None, "pct": round(pct, 2), "chg": round(close - prev, 3) if prev else 0,
                 "turnover": (_num(r.get("turnover"), 0) or 0) * (100 if period == "daily" else 1),
+                "source": "akshare",
             })
             prev = close
+        if rows:
+            source_health.mark("akshare", True, time.monotonic() - t0)
         return rows
-    except Exception:
+    except Exception as exc:
+        source_health.mark("akshare", False, time.monotonic() - t0, str(exc))
         return []
 
 
@@ -1038,12 +1111,14 @@ def _sina_klines(code: str, period: str, limit: int, adjust: str, secid_override
     else:
         prefix = "sz"
     symbol = f"{prefix}{code}"
+    t0 = time.monotonic()
     url = (f"https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
            f"CN_MarketData.getKLineData?symbol={symbol}&scale=240&ma=no&datalen={max(20, min(1023, int(limit)))}")
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
         data = json.loads(urllib.request.urlopen(req, timeout=8).read().decode("utf-8", "ignore"))
-    except Exception:
+    except Exception as exc:
+        source_health.mark("sina", False, time.monotonic() - t0, str(exc))
         return []
     rows = []
     prev = None
@@ -1061,7 +1136,55 @@ def _sina_klines(code: str, period: str, limit: int, adjust: str, secid_override
             "source": "sina",
         })
         prev = close
+    if rows:
+        source_health.mark("sina", True, time.monotonic() - t0)
     return rows[-max(10, int(limit)):]
+
+
+def _tencent_klines(code: str, period: str, limit: int, adjust: str,
+                    secid_override: str | None = None) -> list[dict]:
+    """Tencent daily/weekly/monthly K-line fallback, independent of Eastmoney."""
+    period_key = {"daily": "day", "weekly": "week", "monthly": "month"}.get(period)
+    if not period_key:
+        return []
+    t0 = time.monotonic()
+    try:
+        symbol = _tencent_symbol(code, secid_override)
+        adjust_key = adjust if adjust in ("qfq", "hfq") else ""
+        param = f"{symbol},{period_key},,,{max(10, int(limit))},{adjust_key}"
+        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=" + urllib.parse.quote(param)
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://gu.qq.com/"})
+        data = json.loads(urllib.request.urlopen(req, timeout=8).read().decode("utf-8", "ignore"))
+        block = ((data or {}).get("data") or {}).get(symbol) or {}
+        candidates = [f"{adjust_key}{period_key}" if adjust_key else period_key, period_key, f"qfq{period_key}", f"hfq{period_key}"]
+        raw = next((block.get(k) for k in candidates if isinstance(block.get(k), list)), None) or []
+        rows = []
+        prev = None
+        for item in raw:
+            if not isinstance(item, list) or len(item) < 6:
+                continue
+            close = _num(item[2])
+            if close is None:
+                continue
+            open_ = _num(item[1])
+            high, low = _num(item[3]), _num(item[4])
+            volume = _num(item[5])
+            rows.append({
+                "date": str(item[0])[:10], "open": open_, "close": close,
+                "high": high, "low": low, "volume": volume, "amount": None,
+                "amplitude": round((high - low) / prev * 100, 2) if high and low and prev else None,
+                "pct": round((close / prev - 1) * 100, 2) if prev else None,
+                "chg": round(close - prev, 3) if prev else None,
+                "turnover": None, "source": "tencent",
+            })
+            prev = close
+        if not rows:
+            raise ValueError("empty tencent kline")
+        source_health.mark("tencent", True, time.monotonic() - t0)
+        return rows[-max(10, int(limit)):]
+    except Exception as exc:
+        source_health.mark("tencent", False, time.monotonic() - t0, str(exc))
+        return []
 
 
 def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qfq",
@@ -1106,12 +1229,14 @@ def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qf
                 "amplitude": _num(p[7]),
                 "pct": _num(p[8]),
                 "chg": _num(p[9]),
-                "turnover": _num(p[10]),
+                "turnover": _num(p[10]), "source": "eastmoney",
             }
         )
     rows = rows[-max(10, int(limit)):]
     if not rows:
         rows = _sina_klines(code, period, limit, adjust, secid_override)
+    if not rows:
+        rows = _tencent_klines(code, period, limit, adjust, secid_override)
     if not rows and allow_akshare:
         rows = _akshare_klines(code, period, limit, adjust, secid_override)
     if not rows:
@@ -1124,6 +1249,9 @@ def klines(code: str, period: str = "daily", limit: int = 260, adjust: str = "qf
         # fall back to unadjusted prices for display
         return klines(code, period=period, limit=limit, adjust="", secid_override=secid_override)
     if rows:
+        src = rows[0].get("source") or "unknown"
+        if src in ("eastmoney", "sina", "tencent", "akshare"):
+            source_health.mark(src, True)
         db.cache_delete(miss_key)
         db.cache_set(key, rows)
     return rows

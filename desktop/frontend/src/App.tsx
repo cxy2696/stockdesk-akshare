@@ -28,6 +28,7 @@ import { Tooltip } from 'antd'
 import StockSearch from './components/StockSearch'
 import { api } from './api'
 import { fmt, trendClass } from './utils'
+import DataStatus from './components/DataStatus'
 import { useTheme } from './ThemeContext'
 import { sharePageImage } from './share'
 import Decision from './pages/Decision'
@@ -270,6 +271,7 @@ export default function App() {
           </Tooltip>
         </header>
 
+        <DataStatus />
         <main className="content">
           <div className="page-enter" key={loc.pathname}>
             <Suspense fallback={<div className="card card-pad muted">正在载入页面…</div>}>

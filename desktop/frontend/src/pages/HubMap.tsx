@@ -306,9 +306,8 @@ export default function HubMap() {
         </div>
       )}
 
-      <More title="全部省份" desc="搜索 / 展开领涨公司">
       <div style={{ marginTop: 14 }}>
-        <Card title="全部省份" desc="点击省份行切换 · 展开查看领涨公司">
+        <Card title="全部省份" desc="点击省份行切换 · 领涨公司全部展示">
           <div className="row-between" style={{ gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
             <Input.Search
               allowClear
@@ -319,14 +318,14 @@ export default function HubMap() {
             />
             <span className="muted small">{filtered.length} / {rows.length} 个省级行政区</span>
           </div>
-          <div className="hud-leaders-scroll" style={{ maxHeight: 460 }}>
+          <div className="hud-leaders-scroll">
             {filtered.map((p) => (
-              <details
+              <section
                 key={p.short}
                 className="hud-province-details"
-                style={p.short === selected?.short ? { background: 'var(--tag-bg)', borderRadius: 6 } : undefined}
+                style={p.short === selected?.short ? { background: 'var(--tag-bg)', borderColor: 'var(--accent)' } : undefined}
               >
-                <summary onClick={() => setSelectedShort(p.short)}>
+                <div className="hud-province-head" onClick={() => setSelectedShort(p.short)}>
                   <b>{p.short}</b>
                   <span className="muted small">
                     {p.hasData
@@ -337,7 +336,7 @@ export default function HubMap() {
                     {p.leaders[0]?.name ?? '--'}
                     {p.leaders[0] ? ` ${fmt.pct(p.leaders[0].pct)}` : ''}
                   </em>
-                </summary>
+                </div>
                 <div className="hud-leader-list">
                   {p.leaders.length ? (
                     p.leaders.slice(0, 5).map((s: any) => (
@@ -363,7 +362,7 @@ export default function HubMap() {
                     </Button>
                   </div>
                 </div>
-              </details>
+              </section>
             ))}
             {!filtered.length && (
               <div className="muted small" style={{ textAlign: 'center', padding: 24 }}>
@@ -373,7 +372,6 @@ export default function HubMap() {
           </div>
         </Card>
       </div>
-      </More>
     </div>
   )
 }

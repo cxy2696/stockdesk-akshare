@@ -6,7 +6,7 @@ import time
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
-from . import clock, db, market, td
+from . import clock, db, market, source_health, td
 
 INDEX_SECIDS = {
     "000001": "1.000001",
@@ -373,9 +373,10 @@ def _ths_industry_flow() -> list[dict]:
                 "leader": r.get("领涨股"), "leader_code": None,
                 "leader_pct": market._num(r.get("领涨股-涨跌幅")),
                 "companies": int(up + down) if up is not None and down is not None else None,
-                "kind": "industry",
+                "kind": "industry", "source": "ths",
             })
         if out:
+            source_health.mark("ths", True)
             return out
     except Exception:
         pass
@@ -474,7 +475,7 @@ def _board_rows_inner(kind: str = "industry") -> list[dict]:
             "leader": r.get("f128"),
             "leader_code": r.get("f140"),
             "leader_pct": market._num(r.get("f136")),
-            "kind": kind,
+            "kind": kind, "source": "eastmoney",
         })
     if not out and kind == "industry":
         # Sina first: it is a plain HTTP table and normally returns in a few
@@ -489,7 +490,7 @@ def _board_rows_inner(kind: str = "industry") -> list[dict]:
                 "pct": r.get("pct"), "inflow": r.get("inflow"),
                 "up": None, "down": None,
                 "leader": r.get("leader"), "leader_code": None,
-                "leader_pct": r.get("leader_pct"), "kind": kind,
+                "leader_pct": r.get("leader_pct"), "kind": kind, "source": "sina",
             })
         if not out:
             out = _ths_industry_flow()
@@ -843,6 +844,44 @@ def _news_url(x: dict) -> str:
     return url
 
 
+def _sina_news(limit: int = 20) -> list[dict]:
+    """Sina rolling-news fallback when the Eastmoney news API is blocked."""
+    import json
+    import urllib.request
+
+    t0 = time.time()
+    try:
+        url = ("https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2516"
+               f"&num={max(5, limit)}&versionNumber=1.2.3&encode=utf-8")
+        req = urllib.request.Request(url, headers={"User-Agent": market.UA, "Referer": "https://finance.sina.com.cn/"})
+        payload = json.loads(urllib.request.urlopen(req, timeout=10).read().decode("utf-8", "ignore"))
+        rows = (((payload or {}).get("result") or {}).get("data") or [])
+        out = []
+        seen = set()
+        for x in rows:
+            title = str(x.get("title") or "").strip()
+            if not title or title in seen:
+                continue
+            seen.add(title)
+            summary = str(x.get("intro") or "").strip()
+            out.append({
+                "title": title,
+                "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(x.get("ctime") or 0))) if x.get("ctime") else "",
+                "summary": summary,
+                "url": str(x.get("url") or ""),
+                "kind": "要闻",
+                "industries": _news_tags(f"{title}{summary}"),
+                "source": "新浪财经",
+            })
+        out.sort(key=lambda n: n.get("time") or "", reverse=True)
+        out = out[:max(1, limit)]
+        source_health.mark("sina", bool(out), time.time() - t0, "news")
+        return out
+    except Exception as exc:
+        source_health.mark("sina", False, time.time() - t0, f"news: {exc}")
+        return []
+
+
 def market_news(limit: int = 20) -> list[dict]:
     cached = db.cache_get(f"market:news:v2:{limit}", 120)
     if cached:
@@ -884,6 +923,9 @@ def market_news(limit: int = 20) -> list[dict]:
         })
     out.sort(key=lambda n: n.get("time") or "", reverse=True)
     out = out[:max(1, limit)]
+    source_health.mark("eastmoney", bool(out), None, "news")
+    if not out:
+        out = _sina_news(limit)
     db.cache_set(f"market:news:v2:{limit}", out)
     return out
 
@@ -1021,7 +1063,8 @@ def _compute_index_analysis() -> list[dict]:
             out.append({"code": code, "name": name, "region": region, "style": style, "desc": desc,
                         "price": None, "pct": None, "ma20": None, "ma60": None, "trend": "无数据",
                         "support": None, "resistance": None, "pct7": None, "pct20": None, "pct60": None,
-                        "note": note, "bias": "无数据", "score": 50, "action": "等待数据", "conclusion": "暂无数据"})
+                        "note": note, "bias": "无数据", "score": 50, "action": "等待数据", "conclusion": "暂无数据",
+                        "source": None, "as_of": None})
             continue
 
         def ma(n):
@@ -1091,6 +1134,8 @@ def _compute_index_analysis() -> list[dict]:
             "vol20": round(vol20, 2), "bias20": round(bias20, 2),
             "score": round(score), "bias": bias, "action": action, "conclusion": conclusion,
             "note": note, "date": rows[-1].get("date"),
+            "source": rows[-1].get("source") or "unknown",
+            "as_of": rows[-1].get("date"),
         })
     return out
 
