@@ -5,7 +5,7 @@ numbers, no "the system automatically generated" boilerplate.
 """
 from __future__ import annotations
 
-from . import portfolio, state
+from . import db, factors, portfolio, state
 
 
 def _target_range(score: float) -> tuple[int, int]:
@@ -18,6 +18,119 @@ def _target_range(score: float) -> tuple[int, int]:
     if score >= 32:
         return 30, 45
     return 15, 30
+
+
+def _portfolio_plan(summary: dict, low: int, high: int, single_cap: int) -> dict:
+    """Build a factor-based model portfolio and concrete rebalance orders.
+
+    The selection is deliberately mechanical and traceable: top cross-sectional
+    factor scores, at most five names, at most two per industry, with the
+    market-regime target position split equally.  It is a research suggestion,
+    not an order; every row carries its data source and reason.
+    """
+    try:
+        snap = factors.snapshot(limit=120)
+    except Exception:
+        snap = {}
+    rows = snap.get("stocks") or []
+    if not snap.get("ready") or not rows:
+        return {"recommended": [], "rebalance": [], "recommend_method": "因子快照暂不可用", "recommend_asof": snap.get("date")}
+
+    model = db.cache_get("market:models:v9") or {}
+    focus = {str(x.get("name")) for x in (model.get("industry_focus") or []) if x.get("name")}
+
+    def rank(row):
+        industry = str(row.get("industry") or "")
+        return (1 if industry in focus else 0, float(row.get("score") or 0))
+
+    ordered = sorted(rows, key=rank, reverse=True)
+    # Do not propose buying a stock already locked at the limit; it is not an
+    # executable price and would overstate the model's entry quality.
+    liquid = [r for r in ordered if abs(float(r.get("pct") or 0)) < 9.5]
+    if len(liquid) >= 5:
+        ordered = liquid
+    picked = []
+    per_industry: dict[str, int] = {}
+    for row in ordered:
+        code = str(row.get("code") or "")
+        industry = str(row.get("industry") or "未分类")
+        # Sina full-market fallback has no industry field.  Do not collapse all
+        # of those names into one bucket; only enforce the two-per-industry cap
+        # when the classification is actually known.
+        bucket = industry if industry and industry != "未分类" else f"unknown:{code}"
+        if not code or per_industry.get(bucket, 0) >= 2:
+            continue
+        picked.append(row)
+        per_industry[bucket] = per_industry.get(bucket, 0) + 1
+        if len(picked) >= 5:
+            break
+
+    target_total = round((low + high) / 2, 1)
+    per_weight = round(min(float(single_cap), target_total / max(1, len(picked))), 1)
+    selected: dict[str, dict] = {}
+    recommended = []
+    for row in picked:
+        code = str(row.get("code"))
+        selected[code] = row
+        recommended.append({
+            "code": code, "name": row.get("name") or code,
+            "industry": row.get("industry") or "未分类",
+            "price": row.get("price"), "pct": row.get("pct"),
+            "score": row.get("score"), "percentile": row.get("percentile"),
+            "target_weight": per_weight,
+            "target_value": round(float(summary.get("total") or 0) * per_weight / 100, 2),
+            "reason": f"因子分 {row.get('score')} / 百分位 {round(float(row.get('percentile') or 0) * 100)}%；"
+                      f"{'行业关注；' if (row.get('industry') in focus) else ''}按目标仓位等权分配",
+            "source": "横截面因子 + 行业关注",
+        })
+
+    positions = summary.get("positions") or []
+    total = float(summary.get("total") or 0)
+    held = {str(p.get("code")): p for p in positions}
+    rebalance = []
+    for code, p in held.items():
+        target = per_weight if code in selected else 0.0
+        cur = float(p.get("weight") or 0)
+        delta = round(target - cur, 1)
+        price = float(p.get("price") or 0)
+        value = total * abs(delta) / 100
+        qty = int(value / price / 100) * 100 if price > 0 else 0
+        if delta < -1 and qty > int(p.get("qty") or 0):
+            qty = int(p.get("qty") or 0)
+        action = "加仓" if delta > 1 else "减仓" if delta < -1 else "持有"
+        if action == "减仓" and target <= 0:
+            action = "清仓/换出"
+        rebalance.append({
+            "code": code, "name": p.get("name") or code, "action": action,
+            "current_weight": round(cur, 1), "target_weight": target,
+            "delta_weight": delta, "delta_value": round(value, 2), "qty": qty,
+            "price": round(price, 2),
+            "reason": "在本次推荐组合内，按目标仓位平衡" if code in selected else "不在本次推荐组合，优先回笼现金/换入更高分标的",
+            "source": "账户持仓 + 推荐组合",
+        })
+    for code, row in selected.items():
+        if code in held:
+            continue
+        price = float(row.get("price") or 0)
+        value = total * per_weight / 100
+        qty = int(value / price / 100) * 100 if price > 0 else 0
+        rebalance.append({
+            "code": code, "name": row.get("name") or code, "action": "买入/建仓",
+            "current_weight": 0.0, "target_weight": per_weight,
+            "delta_weight": per_weight, "delta_value": round(value, 2), "qty": qty,
+            "price": round(price, 2), "reason": "推荐组合新标的，按目标权重建仓",
+            "source": "横截面因子 + 行业关注",
+        })
+    rebalance.sort(key=lambda x: (x["action"] == "持有", x["action"].startswith("买入"), -abs(x["delta_weight"])))
+    return {
+        "recommended": recommended,
+        "rebalance": rebalance,
+        "target_total": target_total,
+        "target_cash": round(100 - target_total, 1),
+        "recommend_method": "横截面因子前 5（行业关注优先、单行业最多 2 只）+ 市场状态目标仓位；单票不超过 "
+                            f"{single_cap}%；目标总仓位取建议区间中值 {target_total}%。",
+        "recommend_asof": snap.get("date"),
+    }
 
 
 def position_advice() -> dict:
@@ -132,5 +245,6 @@ def position_advice() -> dict:
         "warnings": warnings,
         "actions": actions,
         "risk_positions": risk_positions,
+        **(_portfolio_plan(s, low, high, single_cap)),
         "updated": m.get("ts"),
     }

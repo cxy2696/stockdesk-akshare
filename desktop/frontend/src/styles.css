@@ -4091,3 +4091,49 @@ html, body { overflow-x: hidden; }
   .data-status-bar { font-size: 10px; gap: 4px; }
   .data-status-bar .data-sep { display: none; }
 }
+
+/* News: keep the sidebar aligned to the top instead of stretching a short
+   aside across a tall feed, and let the feed use the full row width. */
+.news-layout { align-items: start; }
+.news-aside { position: sticky; top: 42px; }
+@media (max-width: 1200px) {
+  .news-aside { position: static; }
+}
+
+/* Factor methodology: flat, scannable explanation instead of a dense paragraph. */
+.factor-explain {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 18px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-soft);
+  border-radius: 8px;
+  font-size: calc(10.5px * var(--fs, 1));
+  line-height: 1.7;
+}
+.factor-explain > div { display: grid; grid-template-columns: 76px 1fr; gap: 6px; }
+.factor-explain b { color: var(--text); }
+.factor-explain span { color: var(--text-sub); }
+@media (max-width: 980px) { .factor-explain { grid-template-columns: 1fr; } }
+
+.factor-explain > .factor-trace {
+  grid-column: 1 / -1;
+  display: block;
+  margin-top: 2px;
+  font-size: calc(10px * var(--fs, 1));
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+
+.mood-reasons {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-soft);
+  border-radius: 8px;
+  font-size: calc(10.5px * var(--fs, 1));
+  line-height: 1.7;
+  color: var(--text-sub);
+}

@@ -115,6 +115,10 @@ def tick_once(force: bool = False) -> str | None:
                 _LAST_TICK = time.time()
                 _LAST_JOB = name
                 _NEXT_DUE = _LAST_TICK + _TICK_EVERY
+            try:
+                db.prune_cache()
+            except Exception:
+                pass
         return name
     with _LOCK:
         _LAST_TICK = now

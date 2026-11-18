@@ -13,7 +13,7 @@ struct InvestHudHeader: View {
     @AppStorage("stockdesk.lang") private var lang = "zh"
     @AppStorage("stockdesk.uiScale") private var uiScale = 1.0
     @Environment(\.horizontalSizeClass) private var hSize
-    @AppStorage("stockdesk.admin.name") private var adminName = "StockDesk"
+    @AppStorage("stockdesk.admin.name") private var adminName = "复盘工具"
     @AppStorage("stockdesk.admin.uid") private var adminUid = "LOCAL-0001"
 
     private var isPad: Bool { hSize == .regular }
@@ -348,7 +348,7 @@ struct MoreView: View {
                                 .background(Theme.accentGradient)
                                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("StockDesk").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
+                                Text("复盘工具").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
                                 Text("v\(AppInfo.version) · 数据来自东方财富公开接口").font(.system(size: 10.5)).foregroundStyle(Theme.textDim)
                                 Text(store.lastRefresh.isEmpty
                                      ? "当前 \(ctx.date.formatted(.dateTime.hour().minute().second())) · 等待首次行情刷新"

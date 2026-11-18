@@ -13,8 +13,8 @@ import plistlib
 import zipfile
 from pathlib import Path
 
-DESKTOP_VERSION = "1.17.0"
-IOS_VERSION = "4.1.2"
+DESKTOP_VERSION = "1.18.0"
+IOS_VERSION = "4.2.0"
 
 REQUIRED = [
     f"StockDesk-macOS-{DESKTOP_VERSION}.dmg",

@@ -110,7 +110,7 @@ app = BUNDLE(
     bundle_identifier="com.stockdesk.personal",
     info_plist={
         "CFBundleName": "StockDesk",
-        "CFBundleDisplayName": "StockDesk",
+        "CFBundleDisplayName": "复盘工具",
         "CFBundleShortVersionString": VERSION,
         "CFBundleVersion": VERSION,
         "NSHighResolutionCapable": True,

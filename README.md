@@ -10,8 +10,8 @@ StockDesk 是一个在本地运行的个人股票工作台，主要面向 A 股�
 
 | 平台 | 版本 |
 | --- | --- |
-| 桌面端（源码 / 安装包） | 1.17.0 |
-| iPhone / iPad | 4.1.2 (36) |
+| 桌面端（源码 / 安装包） | 1.18.0 |
+| iPhone / iPad | 4.2.0 (37) |
 | 美股版 | 1.0.2 |
 | 模型注册表 / C++ 原生核心 | 2.7.0 / 1.2.5 |
 
@@ -35,9 +35,9 @@ StockDesk 是一个在本地运行的个人股票工作台，主要面向 A 股�
 
 | 平台 | 文件 | 说明 |
 | --- | --- | --- |
-| macOS 12+ Apple Silicon | `StockDesk-macOS-1.17.0.dmg` / `.zip` | 打开 DMG 后运行 `Install-StockDesk.command` |
+| macOS 12+ Apple Silicon | `StockDesk-macOS-1.18.0.dmg` / `.zip` | 打开 DMG 后运行 `Install-StockDesk.command` |
 | Windows 10/11 x64 | `StockDesk.exe` | 需要 WebView2；SmartScreen 提示时选择“仍要运行” |
-| iPhone / iPad iOS 17+ | `StockDesk-iOS-4.1.2-unsigned.ipa` | 未签名，需用 Sideloadly / AltStore / Xcode 重签 |
+| iPhone / iPad iOS 17+ | `StockDesk-iOS-4.2.0-unsigned.ipa` | 未签名，需用 Sideloadly / AltStore / Xcode 重签 |
 | 浏览器 / NAS | GHCR 容器 | 见 [容器说明](docs/PACKAGES.md) |
 
 安装包在 GitHub Releases 下载。仓库只保留源码和文档，构建产物不进入 Git。

@@ -185,6 +185,27 @@ def cache_delete(key: str):
         c.execute("DELETE FROM kv WHERE k=?", (key,))
 
 
+OBSOLETE_CACHE_KEYS = (
+    "spot:v6", "market:state", "market:daily:v9", "market:daily:v10",
+    "market:news:v2", "boards:rows:v1", "model:history:v1",
+)
+
+
+def prune_cache(max_age: float = 14 * 86400, obsolete: tuple[str, ...] | None = None) -> int:
+    """Drop expired cache rows and superseded schema keys after a refresh."""
+    deleted = 0
+    with _lock, _db(CACHE_PATH) as c:
+        cur = c.execute("DELETE FROM kv WHERE ts < ?", (time.time() - max_age,))
+        deleted += max(0, cur.rowcount)
+        obsolete = OBSOLETE_CACHE_KEYS if obsolete is None else obsolete
+        if obsolete:
+            marks = ",".join("?" for _ in obsolete)
+            cur = c.execute(f"DELETE FROM kv WHERE k IN ({marks})", tuple(obsolete))
+            deleted += max(0, cur.rowcount)
+        c.commit()
+    return deleted
+
+
 def cache_clear(prefix: str = ""):
     """Drop cached snapshots (all keys, or those starting with ``prefix``)."""
     with _lock, _db(CACHE_PATH) as c:

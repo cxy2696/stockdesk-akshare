@@ -771,26 +771,45 @@ def industry_trends(limit: int = 8) -> list[dict]:
     if cached:
         return cached
     inds = boards("industry", "inflow", 100)[:limit]
-    if inds and all(str(b.get("code", "")).startswith("SINA") for b in inds):
-        # The Sina fallback only has today's flow; there is no board history.
-        # Do not cache the empty result so a recovered source is picked up.
+    if not inds:
         return []
 
-    def history(b: dict) -> list[dict]:
-        try:
-            if str(b.get("code", "")).startswith("THS"):
-                return _ths_board_rows(b["name"])
-            return market.klines(b["code"], limit=160, adjust="", secid_override=f"90.{b['code']}")
-        except Exception:
-            return []
+    name_to_code = {str(v): k for k, v in market.stock_name_map().items() if v}
 
-    # Board histories come from several HTTP endpoints; fetch them together
-    # so the Daily page does not spend 8 × request time on the first paint.
+    def history(b: dict) -> tuple[list[dict], str | None, bool]:
+        """Board index history, or a clearly-labelled leader proxy.
+
+        The Sina fallback has today's flow but no board-history endpoint.  In
+        that case compute 5/20/60-day trend from the board's leader stock and
+        mark it as a proxy; never present it as the official board index.
+        """
+        try:
+            code = str(b.get("code", ""))
+            if code.startswith("THS"):
+                rows = _ths_board_rows(b["name"])
+            elif code.startswith("BK"):
+                rows = market.klines(code, limit=160, adjust="", secid_override=f"90.{code}")
+            else:
+                rows = []
+            if len(rows) >= 25:
+                return rows, None, False
+            leader = str(b.get("leader") or "").strip()
+            leader_code = b.get("leader_code") or name_to_code.get(leader)
+            if leader_code:
+                rows = market.klines(str(leader_code), limit=160, adjust="qfq")
+                if len(rows) >= 25:
+                    return rows, leader or str(leader_code), True
+        except Exception:
+            pass
+        return [], None, False
+
+    # Board histories are network-bound; fetch them together so the Daily page
+    # spends roughly one request time, not eight.
     with ThreadPoolExecutor(max_workers=4) as ex:
         histories = list(ex.map(history, inds))
 
     out = []
-    for b, rows in zip(inds, histories):
+    for b, (rows, proxy_name, proxy) in zip(inds, histories):
         closes = [r["close"] for r in rows]
         if len(closes) < 25:
             continue
@@ -811,8 +830,12 @@ def industry_trends(limit: int = 8) -> list[dict]:
             "trend": trend,
             "ma20": round(ma20, 2) if ma20 else None,
             "ma60": round(ma60, 2) if ma60 else None,
+            "proxy": proxy,
+            "proxy_name": proxy_name,
+            "source": (rows[-1].get("source") if rows else None) or ("leader-proxy" if proxy else "board-index"),
         })
-    db.cache_set(f"industry:trends:{limit}", out)
+    if out:
+        db.cache_set(f"industry:trends:{limit}", out)
     return out
 
 
@@ -903,7 +926,7 @@ def _sina_news(limit: int = 20) -> list[dict]:
 
 
 def market_news(limit: int = 20) -> list[dict]:
-    cached = db.cache_get(f"market:news:v2:{limit}", 120)
+    cached = db.cache_get(f"market:news:v3:{limit}", 120)
     if cached:
         return cached
     import json
@@ -944,9 +967,17 @@ def market_news(limit: int = 20) -> list[dict]:
     out.sort(key=lambda n: n.get("time") or "", reverse=True)
     out = out[:max(1, limit)]
     source_health.mark("eastmoney", bool(out), None, "news")
-    if not out:
-        out = _sina_news(limit)
-    db.cache_set(f"market:news:v2:{limit}", out)
+    # Eastmoney's 101 channel is often sparse/blocked.  Merge Sina's real
+    # rolling news so the 要闻 tab is not almost empty; never synthesise items.
+    if sum(1 for n in out if n.get("kind") == "要闻") < max(5, limit // 6):
+        seen_titles = {n.get("title") for n in out}
+        for n in _sina_news(min(limit, 30)):
+            if n.get("title") not in seen_titles:
+                out.append(n)
+                seen_titles.add(n.get("title"))
+        out.sort(key=lambda n: n.get("time") or "", reverse=True)
+        out = out[:max(1, limit)]
+    db.cache_set(f"market:news:v3:{limit}", out)
     return out
 
 GLOBAL_INDEXES = [
@@ -1172,12 +1203,57 @@ REGION_SUFFIX = {
 }
 
 
-def _sina_region_rows() -> list[dict]:
-    """31-region fallback with true counts, breadth and top leaders.
+def _sina_region_direct() -> list[dict]:
+    """Sina region board summary (newFLJK?param=area), stdlib only.
 
-    Sina's region summary caps the company count at 100; the per-region detail
-    endpoint has the full membership, so enrich each region concurrently.
+    The payload includes company count, region pct and the leading stock, so
+    the map remains usable when Eastmoney push2 and akshare are rate-limited.
     """
+    import json
+    import urllib.request
+
+    t0 = time.time()
+    try:
+        url = "https://money.finance.sina.com.cn/q/view/newFLJK.php?param=area"
+        req = urllib.request.Request(url, headers={"User-Agent": market.UA, "Referer": "https://finance.sina.com.cn/"})
+        text = urllib.request.urlopen(req, timeout=10).read().decode("gbk", "ignore")
+        payload = json.loads(text.split("=", 1)[1].strip().rstrip(";")) if "=" in text else {}
+        full_to_short = {v: k for k, v in REGION_SUFFIX.items()}
+        out = []
+        for key, row in payload.items():
+            p = str(row).split(",")
+            if len(p) < 9 or not p[1]:
+                continue
+            name = p[1]
+            short = full_to_short.get(name, name.replace("省", "").replace("市", "").replace("自治区", "").replace("特别行政区", ""))
+            leader_code = p[8] if p[8] else None
+            if leader_code and len(leader_code) > 2:
+                leader_code = leader_code[2:]
+            leader = p[12] if len(p) > 12 else None
+            out.append({
+                "name": name, "short": short, "code": key,
+                "count": int(market._num(p[2]) or 0), "up": None, "down": None, "flat": None,
+                "pct": market._num(p[5]), "inflow": None,
+                "leader": leader, "leader_code": leader_code, "leader_pct": market._num(p[9]),
+                "leaders": ([{"code": leader_code, "name": leader, "price": market._num(p[10]),
+                              "pct": market._num(p[9]), "inflow": None, "industry": ""}]
+                            if leader_code and leader else []),
+                "industries": [],
+                "source": "sina-area",
+            })
+        out.sort(key=lambda x: x["count"], reverse=True)
+        source_health.mark("sina", bool(out), time.time() - t0, "regions")
+        return out
+    except Exception as exc:
+        source_health.mark("sina", False, time.time() - t0, f"regions: {exc}")
+        return []
+
+
+def _sina_region_rows() -> list[dict]:
+    """31-region fallback with true counts, breadth and top leaders."""
+    direct = _sina_region_direct()
+    if direct:
+        return direct
     try:
         import akshare as ak
         df = ak.stock_sector_spot(indicator="地域")
@@ -1269,7 +1345,20 @@ def company_distribution() -> dict:
     if not out:
         out = _sina_region_rows()
     out.sort(key=lambda x: x["count"], reverse=True)
-    result = {"total": sum(x["count"] for x in out), "provinces": out, "updated": time.time()}
+    capped = bool(out and out[0].get("source") == "sina-area")
+    universe = 0
+    try:
+        spot = market.cached_spot() or {}
+        universe = int(spot.get("expected") or 0)
+    except Exception:
+        universe = 0
+    result = {
+        "total": sum(x["count"] for x in out),
+        "total_universe": universe or None,
+        "capped": capped,
+        "source": (out[0].get("source") if out else None) or "eastmoney",
+        "provinces": out, "updated": time.time(),
+    }
     if out:
         db.cache_set("market:company-map:v1", result)
     return result

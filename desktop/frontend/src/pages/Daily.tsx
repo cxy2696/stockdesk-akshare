@@ -582,11 +582,11 @@ function IndustryTrendCard({ trends }: { trends: any[] }) {
       <div className="industry-trends">
         <div className="it-head"><span>行业</span><span>5日</span><span>20日</span><span>60日</span><span>趋势</span><span>主力</span></div>
         {(!trends || trends.length === 0) && (
-          <EmptyState text="行情源没有返回板块历史数据。等东方财富板块接口恢复，5/20/60 日趋势会自动补全。" />
+          <EmptyState text="板块指数历史暂不可用；若龙头股有日线，会用「龙头代理」明确标注，不冒充板块指数。" />
         )}
         {(trends ?? []).map((t: any) => (
           <div key={t.code} className="it-row">
-            <span><b>{t.name}</b></span>
+            <span><b>{t.name}</b>{t.proxy ? <em className="muted" style={{ fontStyle: 'normal', marginLeft: 4, fontSize: 9 }}>龙头代理</em> : null}</span>
             <span className={`num ${trendClass(t.pct5)}`}>{fmt.pct(t.pct5)}</span>
             <span className={`num ${trendClass(t.pct20)}`}>{fmt.pct(t.pct20)}</span>
             <span className={`num ${trendClass(t.pct60)}`}>{fmt.pct(t.pct60)}</span>
@@ -596,7 +596,7 @@ function IndustryTrendCard({ trends }: { trends: any[] }) {
         ))}
       </div>
       <div className="muted small" style={{ marginTop: 6 }}>
-        趋势由板块指数近 5/20/60 日涨跌和 MA20/60 排列算出，主力是当日净流入。趋势向上但资金流出，要小心是拉高出货。
+        趋势优先用板块指数近 5/20/60 日涨跌和 MA20/60 排列；板块历史缺失时用龙头股日线并标注「龙头代理」。主力是当日净流入，趋势向上但资金流出要小心拉高出货。
       </div>
     </Card>
   )
@@ -659,14 +659,18 @@ function NewsCenter({ news, related, sectors, focus }: { news: any[]; related: a
   const [tab, setTab] = useState('all')
   const [expanded, setExpanded] = useState(false)
   const relatedTitles = useMemo(() => new Set((related ?? []).map((n: any) => n.title)), [related])
+  const focusNames = useMemo(() => new Set((focus ?? []).map((x: any) => String(x.name ?? ''))), [focus])
 
   const filtered = useMemo(() => {
     const all = news ?? []
-    if (tab === 'related') return all.filter((n) => relatedTitles.has(n.title))
+    if (tab === 'related') {
+      return all.filter((n) => relatedTitles.has(n.title)
+        || (n.industries ?? []).some((x: string) => focusNames.has(x)))
+    }
     if (tab === 'flash') return all.filter((n) => (n.kind ?? '') === '快讯')
     if (tab === 'focus') return all.filter((n) => (n.kind ?? '') === '要闻')
     return all
-  }, [news, tab, relatedTitles])
+  }, [news, tab, relatedTitles, focusNames])
 
   const shown = expanded ? filtered : filtered.slice(0, 10)
   const watch = (sectors?.top ?? []).slice(0, 4)

@@ -468,7 +468,7 @@ export default function StockDetail() {
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <Card title="财务指标" desc="近 8 个报告期" pad={false}>
+        <Card title="财务指标" desc="近 8 个报告期 · 东方财富 F10，接口限流时自动切新浪财务指标" pad={false}>
           {fins.length ? (
             <Table
               size="small"
@@ -477,19 +477,19 @@ export default function StockDetail() {
               dataSource={fins}
               columns={[
                 { title: '报告期', dataIndex: 'period' },
-                { title: '每股收益', dataIndex: 'eps', align: 'right', render: (v: number) => <span className="num">{v?.toFixed(3) ?? '--'}</span> },
-                { title: '每股净资产', dataIndex: 'bps', align: 'right', render: (v: number) => <span className="num">{v?.toFixed(2) ?? '--'}</span> },
+                { title: '每股收益', dataIndex: 'eps', align: 'right', render: (v: number) => <span className="num">{v == null ? '--' : v.toFixed(3)}</span> },
+                { title: '每股净资产', dataIndex: 'bps', align: 'right', render: (v: number) => <span className="num">{v == null ? '--' : v.toFixed(2)}</span> },
                 {
                   title: 'ROE',
                   dataIndex: 'roe',
                   align: 'right',
-                  render: (v: number) => <span className="num" style={{ color: (v ?? 0) >= 10 ? 'var(--up)' : undefined }}>{v?.toFixed(2) ?? '--'}%</span>,
+                  render: (v: number) => <span className="num" style={{ color: (v ?? 0) >= 10 ? 'var(--up)' : undefined }}>{v == null ? '--' : `${v.toFixed(2)}%`}</span>,
                 },
                 { title: '营收同比', dataIndex: 'revenue_yoy', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
                 { title: '净利同比', dataIndex: 'profit_yoy', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
-                { title: '毛利率', dataIndex: 'gross_margin', align: 'right', render: (v: number) => <span className="num">{v ? `${v.toFixed(1)}%` : '--'}</span> },
-                { title: '净利率', dataIndex: 'net_margin', align: 'right', render: (v: number) => <span className="num">{v ? `${v.toFixed(1)}%` : '--'}</span> },
-                { title: '资产负债率', dataIndex: 'debt_ratio', align: 'right', render: (v: number) => <span className="num">{v ? `${v.toFixed(1)}%` : '--'}</span> },
+                { title: '毛利率', dataIndex: 'gross_margin', align: 'right', render: (v: number) => <span className="num">{v == null ? '--' : `${v.toFixed(1)}%`}</span> },
+                { title: '净利率', dataIndex: 'net_margin', align: 'right', render: (v: number) => <span className="num">{v == null ? '--' : `${v.toFixed(1)}%`}</span> },
+                { title: '资产负债率', dataIndex: 'debt_ratio', align: 'right', render: (v: number) => <span className="num">{v == null ? '--' : `${v.toFixed(1)}%`}</span> },
               ]}
             />
           ) : (

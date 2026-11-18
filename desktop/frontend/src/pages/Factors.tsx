@@ -33,7 +33,7 @@ export default function Factors() {
   const load = async () => {
     setLoading(true)
     try {
-      const d = await api.get<any>('/api/factors?limit=300')
+      const d = await api.get<any>('/api/factors?limit=6000')
       setData(d)
     } catch (e: any) {
       message.error(e.message)
@@ -66,12 +66,17 @@ export default function Factors() {
   }, [stocks])
   const filteredStocks = useMemo(() => {
     const q = search.trim().toUpperCase()
-    return stocks.filter((r: any) => {
+    const base = stocks.filter((r: any) => {
       if (market !== '全部' && r.market !== market) return false
-      if ((r.score ?? 0) < minScore) return false
       if (q && !String(r.code).includes(q) && !String(r.name || '').toUpperCase().includes(q)) return false
       return true
     })
+    if (minScore <= 0) return base
+    const scores = base.map((r: any) => Number(r.score)).filter((v: number) => Number.isFinite(v)).sort((a: number, b: number) => a - b)
+    if (!scores.length) return []
+    const qtl = (p: number) => scores[Math.min(scores.length - 1, Math.max(0, Math.floor((scores.length - 1) * p)))]
+    const threshold = minScore === 50 ? qtl(0.5) : qtl(0.8)
+    return base.filter((r: any) => (r.score ?? -1) >= threshold)
   }, [stocks, market, minScore, search])
 
   if (loading && !data) return <Card><Skeleton active paragraph={{ rows: 12 }} /></Card>
@@ -96,13 +101,17 @@ export default function Factors() {
         desc="覆盖率筛选 → 类别配额 → 横截面标准化 → 状态权重合成分数"
         extra={<Tag color="blue">横截面因子</Tag>}
       >
-        <div className="muted small" style={{ lineHeight: 1.8, marginBottom: 10 }}>
-          {data.note} 当前入选 {selected.length} 个因子；未入选因子在下方逐条列出原因。
-          {data.trace && (
-            <span className="mono" style={{ display: 'block', marginTop: 2, fontSize: 10 }}>
-              算法 {data.trace.algorithm} · 快照 {data.trace.snapshot_date} · {data.trace.rows} 行 / {data.trace.candidates} 只候选 · 缺失按类别中性处理
-            </span>
-          )}
+        <div className="factor-explain">
+          <div><b>1. 覆盖率</b><span>每个因子先看当前快照有多少股票有真实值；低于 50% 不进入评分。</span></div>
+          <div><b>2. 类别配额</b><span>动量 / 价值 / 波动 / 流动性 / 资金 / 情绪 / 规模，每类最多 2 个，总因子最多 10 个。</span></div>
+          <div><b>3. 标准化</b><span>每个因子在全市场做横截面排名，再转成正态分；方向为负的因子取反。</span></div>
+          <div><b>4. 合成</b><span>类别内可用因子求均值，再按市场状态权重合成；缺失类别不补 0，只按可用类别重新归一。</span></div>
+          <div><b>5. 分数含义</b><span>0–100 是横截面百分位，不是预期收益；历史 IC 需持久化每日快照，本页不伪造。</span></div>
+          <div className="factor-trace muted mono">
+            算法 {data.trace?.algorithm ?? '--'} · 快照 {data.trace?.snapshot_date ?? data.date ?? '--'} · {data.trace?.rows ?? data.total ?? '--'} 行 / {data.trace?.candidates ?? data.scanned ?? '--'} 只候选 · 来源 {data.source ?? '--'}
+            {data.trace?.momentum_coverage === 0 ? ' · 当前快照源不提供 60 日动量，动量因子已明确剔除' : ''}
+            {data.trace?.flow_coverage != null ? ` · 资金覆盖 ${(Number(data.trace.flow_coverage) * 100).toFixed(0)}%` : ''}
+          </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(7, Math.max(3, catGroups.length))}, minmax(0, 1fr))`, gap: 8, marginBottom: 12 }}>
           {CATEGORY_ORDER.filter((k) => catGroups.some((g: any) => g.key === k)).map((key) => {
@@ -214,6 +223,9 @@ export default function Factors() {
               align: 'right' as const,
               render: (v: number) => <span className="num muted" style={{ fontSize: 11 }}>{fmtZ(v)}</span>,
             })),
+            { title: '60日动量', dataIndex: 'pct60', align: 'right', render: (v: number) => v == null ? <span className="muted small">源未提供</span> : <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+            { title: '资金占比', dataIndex: 'main_inflow_ratio', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{v == null ? '--' : `${v > 0 ? '+' : ''}${Number(v).toFixed(2)}%`}</span> },
+            { title: '成交额', dataIndex: 'amount', align: 'right', render: (v: number) => <span className="num muted">{fmt.big(v)}</span> },
             { title: 'PE / PB', render: (_: any, r: any) => <span className="num small">{fmt.price(r.pe, 1)} / {fmt.price(r.pb, 2)}</span>, align: 'right' },
             { title: '主力净流入', dataIndex: 'main_inflow', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.big(v)}</span> },
           ]}

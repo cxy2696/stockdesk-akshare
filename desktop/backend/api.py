@@ -244,9 +244,18 @@ def kline(code: str, period: str = "daily", limit: int = 260, adjust: str = "qfq
 
 @router.get("/api/market/stock/{code}")
 def stock_detail(code: str):
-    q = market.quote(code) or {}
-    prof = market.profile(code)
-    fin = market.financials(code, periods=8)
+    try:
+        q = market.quote(code) or {}
+    except Exception:
+        q = {}
+    try:
+        prof = market.profile(code)
+    except Exception:
+        prof = {}
+    try:
+        fin = market.financials(code, periods=8)
+    except Exception:
+        fin = []
     # never trigger a full-market download just to decorate a detail page;
     # use the cached snapshot if it is already warm
     sp = None
@@ -269,12 +278,21 @@ def stock_detail(code: str):
         except Exception:
             pass
     data["code"] = code
-    data["name"] = data.get("name") or market.resolve_name(code)
+    try:
+        data["name"] = data.get("name") or market.resolve_name(code)
+    except Exception:
+        data["name"] = data.get("name") or code
     data["profile"] = prof
     data["financials"] = fin
-    data["concepts"] = market.concepts(code)
+    try:
+        data["concepts"] = market.concepts(code)
+    except Exception:
+        data["concepts"] = []
     data["industry"] = (prof or {}).get("industry")
-    data["watch"] = repo.watch_has(code)
+    try:
+        data["watch"] = repo.watch_has(code)
+    except Exception:
+        data["watch"] = False
     try:
         data["technical"] = {
             "chips": technical.chips(code),
@@ -686,7 +704,7 @@ def del_preset(name: str):
 
 # ================================================================ backtest
 @router.get("/api/factors")
-def factor_snapshot(limit: int = Query(100, ge=10, le=500),
+def factor_snapshot(limit: int = Query(100, ge=10, le=6000),
                     min_amount: float = Query(30_000_000, ge=0),
                     exclude_st: bool = Query(True)):
     """Cross-sectional factor screen + classification over the full snapshot."""

@@ -1,6 +1,6 @@
 # 本机构建说明
 
-更新时间：2026-11-18。当前基线是桌面端 1.17.0、iOS 4.1.2 (36)、模型注册表 2.7.0、C++ 核心 1.2.5。
+更新时间：2026-11-18。当前基线是桌面端 1.18.0、iOS 4.2.0 (37)、模型注册表 2.7.0、C++ 核心 1.2.5。
 
 这个目录是 StockDesk 的本地源码副本。源码已与上游 `main` 同步，并做了下面这些本地修改。
 
@@ -81,10 +81,10 @@
 | `python scripts/native_bench.py` | HMM kernel 约 0.136 ms（1.2.4 同机约 0.157 ms）、单格点约 0.017 ms（Apple Silicon 本机） |
 | `python scripts/api_smoke.py http://127.0.0.1:8765` | 47 个只读 + 3 个写接口 + SPA 通过 |
 | `python scripts/coverage_check.py http://127.0.0.1:8765` | 正常行情源下 5,581/5,581，missing=0，duplicates=0；限流时 data_complete=false |
-| macOS DMG 启动 | 1.17.0，C++ 1.2.5，rflux 0.7.0，5,581 行覆盖、missing=0、未定价 4，data_complete=false（不把未定价行伪装成完整） |
+| macOS DMG 启动 | 1.18.0，C++ 1.2.5，rflux 0.7.0，5,581 行覆盖、missing=0、未定价 4，data_complete=false（不把未定价行伪装成完整） |
 | 独立安装 | 全新 `HOME` + 新数据目录启动，默认资产 200,000，未读取现有账户；18 个路由无横向溢出/控制台错误 |
 | iOS 模拟器 | `build_ios.sh` 构建成功，iPhone/iPad 页面已验证 |
-| Windows | 本轮源码 GitHub Actions 构建（run 44331990490）；exe 启动、health 1.17.0/C++、前端资源、组合回测 696 日、历史测评 155 期、数据状态 5581/5581/scheduler=true 冒烟通过 |
+| Windows | 本轮源码 GitHub Actions 构建（run 44331990490）；exe 启动、health 1.18.0/C++、前端资源、组合回测 696 日、历史测评 155 期、数据状态 5581/5581/scheduler=true 冒烟通过 |
 
 ## 产物
 
@@ -92,10 +92,10 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `StockDesk-macOS-1.17.0.dmg` | macOS 安装包 |
-| `StockDesk-macOS-1.17.0.zip` | macOS 便携版 |
+| `StockDesk-macOS-1.18.0.dmg` | macOS 安装包 |
+| `StockDesk-macOS-1.18.0.zip` | macOS 便携版 |
 | `StockDesk.exe` | Windows 10/11 x64 |
-| `StockDesk-iOS-4.1.2-unsigned.ipa` | iPhone / iPad，需重签 |
+| `StockDesk-iOS-4.2.0-unsigned.ipa` | iPhone / iPad，需重签 |
 | `StockDesk-simulator.app.zip` | iOS 模拟器 |
 | `SHA256SUMS.txt` | 校验和 |
 | `verification.json` | 构建、测试和产物的机器可读记录 |

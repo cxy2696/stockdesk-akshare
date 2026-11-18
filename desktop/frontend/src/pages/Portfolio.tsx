@@ -1150,6 +1150,55 @@ function AdviceView({
         )}
       </div>
 
+      {advice?.recommended?.length ? (
+        <Card
+          title="推荐组合与调仓建议"
+          desc={`目标总仓位 ${advice.target_total ?? '--'}% · 现金 ${advice.target_cash ?? '--'}% · ${advice.recommend_asof ?? '--'}`}
+          extra={<Tag color="blue">因子 + 行业 + 仓位</Tag>}
+          pad={false}
+        >
+          <div style={{ padding: '10px 14px 4px', display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11.5 }}>
+            <span>推荐 <b className="up">{advice.recommended.length}</b> 只</span>
+            <span>调仓 <b>{advice.rebalance?.filter((x: any) => x.action !== '持有').length ?? 0}</b> 笔</span>
+            <span className="muted">{advice.recommend_method}</span>
+          </div>
+          <Table
+            size="small"
+            rowKey="code"
+            pagination={false}
+            dataSource={advice.recommended}
+            onRow={(r) => ({ onClick: () => nav(r.code), style: { cursor: 'pointer' } })}
+            columns={[
+              { title: '推荐股票', dataIndex: 'name', render: (v: string, r: any) => <span><b>{v}</b> <span className="muted mono small">{r.code}</span><div className="muted" style={{ fontSize: 9.5 }}>{r.industry}</div></span> },
+              { title: '现价', dataIndex: 'price', align: 'right', render: (v: number) => <span className="num">{fmt.price(v)}</span> },
+              { title: '当日', dataIndex: 'pct', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+              { title: '因子分', dataIndex: 'score', align: 'right', render: (v: number) => <b className="num">{v?.toFixed?.(1) ?? '--'}</b> },
+              { title: '目标权重', dataIndex: 'target_weight', align: 'right', render: (v: number) => <b className="num">{v}%</b> },
+              { title: '目标金额', dataIndex: 'target_value', align: 'right', render: (v: number) => <span className="num">{fmt.money(v)}</span> },
+            ]}
+          />
+          {advice.rebalance?.length ? (
+            <Table
+              size="small"
+              rowKey={(r: any) => `${r.code}-${r.action}`}
+              pagination={false}
+              dataSource={advice.rebalance}
+              onRow={(r) => ({ onClick: () => nav(r.code), style: { cursor: 'pointer' } })}
+              columns={[
+                { title: '调仓', dataIndex: 'name', render: (v: string, r: any) => <span><b>{v}</b> <span className="muted mono small">{r.code}</span><div className="muted" style={{ fontSize: 9.5 }}>{r.reason}</div></span> },
+                { title: '动作', dataIndex: 'action', width: 84, render: (v: string) => <Tag color={v.includes('买') ? 'red' : v.includes('卖') || v.includes('清') ? 'green' : 'default'} style={{ margin: 0 }}>{v}</Tag> },
+                { title: '当前→目标', width: 112, align: 'right', render: (_: any, r: any) => <span className="num small">{r.current_weight}% → {r.target_weight}%</span> },
+                { title: '差额', dataIndex: 'delta_weight', width: 88, align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{v > 0 ? '+' : ''}{v}%</span> },
+                { title: '股数', dataIndex: 'qty', width: 80, align: 'right', render: (v: number) => <span className="num">{v ? `${v} 股` : '--'}</span> },
+              ]}
+            />
+          ) : null}
+          <div className="card-pad muted small" style={{ paddingTop: 8, lineHeight: 1.7 }}>
+            这是按模型目标仓位和因子候选生成的机械调仓草案，不含税费、涨跌停和 T+1 校验；执行前按你的风险约束逐笔确认，不构成投资建议。
+          </div>
+        </Card>
+      ) : null}
+
       <More title="市场关注与今日标的" desc="指数 / 领涨行业 / 资金 / 今日扫描">
       <Card
         title="未来 1–2 周关注"

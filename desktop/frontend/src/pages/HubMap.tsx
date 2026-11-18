@@ -39,6 +39,7 @@ interface ProvinceRow extends ProvinceSeed {
   industries: string[]
   leaders: any[]
   hasData: boolean
+  special?: boolean
 }
 
 // 34 个省级行政区静态兜底：接口空的时候也能逐个切换。
@@ -119,9 +120,12 @@ function buildProvinceRows(dist: any, leaders: any[]): ProvinceRow[] {
       industries,
       leaders: l?.leaders ?? d?.leaders ?? [],
       hasData: Boolean(d || l),
+      special: SPECIAL_REGIONS.has(seed.short),
     }
   })
 }
+
+const SPECIAL_REGIONS = new Set(['台湾', '香港', '澳门'])
 
 function orderProvinceRows(rows: ProvinceRow[]) {
   if (!rows.some((r) => r.hasData)) return rows
@@ -168,6 +172,8 @@ export default function HubMap() {
 
   const withDataCount = rows.filter((r) => r.hasData).length
   const totalCount = numOrNull(dist?.total) ?? rows.reduce((sum, r) => sum + r.count, 0)
+  const universeCount = numOrNull(dist?.total_universe)
+  const capped = Boolean(dist?.capped)
 
   const move = (direction: number) => {
     if (!ordered.length) return
@@ -198,7 +204,7 @@ export default function HubMap() {
           const row = rows.find((r) => r.name === p.name || r.short === p.name)
           if (!row) return escapeHtml(p?.name)
           if (!row.hasData) {
-            return `<b>${escapeHtml(row.short)}</b><br/><span style="color:${colors.axis}">该省数据源暂未返回</span>`
+            return `<b>${escapeHtml(row.short)}</b><br/><span style="color:${colors.axis}">${row.special ? '该地区暂无 A 股注册公司样本；边界仅作区域参考' : '该省数据源暂未返回'}</span>`
           }
           return `<b>${escapeHtml(row.short)}</b> <span style="color:${colors.axis}">${escapeHtml(row.type)}</span><br/>
             上市公司 ${row.count} 家<br/>
@@ -257,11 +263,11 @@ export default function HubMap() {
   return (
     <div>
       <div className="hud-map-head" style={{ marginBottom: 10 }}>
-        <div className="muted small">沪深京 A 股 · 34 个省级行政区 · 点击地图切换</div>
+        <div className="muted small">沪深京 A 股 · 34 个省级行政区 · 点击地图切换<br/><span style={{ fontSize: 10, color: 'var(--text-dim)' }}>台湾/香港/澳门暂无 A 股注册公司样本，不代表接口故障。</span></div>
         <div className="hud-map-total">
-          <span>上市公司总数</span>
-          <b>{totalCount > 0 ? totalCount.toLocaleString('zh-CN') : '--'}</b>
-          <em>{withDataCount ? `${withDataCount} 个地区已返回` : '数据源暂未返回'}</em>
+          <span>全市场 / 地域样本</span>
+          <b>{(universeCount || totalCount) > 0 ? (universeCount || totalCount).toLocaleString('zh-CN') : '--'}</b>
+          <em>{capped ? `地域样本 ${totalCount.toLocaleString('zh-CN')}（每区最多 100 只）` : `${withDataCount} 个地区已返回`}</em>
         </div>
       </div>
 
@@ -290,7 +296,7 @@ export default function HubMap() {
         <Tooltip title="下一省">
           <Button size="small" icon={<RightOutlined />} onClick={() => move(1)} aria-label="下一省" />
         </Tooltip>
-        <span className="muted small">共 34 个省级行政区{loaded ? '' : ' · 加载中…'}</span>
+        <span className="muted small">共 34 个省级行政区{loaded ? '' : ' · 加载中…'}{capped ? ' · 地域源每区最多 100 只样本' : ''}</span>
         <span className="muted small" style={{ marginLeft: 'auto' }}>
           {withDataCount ? `已有 ${withDataCount} 个地区数据` : '数据源暂未返回，可先按静态省份浏览'}
         </span>
@@ -353,7 +359,7 @@ export default function HubMap() {
                     ))
                   ) : (
                     <div className="muted small" style={{ padding: '4px 0' }}>
-                      {p.hasData ? '该省领涨公司数据源暂未返回' : '该省数据源暂未返回'}
+                      {p.hasData ? '该省领涨公司数据源暂未返回' : (p.special ? '该地区暂无 A 股注册公司样本' : '该省数据源暂未返回')}
                     </div>
                   )}
                   <div style={{ marginTop: 4, paddingLeft: 0 }}>
@@ -388,7 +394,7 @@ function ProvinceOverview({ row }: { row: ProvinceRow }) {
           className="muted small"
           style={{ marginBottom: 10, padding: '7px 10px', borderRadius: 8, background: 'var(--tag-bg)', lineHeight: 1.6 }}
         >
-          该省数据源暂未返回，上市公司数、涨跌、主力净流入和领涨公司暂时为空；接口恢复后补全。
+          {row.special ? '台湾/香港/澳门暂无 A 股注册公司样本；这是市场覆盖范围，不是接口故障。' : '该省数据源暂未返回，上市公司数、涨跌、主力净流入和领涨公司暂时为空；接口恢复后补全。'}
         </div>
       )}
 
@@ -407,13 +413,13 @@ function ProvinceOverview({ row }: { row: ProvinceRow }) {
           label="地域涨跌"
           value={row.pct === null ? '--' : fmt.pct(row.pct)}
           color={row.pct === null ? undefined : row.pct >= 0 ? 'var(--up)' : 'var(--down)'}
-          sub={<span className="muted">{row.hasData ? '东方财富地域板块' : '待数据源返回'}</span>}
+          sub={<span className="muted">{row.hasData ? '东方财富地域板块' : (row.special ? '不在 A 股注册地样本' : '待数据源返回')}</span>}
         />
         <Kpi
           label="主力净流入"
           value={fmt.big(row.inflow)}
           color={row.inflow === null ? undefined : row.inflow >= 0 ? 'var(--up)' : 'var(--down)'}
-          sub={<span className="muted">{row.hasData ? '板块资金口径' : '待数据源返回'}</span>}
+          sub={<span className="muted">{row.hasData ? '板块资金口径' : (row.special ? '不在 A 股注册地样本' : '待数据源返回')}</span>}
         />
       </div>
 
@@ -425,7 +431,7 @@ function ProvinceOverview({ row }: { row: ProvinceRow }) {
               row.industries.map((name) => <Tag key={name} color="gold" style={{ margin: 0 }}>{name}</Tag>)
             ) : (
               <span className="muted small">
-                {row.hasData ? '该省代表行业数据源暂未返回' : '该省数据源暂未返回'}
+                {row.hasData ? '该省代表行业数据源暂未返回' : (row.special ? '该地区暂无 A 股样本' : '该省数据源暂未返回')}
               </span>
             )}
           </div>

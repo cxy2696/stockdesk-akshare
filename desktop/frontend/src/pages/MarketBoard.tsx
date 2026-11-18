@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Drawer, Input, Segmented, Select, Skeleton, Table, Tag, Tooltip, message } from 'antd'
 import { ReloadOutlined, RiseOutlined, FallOutlined, FireOutlined } from '@ant-design/icons'
@@ -181,23 +181,17 @@ function BoardsTab({ nav }: { nav: (p: string) => void }) {
 
 function MoodTab({ nav }: { nav: (p: string) => void }) {
   const [market, setMarket] = useState<any>(null)
-  const [limitUp, setLimitUp] = useState<any[]>([])
-  const [limitDown, setLimitDown] = useState<any[]>([])
   const [ranking, setRanking] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
     setLoading(true)
     try {
-      const [m, up, down, rank] = await Promise.all([
+      const [m, rank] = await Promise.all([
         api.get<any>('/api/market/state'),
-        api.get<any[]>('/api/market/limitpool?direction=up&limit=20'),
-        api.get<any[]>('/api/market/limitpool?direction=down&limit=10'),
-        api.get<any[]>('/api/market/ranking?by=pct&limit=8'),
+        api.get<any[]>('/api/market/ranking?by=pct&limit=40'),
       ])
       setMarket(m)
-      setLimitUp(up)
-      setLimitDown(down)
       setRanking(rank)
     } catch (e: any) {
       message.error(e.message)
@@ -216,6 +210,7 @@ function MoodTab({ nav }: { nav: (p: string) => void }) {
   const b = market.breadth ?? {}
   const total = Math.max((b.up ?? 0) + (b.down ?? 0) + (b.flat ?? 0), 1)
   const tone = market.verdict?.tone === 'up' ? 'var(--up)' : market.verdict?.tone === 'down' ? 'var(--down)' : 'var(--text-sub)'
+  const strong = ranking.filter((x: any) => (x.pct ?? 0) > 0).slice(0, 10)
 
   return (
     <div>
@@ -255,63 +250,36 @@ function MoodTab({ nav }: { nav: (p: string) => void }) {
               <div><span>成交额</span><b>{fmt.big(market.turnover)}</b></div>
               <div><span>上涨占比</span><b>{b.up_ratio ?? 0}%</b></div>
             </div>
+            {market.verdict?.reasons?.length ? (
+              <div className="mood-reasons">
+                <div className="muted small" style={{ fontWeight: 600, marginBottom: 4 }}>温度依据</div>
+                {(market.verdict.reasons as string[]).slice(0, 4).map((x, i) => <div key={i}>· {x}</div>)}
+              </div>
+            ) : null}
           </div>
         </Card>
 
-        <Card title="涨停池" desc={`${limitUp.length} 只 · 点击查看个股`}>
-          <div style={{ maxHeight: 330, overflowY: 'auto' }}>
-            {limitUp.map((x) => (
-              <div key={x.code} className="row-between" style={{ padding: '6px 0', borderBottom: '1px dashed var(--border-soft)', cursor: 'pointer' }} onClick={() => nav(`/stock/${x.code}`)}>
-                <span className="small"><b>{x.name}</b> <span className="muted mono small">{x.code}</span> <span className="muted small">{x.industry}</span></span>
-                <span className="num up" style={{ fontWeight: 600 }}>{fmt.pct(x.pct)}</span>
-              </div>
-            ))}
-            {!limitUp.length && <EmptyState text="暂无涨停股" icon="○" />}
-          </div>
-          {limitDown.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <div className="muted small" style={{ marginBottom: 4 }}>跌停 {limitDown.length} 只</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {limitDown.map((x) => (
-                  <span key={x.code} className="chip down">{x.name} {fmt.pct(x.pct)}</span>
-                ))}
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      <div className="grid-2-even" style={{ marginTop: 14 }}>
-        <Card title="今日强势股" desc="涨幅榜" pad={false}>
+        <Card title="弱势盘里的强势股" desc={`全市场涨幅前列且保持红盘 · ${strong.length} 只 · 只观察，不追高`} pad={false}>
           <Table
             size="small"
             rowKey="code"
-            dataSource={ranking}
+            dataSource={strong}
             pagination={false}
             onRow={(r) => ({ onClick: () => nav(`/stock/${r.code}`), style: { cursor: 'pointer' } })}
+            locale={{ emptyText: <EmptyState text="今天没有红盘强势股；空仓等待也是选择。" icon="○" /> }}
             columns={[
-              { title: '股票', dataIndex: 'name', render: (v: string, r: any) => <span><b>{v}</b> <span className="muted mono small">{r.code}</span></span> },
+              { title: '股票', dataIndex: 'name', render: (v: string, r: any) => <span><b>{v}</b> <span className="muted mono small">{r.code}</span><div className="muted" style={{ fontSize: 9 }}>{r.industry || r.market || '--'}</div></span> },
               { title: '现价', dataIndex: 'price', align: 'right', render: (v: number) => <span className="num">{fmt.price(v)}</span> },
-              { title: '涨跌幅', dataIndex: 'pct', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+              { title: '涨跌', dataIndex: 'pct', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`} style={{ fontWeight: 600 }}>{fmt.pct(v)}</span> },
               { title: '成交额', dataIndex: 'amount', align: 'right', render: (v: number) => <span className="num small">{fmt.big(v)}</span> },
             ]}
           />
-        </Card>
-        <Card title="指数趋势" desc="20/60 日均线 + RSI">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {(market.indices ?? []).map((i: any) => (
-              <div key={i.code} className="row-between" style={{ padding: '6px 0', borderBottom: '1px dashed var(--border-soft)' }}>
-                <span className="small"><b>{i.name}</b></span>
-                <span className="small">
-                  <span className={`num ${trendClass(i.pct)}`} style={{ marginRight: 8 }}>{fmt.pct(i.pct)}</span>
-                  <Tag color={i.trend === '多头' ? 'red' : i.trend === '空头' ? 'green' : 'default'} style={{ margin: 0 }}>{i.trend}</Tag>
-                  <span className="muted" style={{ marginLeft: 6 }}>RSI {i.rsi ?? '--'} · 20日线 {i.above20 ? '上' : '下'}</span>
-                </span>
-              </div>
-            ))}
+          <div className="card-pad muted small" style={{ paddingTop: 8, lineHeight: 1.7 }}>
+            市场偏弱时只看仍红盘、成交额没有萎缩的少数股票；不是买入信号。等指数重新站上 MA20 或个股回踩不破再评估。
           </div>
         </Card>
       </div>
+
     </div>
   )
 }
@@ -328,21 +296,24 @@ function PatternsTab({ nav }: { nav: (p: string) => void }) {
     api.get<any[]>('/api/market/patterns').then(setCatalog).catch(() => {})
   }, [])
 
-  const scan = async (pat = pattern, uni = universe, lim = limit) => {
+  const requestSeq = useRef(0)
+  const scan = useCallback(async (pat = pattern, uni = universe, lim = limit) => {
+    const seq = ++requestSeq.current
     setLoading(true)
     try {
       const r = await api.get<any>(`/api/market/patterns/scan?pattern=${pat}&universe=${uni}&limit=${lim}`)
-      setResult(r)
+      // Ignore a slower response from a pattern the user already switched away from.
+      if (seq === requestSeq.current) setResult(r)
     } catch (e: any) {
-      message.error(e.message)
+      if (seq === requestSeq.current) message.error(e.message)
     } finally {
-      setLoading(false)
+      if (seq === requestSeq.current) setLoading(false)
     }
-  }
+  }, [pattern, universe, limit])
 
   useEffect(() => {
     if (catalog.length) scan()
-  }, [catalog.length])
+  }, [catalog.length, pattern, universe, limit, scan])
 
   const active = catalog.find((p) => p.id === pattern)
 
@@ -354,7 +325,7 @@ function PatternsTab({ nav }: { nav: (p: string) => void }) {
             <button
               key={p.id}
               className={`pattern-chip ${pattern === p.id ? 'active' : ''}`}
-              onClick={() => { setPattern(p.id); scan(p.id, universe, limit) }}
+              onClick={() => setPattern(p.id)}
             >
               <span className="pattern-name">{p.name}</span>
               <span className="pattern-tag">{p.tag}</span>
@@ -369,14 +340,14 @@ function PatternsTab({ nav }: { nav: (p: string) => void }) {
             <Select
               size="small"
               value={universe}
-              onChange={(v) => { setUniverse(v); scan(pattern, v, limit) }}
+              onChange={setUniverse}
               options={[{ label: '成交额前列', value: 'amount' }, { label: '市值前列', value: 'mcap' }]}
               style={{ width: 110 }}
             />
             <Select
               size="small"
               value={limit}
-              onChange={(v) => { setLimit(v); scan(pattern, universe, v) }}
+              onChange={setLimit}
               options={[{ label: '前 100 只', value: 100 }, { label: '前 200 只', value: 200 }, { label: '前 300 只', value: 300 }]}
               style={{ width: 100 }}
             />

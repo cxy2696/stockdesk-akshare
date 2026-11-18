@@ -188,7 +188,7 @@ def _money_cn(v) -> float | None:
 _FUND_LOCK = __import__("threading").Lock()
 
 
-def _fund_flow(top: int = 900) -> dict[str, dict]:
+def _fund_flow(top: int = 3000) -> dict[str, dict]:
     """Individual main-force flow from Sina, merged from both tails.
 
     The old request asked for all ~6,000 rows at once and took 20–40 s on a
@@ -196,11 +196,11 @@ def _fund_flow(top: int = 900) -> dict[str, dict]:
     outflows, so we fetch both sorted tails (900 rows each) in parallel and
     merge them.  That keeps the card complete while cutting payload ~3×.
     """
-    cached = db.cache_get("fund:individual", 60)
+    cached = db.cache_get("fund:individual:v2", 60)
     if cached is not None:
         return cached
     with _FUND_LOCK:
-        cached = db.cache_get("fund:individual", 60)
+        cached = db.cache_get("fund:individual:v2", 60)
         if cached is not None:
             return cached
         out: dict[str, dict] = {}
@@ -231,7 +231,7 @@ def _fund_flow(top: int = 900) -> dict[str, dict]:
                 "outflow": _num(r.get("outamount")),
             }
         if out:
-            db.cache_set("fund:individual", out)
+            db.cache_set("fund:individual:v2", out)
         else:
             # Cache the failure briefly so a blocked Sina endpoint does not add
             # a fresh timeout to every page that renders flows.
@@ -739,7 +739,9 @@ def fetch_spot(ttl: float = SPOT_TTL, progress=None) -> dict:
 def fetch_spot_now(progress=None) -> dict:
     """Synchronous full refresh, used by the scheduler/manual refresh only."""
     with _spot_lock:
-        return _fetch_spot_unlocked(ttl=0, progress=progress, force=True)
+        out = _fetch_spot_unlocked(ttl=0, progress=progress, force=True)
+    db.prune_cache()
+    return out
 
 
 def _fetch_spot_unlocked(ttl: float = SPOT_TTL, progress=None, force: bool = False) -> dict:
@@ -1474,12 +1476,52 @@ FIN_FIELDS = ",".join(
 )
 
 
+def _akshare_financials(code: str, periods: int = 8) -> list[dict]:
+    """Sina financial-indicator fallback when Eastmoney F10 is rate-limited."""
+    import akshare as ak
+
+    t0 = time.monotonic()
+    try:
+        df = ak.stock_financial_analysis_indicator(symbol=code, start_year=str(time.localtime().tm_year - 3))
+        if df is None or len(df) == 0:
+            return []
+        df = df.sort_values("日期", ascending=False).head(max(1, periods))
+        rows = []
+        for _, r in df.iterrows():
+            def pick(*names):
+                for n in names:
+                    v = _num(r.get(n))
+                    if v is not None:
+                        return v
+                return None
+            rows.append({
+                "period": str(r.get("日期") or ""),
+                "eps": pick("加权每股收益(元)", "摊薄每股收益(元)", "每股收益_调整后(元)"),
+                "bps": pick("每股净资产_调整后(元)", "每股净资产_调整前(元)"),
+                "roe": pick("加权净资产收益率(%)", "净资产收益率(%)"),
+                "revenue_yoy": pick("主营业务收入增长率(%)"),
+                "profit_yoy": pick("净利润增长率(%)"),
+                "gross_margin": pick("销售毛利率(%)", "主营业务利润率(%)"),
+                "net_margin": pick("销售净利率(%)"),
+                "debt_ratio": pick("资产负债率(%)"),
+                "source": "sina",
+            })
+        if rows:
+            source_health.mark("sina", True, time.monotonic() - t0, "financials")
+        return rows
+    except Exception as exc:
+        source_health.mark("sina", False, time.monotonic() - t0, f"financials: {exc}")
+        return []
+
+
 def financials(code: str, periods: int = 8) -> list[dict]:
     """Recent quarterly main indicators (eastmoney F10 datacenter)."""
     key = f"fin:{code}"
     cached = db.cache_get(key, 3600 * 12)
-    if cached is not None:
+    if cached:
         return cached
+    if cached == []:
+        db.cache_delete(key)
     url = (
         "https://datacenter.eastmoney.com/securities/api/data/v1/get"
         "?reportName=RPT_F10_FINANCE_MAINFINADATA"
@@ -1507,11 +1549,15 @@ def financials(code: str, periods: int = 8) -> list[dict]:
                     "debt_ratio": _num(x.get("ZCFZL")),
                     "revenue": _num(x.get("TOTAL_OPERATE_INCOME")),
                     "net_profit": _num(x.get("PARENT_NETPROFIT")),
+                    "source": "eastmoney",
                 }
             )
     except Exception:
         pass
-    db.cache_set(key, rows)
+    if not rows:
+        rows = _akshare_financials(code, periods)
+    if rows:
+        db.cache_set(key, rows)
     return rows
 
 
