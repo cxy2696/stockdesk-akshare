@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as echarts from 'echarts'
-import { Button, Input, Select, Tag, Tooltip } from 'antd'
+import { Button, Select, Tag, Tooltip } from 'antd'
 import { LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import { Card, More, Kpi } from '../components/ui'
@@ -140,7 +140,6 @@ export default function HubMap() {
   const [leaders, setLeaders] = useState<any[]>([])
   const [loaded, setLoaded] = useState(false)
   const [selectedShort, setSelectedShort] = useState('')
-  const [q, setQ] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -166,12 +165,6 @@ export default function HubMap() {
   }, [loaded, ordered])
 
   const selected = ordered.find((r) => r.short === selectedShort) ?? ordered[0]
-  const filtered = useMemo(() => {
-    const key = q.trim()
-    if (!key) return ordered
-    return ordered.filter((r) => r.short.includes(key) || r.name.includes(key) || r.type.includes(key))
-  }, [ordered, q])
-
   const withDataCount = rows.filter((r) => r.hasData).length
   const totalCount = numOrNull(dist?.total) ?? rows.reduce((sum, r) => sum + r.count, 0)
   const universeCount = numOrNull(dist?.total_universe)
@@ -323,28 +316,24 @@ export default function HubMap() {
         <Tooltip title="下一省">
           <Button size="small" icon={<RightOutlined />} onClick={() => move(1)} aria-label="下一省" />
         </Tooltip>
+        {rows.filter((r) => r.special).map((r) => (
+          <button
+            key={r.short}
+            className={`chip ${selected?.short === r.short ? 'active' : ''}`}
+            onClick={() => setSelectedShort(r.short)}
+            title={r.hasData ? `${r.short} · ${r.count} 家` : `${r.short} · 暂无 A 股注册样本；澳门面积小，可直接点这里`}
+          >
+            {r.short}
+          </button>
+        ))}
         <span className="muted small">共 34 个省级行政区{loaded ? '' : ' · 加载中…'}{capped ? ' · 地域源每区最多 100 只样本' : ''}</span>
         <span className="muted small" style={{ marginLeft: 'auto' }}>
           {withDataCount ? `已有 ${withDataCount} 个地区数据` : '数据源暂未返回，可先按静态省份浏览'}
         </span>
       </div>
 
-      <div className="special-region-strip">
-        <span className="muted small">地图快捷定位</span>
-        {rows.filter((r) => r.special).map((r) => (
-          <button
-            key={r.short}
-            className={`chip ${selected?.short === r.short ? 'active' : ''}`}
-            onClick={() => setSelectedShort(r.short)}
-            title={r.hasData ? `${r.short} · ${r.count} 家` : `${r.short} · 暂无 A 股注册样本`}
-          >
-            {r.short}{r.hasData ? ` · ${r.count}` : ' · 无 A 股样本'}
-          </button>
-        ))}
-        <span className="muted" style={{ fontSize: 10 }}>澳门面积很小，地图上可能只显示为点；用这里可直接选中。</span>
-      </div>
-      <Card title="地域分布地图" desc="颜色越亮 = 上市公司越多 · 滚轮缩放 / 拖拽平移 · 台湾/香港/澳门带常驻标注">
-        <EChart option={mapOption} height={500} notMerge onEvents={mapEvents} />
+      <Card title="地域分布地图" desc="颜色越亮 = 上市公司越多 · 点击省份切换">
+        <EChart option={mapOption} height={440} notMerge onEvents={mapEvents} />
       </Card>
 
       {selected && (
@@ -353,72 +342,6 @@ export default function HubMap() {
         </div>
       )}
 
-      <div style={{ marginTop: 14 }}>
-        <Card title="全部省份" desc="点击省份行切换 · 领涨公司全部展示">
-          <div className="row-between" style={{ gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-            <Input.Search
-              allowClear
-              placeholder="搜索省份 / 全称"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              style={{ width: 280 }}
-            />
-            <span className="muted small">{filtered.length} / {rows.length} 个省级行政区</span>
-          </div>
-          <div className="hud-leaders-scroll">
-            {filtered.map((p) => (
-              <section
-                key={p.short}
-                className="hud-province-details"
-                style={p.short === selected?.short ? { background: 'var(--tag-bg)', borderColor: 'var(--accent)' } : undefined}
-              >
-                <div className="hud-province-head" onClick={() => setSelectedShort(p.short)}>
-                  <b>{p.short}</b>
-                  <span className="muted small">
-                    {p.hasData
-                      ? `${p.count} 家 · ${p.industries.slice(0, 2).join(' / ') || '行业待返回'}`
-                      : '该省数据源暂未返回'}
-                  </span>
-                  <em>
-                    {p.leaders[0]?.name ?? '--'}
-                    {p.leaders[0] ? ` ${fmt.pct(p.leaders[0].pct)}` : ''}
-                  </em>
-                </div>
-                <div className="hud-leader-list">
-                  {p.leaders.length ? (
-                    p.leaders.slice(0, 5).map((s: any) => (
-                      <div key={s.code || s.name} className="hud-leader-row">
-                        {s.code ? (
-                          <Link className="link" to={`/stock/${s.code}`} style={{ fontWeight: 600 }}>{s.name}</Link>
-                        ) : (
-                          <b>{s.name}</b>
-                        )}
-                        <span className="mono muted">{s.code}</span>
-                        <span className="muted small">{s.industry || '--'}</span>
-                        <em className={trendClass(s.pct)}>{fmt.pct(s.pct)}</em>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="muted small" style={{ padding: '4px 0' }}>
-                      {p.hasData ? '该省领涨公司数据源暂未返回' : (p.special ? '该地区暂无 A 股注册公司样本' : '该省数据源暂未返回')}
-                    </div>
-                  )}
-                  <div style={{ marginTop: 4, paddingLeft: 0 }}>
-                    <Button type="link" size="small" style={{ padding: 0 }} onClick={() => setSelectedShort(p.short)}>
-                      在地图中查看
-                    </Button>
-                  </div>
-                </div>
-              </section>
-            ))}
-            {!filtered.length && (
-              <div className="muted small" style={{ textAlign: 'center', padding: 24 }}>
-                没有匹配的省份，换个关键词试。
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
     </div>
   )
 }
