@@ -598,19 +598,15 @@ function IndustryFocus({ focus, verdict, market, nav }: { focus: any[]; verdict?
       extra={<span className="muted small">{list.length ? `${list.length} 个方向` : '数据计算中'}</span>}
     >
       {list.length ? (
-        <div className="focus-grid">
+        <div className="focus-list">
           {list.map((x: any) => (
-            <div key={x.name} className="focus-card">
-              <div className="row-between">
+            <div key={x.name} className="focus-row">
+              <div className="focus-row-head">
                 <b>{x.name}</b>
                 <span className={`chip ${x.status?.includes('超') ? 'up' : x.status?.includes('临界') ? 'amber' : 'down'}`}>{x.status}</span>
+                <span className="muted small">上涨 {Math.round((x.ratio ?? 0) * 100)}% · 最大簇 {(x.giant_occupied ? (x.giant_occupied * 100).toFixed(0) : '--')}% · 资金 <b className={trendClass(x.flow)}>{x.flow == null ? '--' : fmt.big(x.flow)}</b></span>
+                <div className="focus-bar"><i style={{ width: `${Math.min(100, (x.ratio ?? 0) * 100)}%` }} /></div>
               </div>
-              <div className="focus-metrics">
-                <span>上涨 <b className="up">{Math.round((x.ratio ?? 0) * 100)}%</b></span>
-                <span>最大簇 <b>{(x.giant_occupied ? (x.giant_occupied * 100).toFixed(0) : '--')}%</b></span>
-                <span>资金 <b className={trendClass(x.flow)}>{x.flow == null ? '--' : fmt.big(x.flow)}</b></span>
-              </div>
-              <div className="focus-bar"><i style={{ width: `${Math.min(100, (x.ratio ?? 0) * 100)}%` }} /></div>
               <div className="focus-watch">
                 {(x.watch ?? []).slice(0, 3).map((name: string) => {
                   const leader = (x.leaders ?? []).find((s: any) => s.name === name)

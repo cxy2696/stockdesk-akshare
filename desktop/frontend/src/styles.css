@@ -4178,3 +4178,55 @@ html, body { overflow-x: hidden; }
 
 /* Daily brief: hide empty industry columns instead of leaving a large blank block. */
 .sector-columns.concepts-only { grid-template-columns: 1fr; }
+
+/* ---------------------------------------------------------------- minimal pass
+   Fewer boxes, more whitespace: sections are separated by a hairline instead of
+   floating cards. KPI tiles keep a subtle surface so numbers still read as a
+   group. This is layout-only; no data or interaction is hidden. */
+.shell .card {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border-soft);
+  border-radius: 0;
+  box-shadow: none;
+}
+.shell .card:hover { border-color: var(--border-soft); }
+.shell .card-head { padding: 13px 0 0; }
+.shell .card-body { padding: 11px 0 15px; }
+.shell .card-pad { padding: 13px 0; }
+.shell .kpi-grid .card,
+.shell .card.kpi {
+  background: var(--card-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  padding: 13px 15px;
+}
+.shell .kpi-grid { gap: 14px; }
+.shell .grid-2, .shell .grid-3, .shell .grid-2-even { gap: 22px; }
+.shell .more-box {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border-soft);
+  border-radius: 0;
+  padding-top: 4px;
+}
+.shell .table-wrap, .shell .ant-table-wrapper { background: transparent; }
+.shell .card .ant-table-wrapper { margin-top: 2px; }
+.shell .factor-explain { background: transparent; border: 0; padding: 0 0 10px; }
+.shell .card-desc { opacity: 0.82; }
+@media (max-width: 900px) {
+  .shell .grid-2, .shell .grid-3, .shell .grid-2-even { gap: 16px; }
+}
+
+/* Daily industry focus: four big cards -> one scannable list. */
+.focus-list { display: flex; flex-direction: column; }
+.focus-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border-soft); }
+.focus-row:last-child { border-bottom: 0; }
+.focus-row-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.focus-row-head .focus-bar { flex: 0 0 110px; width: 110px; height: 5px; }
+.focus-row .focus-watch { justify-content: flex-end; }
+/* Factor categories as one compact chip line. */
+.factor-cat-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.factor-cat-chip { font-size: calc(10.5px * var(--fs, 1)); padding: 4px 8px; border: 1px solid var(--border-soft); border-radius: 999px; color: var(--text-sub); background: var(--card-2); }
+.factor-cat-chip b { color: var(--text); font-family: SF Mono, monospace; }
+.factor-summary { font-size: calc(11px * var(--fs, 1)); color: var(--text-sub); line-height: 1.8; padding-bottom: 5px; }

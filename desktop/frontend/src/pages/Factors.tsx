@@ -107,26 +107,22 @@ export default function Factors() {
         extra={<Tag color="blue">横截面因子</Tag>}
       >
         <div className="factor-explain">
-          <div><b>1. 覆盖率</b><span>每个因子先看当前快照有多少股票有真实值；低于 50% 不进入评分。</span></div>
-          <div><b>2. 类别配额</b><span>动量 / 价值 / 波动 / 流动性 / 资金 / 情绪 / 规模，每类最多 2 个，总因子最多 10 个。</span></div>
-          <div><b>3. 标准化</b><span>每个因子在全市场做横截面排名，再转成正态分；方向为负的因子取反。</span></div>
-          <div><b>4. 合成</b><span>类别内可用因子求均值，再按市场状态权重合成；缺失类别不补 0，只按可用类别重新归一。</span></div>
-          <div><b>5. 分数含义</b><span>0–100 是横截面百分位，不是预期收益；历史 IC 需持久化每日快照，本页不伪造。</span></div>
+          <div className="factor-summary">
+            覆盖率 ≥ 50% 才参与 → 每类最多 2 个、总上限 10 个 → 全市场排名转正态分 → 按市场状态权重合成 → 0–100 是横截面百分位，不是预期收益。
+          </div>
           <div className="factor-trace muted mono">
             算法 {data.trace?.algorithm ?? '--'} · 快照 {data.trace?.snapshot_date ?? data.date ?? '--'} · {data.trace?.rows ?? data.total ?? '--'} 行 / {data.trace?.candidates ?? data.scanned ?? '--'} 只候选 · 来源 {data.source ?? '--'}
             {data.trace?.momentum_coverage === 0 ? ' · 快照源不提供 60 日动量；已用日内动量作为短期代理' : ''}
             {data.trace?.flow_coverage != null ? ` · 资金覆盖 ${(Number(data.trace.flow_coverage) * 100).toFixed(0)}%` : ''}
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(7, Math.max(3, catGroups.length))}, minmax(0, 1fr))`, gap: 8, marginBottom: 12 }}>
+        <div className="factor-cat-chips">
           {CATEGORY_ORDER.filter((k) => catGroups.some((g: any) => g.key === k)).map((key) => {
             const g = catGroups.find((x: any) => x.key === key)
             return (
-              <div key={key} className="card" style={{ padding: '9px 11px', boxShadow: 'none' }}>
-                <div className="muted small">{g.label}</div>
-                <div className="num" style={{ fontSize: 18, fontWeight: 700 }}>{selectedByCategory[key] ?? 0}<span className="muted" style={{ fontSize: 11 }}> / {g.count}</span></div>
-                <div className="muted" style={{ fontSize: 10 }}>{g.labels?.slice(0, 2).join(' · ')}</div>
-              </div>
+              <span key={key} className="factor-cat-chip" title={g.labels?.join(' · ')}>
+                {g.label} <b>{selectedByCategory[key] ?? 0}</b><span className="muted">/{g.count}</span>
+              </span>
             )
           })}
         </div>
