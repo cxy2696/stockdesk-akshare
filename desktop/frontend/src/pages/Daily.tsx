@@ -99,20 +99,12 @@ export default function Daily() {
       >
         <div className="daily-summary">{brief.summary}</div>
 
-        <div className="daily-index-grid">
+        <div className="daily-index-row">
           {(brief.indices ?? []).map((i: any) => (
-            <button key={i.code} className="daily-index daily-index-btn" onClick={() => nav(`/stock/${i.code}`)}>
-              <div className="row-between">
-                <span className="small"><b>{i.name}</b></span>
-                <span className={`num ${trendClass(i.pct)}`} style={{ fontWeight: 600 }}>{fmt.pct(i.pct)}</span>
-              </div>
-              <div className="num" style={{ fontSize: 17, fontWeight: 600, marginTop: 2 }}>{fmt.price(i.price)}</div>
-              <div className="muted small" style={{ marginTop: 3 }}>
-                {i.trend ?? '震荡'} · RSI {i.rsi ?? '--'} · MA20 {i.above20 ? '上方' : '下方'}
-              </div>
-              <div className="daily-index-td">
-                九转 {i.td?.label ?? (i.td_buy ? `买 ${i.td_buy}/9` : i.td_sell ? `卖 ${i.td_sell}/9` : '无结构')}
-              </div>
+            <button key={i.code} className="daily-index-item" onClick={() => nav(`/stock/${i.code}`)}>
+              <span className="daily-index-top"><b>{i.name}</b><em className={trendClass(i.pct)}>{fmt.pct(i.pct)}</em></span>
+              <span className="daily-index-price num">{fmt.price(i.price)}</span>
+              <span className="daily-index-note muted">{i.trend ?? '震荡'} · RSI {i.rsi ?? '--'} · MA20 {i.above20 ? '上' : '下'} · 九转 {i.td?.label ?? (i.td_buy ? `买${i.td_buy}/9` : i.td_sell ? `卖${i.td_sell}/9` : '无')}</span>
             </button>
           ))}
         </div>
@@ -171,10 +163,6 @@ export default function Daily() {
 
       <ModelStrip model={model} onJump={() => nav('/models')} />
 
-
-      <div id="daily-industry" style={{ marginTop: 14 }}>
-        <IndustryFocus focus={brief.industry_focus} market={brief.sectors?.top} nav={nav} />
-      </div>
 
       <div className="grid-2" style={{ marginTop: 14, alignItems: 'start' }}>
         <PositionAdviceCard advice={brief.advice} title="仓位管理推荐" />
@@ -584,55 +572,6 @@ function IndustryTrendCard({ trends }: { trends: any[] }) {
       </div>
       <div className="muted small" style={{ marginTop: 6 }}>
         趋势优先用板块指数近 5/20/60 日涨跌和 MA20/60 排列；板块历史缺失时用龙头股日线并标注「龙头代理」。主力是当日净流入，趋势向上但资金流出要小心拉高出货。
-      </div>
-    </Card>
-  )
-}
-
-function IndustryFocus({ focus, verdict, market, nav }: { focus: any[]; verdict?: any; market?: any[]; nav: (p: string) => void }) {
-  const list = (focus ?? []).slice(0, 4)
-  return (
-    <Card
-      title="行业关注重点"
-      desc="广度、资金、龙头与九转放在一起看，决定先做哪个方向"
-      extra={<span className="muted small">{list.length ? `${list.length} 个方向` : '数据计算中'}</span>}
-    >
-      {list.length ? (
-        <div className="focus-list">
-          {list.map((x: any) => (
-            <div key={x.name} className="focus-row">
-              <div className="focus-row-head">
-                <b>{x.name}</b>
-                <span className={`chip ${x.status?.includes('超') ? 'up' : x.status?.includes('临界') ? 'amber' : 'down'}`}>{x.status}</span>
-                <span className="muted small">上涨 {Math.round((x.ratio ?? 0) * 100)}% · 最大簇 {(x.giant_occupied ? (x.giant_occupied * 100).toFixed(0) : '--')}% · 资金 <b className={trendClass(x.flow)}>{x.flow == null ? '--' : fmt.big(x.flow)}</b></span>
-                <div className="focus-bar"><i style={{ width: `${Math.min(100, (x.ratio ?? 0) * 100)}%` }} /></div>
-              </div>
-              <div className="focus-watch">
-                {(x.watch ?? []).slice(0, 3).map((name: string) => {
-                  const leader = (x.leaders ?? []).find((s: any) => s.name === name)
-                  return (
-                    <button key={name} className="chip chip-btn" onClick={() => leader?.code && nav(`/stock/${leader.code}`)}>
-                      {name} {leader?.pct != null ? fmt.pct(leader.pct) : ''}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid-2">
-          <EmptyState text="行业广度还在计算。稍等片刻，或先看下面的行业要闻和资金流。" icon="◌" />
-          <div>
-            <div className="muted small" style={{ marginBottom: 6 }}>今天资金在往这些方向走</div>
-            {(market ?? []).slice(0, 6).map((x: any) => (
-              <div key={x.code} className="sector-row"><span>{x.name}</span><b className={trendClass(x.pct)}>{fmt.pct(x.pct)}</b></div>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="muted small" style={{ marginTop: 8 }}>
-        上涨占比过 50%、最大簇扩大、龙头放量，三条同时满足才加仓。
       </div>
     </Card>
   )

@@ -22,10 +22,10 @@ const MODES: { label: string; value: Mode }[] = [
 ]
 
 const MODE_DESC: Record<Mode, string> = {
-  recommended: '用自选 + 当前持仓作为股票池，60 日动量选前 N，HMM 状态决定总仓位；每 N 个交易日换仓，次日开盘成交。',
-  custom: '输入代码和目标权重，可买入持有或定期再平衡；权重会自动归一化。',
-  ledger: '回放你在「持仓管理」里记录的真实买卖，保留实际费用，检查现金和 T+1 约束。',
-  single: '对单只股票运行双均线、动量、RSI、MACD 等规则策略。',
+  recommended: '自选/持仓为池，动量选股，HMM 定仓位，定期换仓。',
+  custom: '输入代码与目标权重，买入持有或定期再平衡。',
+  ledger: '回放「持仓管理」里的真实买卖，含费用与 T+1。',
+  single: '单只股票跑均线、动量、RSI、MACD 规则。',
 }
 
 interface HoldingRow { code: string; weight: number }
@@ -45,7 +45,6 @@ export default function Backtest() {
   const [slippageBps, setSlippageBps] = useState(5)
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-  const [last, setLast] = useState<any>(null)
   const [codeError, setCodeError] = useState('')
   const [holdings, setHoldings] = useState<HoldingRow[]>([
     { code: '600519', weight: 50 },
@@ -63,7 +62,6 @@ export default function Backtest() {
       setValues(Object.fromEntries(first.params.map((p: any) => [p.key, p.value])))
     }).catch(() => {})
     api.get<any[]>('/api/backtest/benchmarks').then(setBenchmarks).catch(() => {})
-    api.get<any>('/api/backtest/last').then(setLast).catch(() => {})
   }, [])
 
   const current = strategies.find((s) => s.id === strategy)
@@ -74,12 +72,13 @@ export default function Backtest() {
     if (s) setValues(Object.fromEntries(s.params.map((p: any) => [p.key, p.value])))
   }
 
-  const run = async () => {
-    if (mode === 'single' && !/^\d{6}$/.test(code)) {
+  const run = async (overrideMode?: Mode) => {
+    const chosen = overrideMode ?? mode
+    if (chosen === 'single' && !/^\d{6}$/.test(code)) {
       setCodeError('请输入 6 位股票代码')
       return
     }
-    if (mode === 'custom' && !holdings.some((h) => /^\d{6}$/.test(h.code) && h.weight > 0)) {
+    if (chosen === 'custom' && !holdings.some((h) => /^\d{6}$/.test(h.code) && h.weight > 0)) {
       setCodeError('至少填写一个有效代码和正权重')
       return
     }
@@ -95,7 +94,7 @@ export default function Backtest() {
         slippage: slippageBps / 10000,
       }
       let r: any
-      if (mode === 'single') {
+      if (chosen === 'single') {
         r = await api.post<any>('/api/backtest/run', {
           code,
           strategy,
@@ -104,12 +103,12 @@ export default function Backtest() {
         })
       } else {
         r = await api.post<any>('/api/backtest/portfolio', {
-          mode,
+          mode: chosen,
           ...common,
           holdings: holdings.filter((h) => h.code && h.weight > 0),
           universe: universe.map((x) => x.trim()).filter(Boolean),
           top_n: topN,
-          rebalance_days: mode === 'custom' ? customRebalance : rebalance,
+          rebalance_days: chosen === 'custom' ? customRebalance : rebalance,
         })
       }
       setResult(r)
@@ -119,6 +118,12 @@ export default function Backtest() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const quickRun = (nextMode: Mode) => {
+    setMode(nextMode)
+    setResult(null)
+    void run(nextMode)
   }
 
   const useCurrentPositions = async () => {
@@ -137,7 +142,7 @@ export default function Backtest() {
     }
   }
 
-  const shown = result ?? (mode === 'single' ? last : null)
+  const shown = result
   const m = shown?.metrics ?? {}
   const isPortfolio = shown?.mode && shown.mode !== 'single'
 
@@ -348,11 +353,11 @@ export default function Backtest() {
                 />
               </div>
               <div className="muted" style={{ fontSize: 10.5, lineHeight: 1.7, marginTop: 5 }}>
-                卖出另收千 0.5 印花税；单笔佣金最低 5 元；空仓现金不计息。停牌按最近收盘估值，不模拟涨跌停无法成交。
+                卖出含印花税，佣金最低 5 元；停牌按最近收盘估值。
               </div>
             </div>
 
-            <Button type="primary" size="large" icon={<ExperimentOutlined />} loading={loading} onClick={run} style={{ marginTop: 4 }}>
+            <Button type="primary" size="large" icon={<ExperimentOutlined />} loading={loading} onClick={() => run()} style={{ marginTop: 4 }}>
               开始回测
             </Button>
           </div>
@@ -447,18 +452,14 @@ export default function Backtest() {
               </div>
             </>
           ) : (
-            <Card title="选择回测口径" desc="四种模式共用次日开盘、T+1、费用和基准假设">
-              <div className="backtest-guide">
-                {MODES.map((m) => (
-                  <div key={m.value} className={`backtest-guide-row ${mode === m.value ? 'active' : ''}`}>
-                    <b>{m.label}</b>
-                    <span>{MODE_DESC[m.value]}</span>
-                  </div>
-                ))}
+            <Card title="一键开始" desc="先跑一个口径，再改参数">
+              <div className="backtest-quick">
+                <button onClick={() => quickRun('ledger')}><b>当前持仓回放</b><span>用真实流水检查费用、现金和 T+1</span></button>
+                <button onClick={() => quickRun('recommended')}><b>推荐组合</b><span>自选/持仓为池，动量选股 + HMM 仓位</span></button>
+                <button onClick={() => quickRun('single')}><b>单股均线</b><span>用当前代码跑双均线策略</span></button>
               </div>
               <div className="muted small" style={{ marginTop: 12, lineHeight: 1.8 }}>
-                推荐组合需要自选或持仓至少 1 只；自定义持仓至少 1 个代码和正权重；交易记录回放需要至少一笔流水；单股策略输入 6 位代码即可。
-                回测是历史样本内检验，不构成收益承诺。
+                所有口径共用：次日开盘成交、T+1、佣金/滑点、同一基准。回测是历史样本内检验，不构成收益承诺。
               </div>
             </Card>
           )}

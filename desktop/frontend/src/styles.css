@@ -4230,3 +4230,27 @@ html, body { overflow-x: hidden; }
 .factor-cat-chip { font-size: calc(10.5px * var(--fs, 1)); padding: 4px 8px; border: 1px solid var(--border-soft); border-radius: 999px; color: var(--text-sub); background: var(--card-2); }
 .factor-cat-chip b { color: var(--text); font-family: SF Mono, monospace; }
 .factor-summary { font-size: calc(11px * var(--fs, 1)); color: var(--text-sub); line-height: 1.8; padding-bottom: 5px; }
+
+/* Factor screening: selected factors as one compact line; detail table removed. */
+.factor-selected-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 8px; }
+.factor-pill { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 8px; border: 1px solid var(--border-soft); border-radius: 999px; background: var(--card-2); font-size: calc(10.5px * var(--fs, 1)); }
+.factor-pill b { font-weight: 600; color: var(--text); }
+.factor-pill em { font-style: normal; font-family: SF Mono, monospace; font-size: 9.5px; color: var(--text-dim); }
+.factor-rejected { line-height: 1.7; padding-bottom: 2px; }
+
+/* Backtest: one-click entry points instead of a four-row guide block. */
+.backtest-quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.backtest-quick button { text-align: left; padding: 12px 13px; border: 1px solid var(--border-soft); border-radius: 8px; background: var(--card-2); color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 5px; }
+.backtest-quick button:hover { border-color: var(--accent); }
+.backtest-quick b { font-size: calc(12px * var(--fs, 1)); }
+.backtest-quick span { font-size: calc(10px * var(--fs, 1)); color: var(--text-dim); line-height: 1.6; }
+@media (max-width: 900px) { .backtest-quick { grid-template-columns: 1fr; } }
+
+/* Daily: five index cards -> one compact strip. */
+.daily-index-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 12px 0 2px; }
+.daily-index-item { text-align: left; padding: 8px 0 7px; border: 0; border-top: 1px solid var(--border-soft); background: transparent; color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.daily-index-top { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.daily-index-top em { font-style: normal; font-family: SF Mono, monospace; font-size: 11px; }
+.daily-index-price { font-size: 17px; font-weight: 600; }
+.daily-index-note { font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 900px) { .daily-index-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

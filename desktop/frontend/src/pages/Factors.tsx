@@ -53,6 +53,7 @@ export default function Factors() {
   const screening = data?.screening ?? {}
   const classification = data?.classification ?? {}
   const selected = useMemo(() => factors.filter((f: any) => f.selected), [factors])
+  const rejected = useMemo(() => factors.filter((f: any) => !f.selected), [factors])
   const selectedByCategory = useMemo(() => {
     const out: Record<string, number> = {}
     for (const f of selected) out[f.category] = (out[f.category] ?? 0) + 1
@@ -126,35 +127,19 @@ export default function Factors() {
           })}
         </div>
 
-        <Table
-          size="small"
-          rowKey="name"
-          dataSource={factors}
-          pagination={{ pageSize: 12, size: 'small', showSizeChanger: false }}
-          columns={[
-            {
-              title: '因子', dataIndex: 'label',
-              render: (v: string, r: any) => (
-                <div>
-                  <b>{v}</b>
-                  <div className="muted mono" style={{ fontSize: 10 }}>{r.name}</div>
-                </div>
-              ),
-            },
-            { title: '类别', dataIndex: 'category', render: (v: string) => <Tag>{catGroups.find((g: any) => g.key === v)?.label ?? v}</Tag> },
-            { title: '覆盖率', dataIndex: 'coverage', align: 'right', render: (v: number) => <Tag color={coverageTone(v)}>{`${((v ?? 0) * 100).toFixed(1)}%`}</Tag> },
-            {
-              title: '筛选结果',
-              dataIndex: 'selected',
-              render: (v: boolean, r: any) => (
-                <div>
-                  <Tag color={v ? 'green' : 'default'}>{v ? '入选' : '剔除'}</Tag>
-                  <div className="muted" style={{ fontSize: 10 }}>{r.reason ?? '--'}</div>
-                </div>
-              ),
-            },
-          ]}
-        />
+        <div className="factor-selected-list">
+          {selected.map((f: any) => (
+            <span key={f.name} className="factor-pill" title={`${f.reason ?? '入选'} · ${f.label}`}>
+              <b>{f.label}</b>
+              <em>{Math.round((f.coverage ?? 0) * 100)}%</em>
+            </span>
+          ))}
+          {!selected.length && <span className="muted small">本轮没有因子达到入选条件。</span>}
+        </div>
+        <div className="muted small factor-rejected">
+          未入选 {rejected.length} 个：{rejected.slice(0, 6).map((f: any) => f.label).join('、')}
+          {rejected.length > 6 ? ' 等' : ''}。覆盖率不足或类别配额用满，候选仍按可用因子合成。
+        </div>
       </Card>
 
       <Card
