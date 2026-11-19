@@ -230,6 +230,21 @@ py::dict fibonacci(py::array_t<double, py::array::c_style | py::array::forcecast
     return out;
 }
 
+py::array_t<double> standardize_matrix(py::array_t<double, py::array::c_style | py::array::forcecast> values) {
+    const py::buffer_info info = values.request();
+    if (info.ndim != 2) throw std::invalid_argument("values must be 2-D");
+    std::vector<double> out;
+    {
+        py::gil_scoped_release release;
+        out = stockdesk::native::standardize_matrix(static_cast<const double *>(info.ptr),
+                                                    static_cast<std::size_t>(info.shape[0]),
+                                                    static_cast<std::size_t>(info.shape[1]));
+    }
+    py::array_t<double> result({info.shape[0], info.shape[1]});
+    std::copy(out.begin(), out.end(), result.mutable_data());
+    return result;
+}
+
 py::dict factor_composite(py::array_t<double, py::array::c_style | py::array::forcecast> values,
                             py::array_t<std::int64_t, py::array::c_style | py::array::forcecast> directions,
                             py::array_t<std::int64_t, py::array::c_style | py::array::forcecast> categories,
@@ -351,7 +366,7 @@ py::dict baum_welch(py::array_t<double, py::array::c_style | py::array::forcecas
 
 PYBIND11_MODULE(_native, m) {
     m.doc() = "StockDesk C++ model core: lattice percolation + univariate Gaussian HMM";
-    m.attr("__version__") = "1.4.0";
+    m.attr("__version__") = "1.5.0";
     m.def("grid_largest", &grid_largest, py::arg("grid"), py::arg("cols"),
           "Largest four-neighbour lattice component (union-find).");
     m.def("grid_batch", &grid_batch, py::arg("grids"), py::arg("cols"),
@@ -363,6 +378,7 @@ PYBIND11_MODULE(_native, m) {
     m.def("risk_metrics", &risk_metrics, py::arg("nav"), py::arg("bench"));
     m.def("chips", &chips, py::arg("highs"), py::arg("lows"), py::arg("closes"), py::arg("volumes"), py::arg("buckets"));
     m.def("fibonacci", &fibonacci, py::arg("highs"), py::arg("lows"), py::arg("closes"));
+    m.def("standardize_matrix", &standardize_matrix, py::arg("values"));
     m.def("factor_composite", &factor_composite, py::arg("values"), py::arg("directions"),
           py::arg("categories"), py::arg("weights"));
     m.def("breadth_census", &breadth_census, py::arg("pct"), py::arg("price"), py::arg("limit_pct"),

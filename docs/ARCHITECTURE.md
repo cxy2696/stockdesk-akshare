@@ -15,6 +15,8 @@ migration can continue without pretending the rewrite is finished.
 | MA / RSI / MACD / TD setup+countdown | C++17 | `backend/native_core/indicators.cpp` |
 | Portfolio risk metrics | C++17 | `backend/native_core/risk.cpp` |
 | Chip distribution / Fibonacci | C++17 | `backend/native_core/chips.cpp` |
+| Feature matrix standardisation | C++17 | `backend/native_core/standardize.cpp` |
+| Alpha158/LightGBM feature pipeline | Python adapter + C++ standardiser | `backend/ml.py` |
 | Python binding / validation | C++17 + pybind11 | `backend/native_core/bindings.cpp` |
 | Data source adapters, caching, FastAPI routes | Python | `backend/*.py` |
 | Desktop UI | React/TypeScript | `frontend/src` |

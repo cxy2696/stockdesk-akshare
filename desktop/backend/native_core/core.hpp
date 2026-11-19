@@ -159,6 +159,9 @@ ChipsResult chips(const double *highs, const double *lows, const double *closes,
 FibResult fibonacci(const double *highs, const double *lows, const double *closes,
                      std::size_t n);
 
+/// Column-wise z-score standardisation; non-finite cells become 0.
+std::vector<double> standardize_matrix(const double *values, std::size_t rows, std::size_t cols);
+
 /// Cross-sectional factor rank/composite/percentile kernel.
 ///
 /// `values` is row-major rows*factors with NaN for missing observations.

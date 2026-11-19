@@ -9,6 +9,8 @@ import { fmt, trendClass } from '../utils'
 export default function Forecast() {
   const nav = useNavigate()
   const [data, setData] = useState<any>(null)
+  const [ml, setMl] = useState<any>(null)
+  const [mlBusy, setMlBusy] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
@@ -21,8 +23,16 @@ export default function Forecast() {
       setLoading(false)
     }
   }
+  const loadMl = async () => {
+    setMlBusy(true)
+    try { setMl(await api.get<any>('/api/ml/forecast?code=000300')) }
+    catch { setMl({ available: false, reason: 'LightGBM 接口暂不可用' }) }
+    finally { setMlBusy(false) }
+  }
+
   useEffect(() => {
     load()
+    loadMl()
     const t = setInterval(load, 5 * 60_000)
     return () => clearInterval(t)
   }, [])
@@ -60,6 +70,42 @@ export default function Forecast() {
         </div>
         <Table rowKey="label" size="small" pagination={false} dataSource={f.states ?? []} columns={stateCols as any} />
         <div className="muted small" style={{ marginTop: 10 }}>{f.caveat} 方法：{f.method}。</div>
+      </Card>
+
+      <Card
+        title="LightGBM · Alpha158 · 48 维特征"
+        desc="本地训练，严格按时间切分验证；不调用外部模型服务"
+        extra={<Button size="small" icon={<ReloadOutlined />} loading={mlBusy} onClick={loadMl}>重训</Button>}
+        style={{ marginTop: 14 }}
+      >
+        {ml?.available ? (
+          <>
+            <div className="grid-3" style={{ marginBottom: 12 }}>
+              <Kpi label="上涨概率（未来5日）" value={`${Math.round((ml.prob_up || 0) * 100)}%`} color={(ml.prob_up || 0) >= 0.55 ? 'var(--up)' : (ml.prob_up || 0) <= 0.45 ? 'var(--down)' : undefined} sub={`${ml.direction} · 不是收益承诺`} />
+              <Kpi label="验证准确率" value={`${Math.round((ml.accuracy || 0) * 100)}%`} sub={`基线 ${Math.round((ml.base_rate || 0) * 100)}% · logloss ${ml.logloss}`} />
+              <Kpi label="样本 / 特征" value={`${ml.train_samples} / ${ml.valid_samples}`} sub={`Alpha158 ${ml.alpha158_count} · 入选 ${ml.feature_count}`} />
+            </div>
+            <div className="small" style={{ lineHeight: 1.85, marginBottom: 8 }}>
+              模型用 {ml.bars} 根 K 线，按时间前 {Math.round((ml.train_samples / Math.max(1, ml.train_samples + ml.valid_samples)) * 100)}% 训练、后段验证；
+              标签是未来 5 个交易日方向。验证准确率接近基线时，不要把它当方向预测器，只作为因子有效性的参考。
+            </div>
+            <Table
+              size="small"
+              rowKey="name"
+              pagination={false}
+              dataSource={ml.top_features || []}
+              columns={[
+                { title: '贡献因子', dataIndex: 'name', render: (v: string) => <b className="mono small">{v}</b> },
+                { title: 'LightGBM gain', dataIndex: 'gain', align: 'right' as const, render: (v: number) => <span className="num">{v}</span> },
+              ]}
+            />
+            <div className="muted small" style={{ marginTop: 8 }}>
+              来源 {ml.source} · 缓存 30 分钟 · {ml.caveat}
+            </div>
+          </>
+        ) : (
+          <EmptyState text={ml?.reason || (mlBusy ? '本地特征与 LightGBM 正在训练…' : 'LightGBM 尚未返回')} icon="◌" />
+        )}
       </Card>
 
       <div className="grid-2" style={{ marginTop: 14 }}>

@@ -25,6 +25,7 @@ ext = Pybind11Extension(
         "backend/native_core/indicators.cpp",
         "backend/native_core/risk.cpp",
         "backend/native_core/chips.cpp",
+        "backend/native_core/standardize.cpp",
     ],
     include_dirs=["backend/native_core"],
     cxx_std=17,
@@ -33,7 +34,7 @@ ext = Pybind11Extension(
 )
 setup(
     name="stockdesk-native",
-    version="1.4.0",
+    version="1.5.0",
     ext_modules=[ext],
     cmdclass={"build_ext": build_ext},
 )

@@ -33,6 +33,15 @@ hiddenimports = collect_submodules("uvicorn") + collect_submodules("akshare") + 
     "webview", "webview.platforms.cocoa",
 ]
 
+try:
+    import lightgbm  # noqa: F401
+    import scipy  # noqa: F401
+    datas += collect_data_files("lightgbm")
+    binaries += collect_dynamic_libs("lightgbm")
+    hiddenimports += collect_submodules("lightgbm") + collect_submodules("scipy")
+except Exception:
+    pass
+
 # Optional rflux HMM backend. It is not a hard dependency: if the package or
 # its dylib is missing, StockDesk's native/NumPy path is used instead.
 try:

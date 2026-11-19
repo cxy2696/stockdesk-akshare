@@ -11,7 +11,7 @@ from fastapi import APIRouter, Body, HTTPException, Query, WebSocket, WebSocketD
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import advice, backtest, clock, daily, db, decision, factors as factor_lib, market, native, ollama as ollama_lib, patterns as pattern_lib, portfolio, repo, rflux_engine, screener, state, td as td_model, technical
+from . import advice, backtest, clock, daily, db, decision, factors as factor_lib, market, ml, native, ollama as ollama_lib, patterns as pattern_lib, portfolio, repo, rflux_engine, screener, state, td as td_model, technical
 from .config import APP_VERSION
 
 router = APIRouter()
@@ -128,6 +128,12 @@ def province_leaders():
 def models_meta():
     from . import model_registry
     return ok(model_registry.meta())
+
+
+@router.get("/api/ml/forecast")
+def ml_forecast(code: str = "000300"):
+    """Local LightGBM + Alpha158 + 48-feature forecast (no external service)."""
+    return ok(ml.forecast(code))
 
 
 @router.get("/api/market/models")

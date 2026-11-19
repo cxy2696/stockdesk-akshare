@@ -10,7 +10,7 @@ import time
 from . import native
 
 MODEL_VERSION = "2.7.0"
-NATIVE_VERSION = native.VERSION or "1.4.0"
+NATIVE_VERSION = native.VERSION or "1.5.0"
 
 MODELS = {
     "hmm": {
