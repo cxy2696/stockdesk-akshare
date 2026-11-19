@@ -1431,7 +1431,7 @@ export default function Models() {
             )
           ) : focus.length ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 10 }}>
-              {focus.map((x: any) => {
+              {focus.slice(0, 6).map((x: any) => {
                 const tone = percTone(x.status)
                 const leaders = (x.leaders ?? []).filter((s: any) => s.code).slice(0, 3)
                 const fallbackFocus = `${x.status ?? '--'}；上涨占比 ${share(x.ratio)}，最大簇 ${share(x.giant_occupied)}。`
@@ -1505,6 +1505,11 @@ export default function Models() {
                   </div>
                 )
               })}
+              {focus.length > 6 ? (
+                <button className="btn-ghost" style={{ gridColumn: '1 / -1', justifySelf: 'start', fontSize: 10.5 }} onClick={() => nav('/screener')}>
+                  查看全部 {focus.length} 个行业 →
+                </button>
+              ) : null}
             </div>
           ) : (
             <InlineEmpty text="这次渗流分组没有给出行业关注项，可能是行情源没返回行业字段。等下一次采样。" />

@@ -188,7 +188,7 @@ def cache_delete(key: str):
 OBSOLETE_CACHE_KEYS = (
     "spot:v3", "spot:v4", "spot:v5", "spot:v6",
     "market:state", "market:daily:v9", "market:daily:v10",
-    "market:news:v2", "boards:rows:v1", "model:history:v1",
+    "market:news:v2", "boards:rows:v1", "model:history:v1", "spot:ak",
 )
 
 _LAST_PRUNE = 0

@@ -146,7 +146,6 @@ export default function App() {
       if (loc.pathname === '/evaluation') return { title: 'Model Evaluation', sub: 'Walk-forward hit rate and equity' }
       if (loc.pathname === '/decision') return { title: 'Trade Decision', sub: 'Buy zone · stop · target · rating' }
       if (loc.pathname === '/forecast') return { title: 'Market Forecast', sub: '5-day regime-conditional outlook' }
-      if (loc.pathname === '/industry-news') return { title: 'Index Analysis', sub: 'A-share and global indices · conclusions' }
       return EN_NAV[loc.pathname] ?? { title: 'StockDesk', sub: '' }
     }
     if (loc.pathname.startsWith('/stock/')) return { title: '个股详情', sub: '行情 · 筹码 · 财务' }
@@ -288,7 +287,7 @@ export default function App() {
               <Route path="/index-analysis" element={<IndexAnalysis />} />
               <Route path="/hub-map" element={<Navigate to="/regions" replace />} />
               <Route path="/regions" element={<HubMap />} />
-              <Route path="/industry-news" element={<IndexAnalysis />} />
+              <Route path="/industry-news" element={<Navigate to="/index-analysis" replace />} />
               <Route path="/models" element={<Models />} />
               <Route path="/evaluation" element={<Evaluation />} />
               <Route path="*" element={<Navigate to="/" replace />} />

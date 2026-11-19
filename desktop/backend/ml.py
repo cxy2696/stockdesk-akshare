@@ -78,9 +78,6 @@ def build_alpha158(rows: list[dict]) -> pd.DataFrame:
         cols[f"volume_{w}"] = v / v.rolling(w, min_periods=1).mean()
 
     # 20 families x 7 windows = 140 factors.
-    families = ["ROC", "MA", "STD", "BETA", "RSQR", "RESI", "MAX", "MIN",
-                "QTLU", "QTLD", "RANK", "RSV", "IMAX", "IMIN", "IMXD",
-                "CORR", "CORD", "CNTP", "CNTN", "CNTD"]
     for w in WINDOWS:
         roll = c.rolling(w, min_periods=max(2, w // 2))
         mean = roll.mean()

@@ -246,7 +246,7 @@ def _sina_industry_flow() -> list[dict]:
                "MoneyFlow.ssl_bkzj_bk?page=1&num=100&sort=netamount&asc=0&fenlei=0")
         req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
         rows = json.loads(urllib.request.urlopen(req, timeout=15).read().decode("utf-8", "ignore"))
-        catalog = sina_industry_catalog()
+        sina_industry_catalog()
         out = []
         for r in rows:
             name = r.get("name") or ""
@@ -791,10 +791,6 @@ def _assemble_snapshot(seen: dict[str, dict], expected: list[tuple[str, str]],
 def _akshare_spot(force: bool = False) -> dict:
     """Complete fallback universe with Sina quotes and Eastmoney-like fields."""
     t0 = time.monotonic()
-    cached = db.cache_get("spot:ak", 600)
-    if not force and cached and cached.get("schema") == SPOT_SCHEMA:
-        cached["date"] = clock.last_session_date()
-        return cached
     universe = universe_symbols()
     quotes = _sina_market_center()
     source = "sina-market-center"
@@ -824,7 +820,6 @@ def _akshare_spot(force: bool = False) -> dict:
     if out["rows"]:
         source_health.mark("sina", bool(quotes), time.monotonic() - t0)
         source_health.mark("akshare", bool(out.get("data_complete")), time.monotonic() - t0)
-        db.cache_set("spot:ak", out)
         db.cache_set(SPOT_KEY, out)
         _remember_universe(out["rows"])
     else:
