@@ -194,6 +194,34 @@ OBSOLETE_CACHE_KEYS = (
 _LAST_PRUNE = 0
 _LAST_PRUNE_AT = 0.0
 _LAST_VACUUM = 0.0
+_TOTAL_PRUNE = 0
+
+# Rows whose schema/semantics changed are not useful even when they are not
+# 14 days old.  These TTLs are deliberately conservative; the current core
+# caches are protected below.
+_TTL_RULES = (
+    ("kline:", 7 * 86400),
+    ("fund:", 2 * 3600),
+    ("market:heatmap:", 2 * 3600),
+    ("rank:", 3600),
+    ("boards:", 3600),
+    ("industry:", 86400),
+    ("news:", 86400),
+    ("market:news:", 86400),
+    ("chip:", 86400),
+    ("fib:", 86400),
+    ("ml:forecast:", 2 * 86400),
+    ("factor:full:", 2 * 86400),
+    ("model:history:", 7 * 86400),
+    ("profile:", 30 * 86400),
+    ("fin:", 30 * 86400),
+    ("concepts:", 30 * 86400),
+)
+_PROTECTED_KEYS = (
+    "spot:v7", "market:state:v2", "market:daily:v11", "market:index-analysis:v1",
+    "market:models:v12", "model:history:v2:000300:1000",
+    "factor:screen:6000:30000000.0:1",
+)
 
 
 def prune_cache(max_age: float = 14 * 86400, obsolete: tuple[str, ...] | None = None) -> int:
@@ -203,7 +231,7 @@ def prune_cache(max_age: float = 14 * 86400, obsolete: tuple[str, ...] | None = 
     patterns so active caches (spot:v7, state:v2, daily:v11, factor:screen:6000)
     are never touched.
     """
-    global _LAST_PRUNE, _LAST_PRUNE_AT
+    global _LAST_PRUNE, _LAST_PRUNE_AT, _TOTAL_PRUNE
     deleted = 0
     now = time.time()
     with _lock, _db(CACHE_PATH) as c:
@@ -254,6 +282,15 @@ def prune_cache(max_age: float = 14 * 86400, obsolete: tuple[str, ...] | None = 
         except sqlite3.DatabaseError:
             pass
 
+        # TTL cleanup for caches that are stale long before the 14-day floor.
+        protected_marks = ",".join("?" for _ in _PROTECTED_KEYS)
+        for prefix, ttl in _TTL_RULES:
+            cur = c.execute(
+                f"DELETE FROM kv WHERE k LIKE ? AND k NOT IN ({protected_marks}) AND ts < ?",
+                (prefix + "%", *_PROTECTED_KEYS, now - ttl),
+            )
+            deleted += max(0, cur.rowcount)
+
         # Hard value budget: keep current snapshot/state/factor caches, then
         # trim oldest K-lines until the disposable cache is below 40 MB.
         try:
@@ -268,11 +305,26 @@ def prune_cache(max_age: float = 14 * 86400, obsolete: tuple[str, ...] | None = 
                     c.execute("DELETE FROM kv WHERE k=?", (row["k"],))
                     total -= int(row["n"] or 0)
                     deleted += 1
+                if total > 40 * 1024 * 1024:
+                    # Other stale caches may dominate; trim the oldest
+                    # non-core rows as a last resort.
+                    marks = ",".join("?" for _ in _PROTECTED_KEYS)
+                    rows = c.execute(
+                        f"SELECT k,length(v) AS n FROM kv WHERE k NOT IN ({marks}) ORDER BY ts ASC",
+                        _PROTECTED_KEYS,
+                    ).fetchall()
+                    for row in rows:
+                        if total <= 40 * 1024 * 1024:
+                            break
+                        c.execute("DELETE FROM kv WHERE k=?", (row["k"],))
+                        total -= int(row["n"] or 0)
+                        deleted += 1
         except sqlite3.DatabaseError:
             pass
         c.commit()
     _LAST_PRUNE = deleted
     _LAST_PRUNE_AT = now
+    _TOTAL_PRUNE += deleted
     if deleted:
         try:
             with _lock, _db(CACHE_PATH) as c:
@@ -309,7 +361,8 @@ def cache_stats() -> dict:
         rows = bytes_used = 0
     return {
         "rows": int(rows), "value_bytes": int(bytes_used), "file_bytes": int(size),
-        "last_pruned": int(_LAST_PRUNE), "last_pruned_at": _LAST_PRUNE_AT or None,
+        "last_pruned": int(_LAST_PRUNE), "total_pruned": int(_TOTAL_PRUNE),
+        "last_pruned_at": _LAST_PRUNE_AT or None,
     }
 
 

@@ -67,7 +67,7 @@ export default function DataStatus() {
   const unpriced = coverage.unpriced ?? '--'
   const freshness = data.freshness
   const freshLabel = freshness === 'fresh' ? '及时' : freshness === 'delayed' ? '稍旧' : freshness === 'stale' ? '过期' : '待生成'
-  const jobName: Record<string, string> = { spot: '全市场快照', state: '行情状态', daily: '每日策略', index: '指数分析', models: '量化模型', evaluation: '历史测评' }
+  const jobName: Record<string, string> = { spot: '全市场快照', state: '行情状态', daily: '每日策略', index: '指数分析', models: '量化模型', evaluation: '历史测评', factors: '因子筛选' }
   const pending = (scheduler.force_pending || []).map((x: string) => jobName[x] || x)
   const jobLabel = scheduler.running
     ? (scheduler.last_job
@@ -77,6 +77,10 @@ export default function DataStatus() {
         : '后台已启动，等待首轮')
     : '后台调度未启动'
   const pendingLabel = pending.length ? ` · 排队 ${pending.length}` : ''
+  const cache = data.cache_stats || scheduler.cache || {}
+  const cacheMb = cache.file_bytes ? (cache.file_bytes / 1048576).toFixed(0) : '--'
+  const pruned = cache.last_pruned || 0
+  const totalPruned = cache.total_pruned || 0
 
   return (
     <div className={`data-status-bar ${freshness || ''}`}>
@@ -89,6 +93,10 @@ export default function DataStatus() {
       <span className="data-sep" />
       <Tooltip title={sources.length ? `本次快照来源：${sources.join('、')}` : '尚无来源记录；数据到达后自动标记'}>
         <span className="data-muted">来源 {sources.length ? sources.join(' + ') : '--'}</span>
+      </Tooltip>
+      <span className="data-sep" />
+      <Tooltip title={`自动清理：上次删除 ${pruned} 条，累计 ${totalPruned} 条；数据刷新/后台巡检后执行`}>
+        <span className="data-muted">缓存 {cacheMb} MB · 清理 {totalPruned}</span>
       </Tooltip>
       <span className="data-sep" />
       <span className="data-muted">{jobLabel}{pendingLabel}</span>

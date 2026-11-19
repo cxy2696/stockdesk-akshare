@@ -27,6 +27,8 @@ _THREAD: threading.Thread | None = None
 _TICK_EVERY = 15.0
 _FIRST_DELAY = 30.0
 _FORCE: set[str] = set()
+_LAST_MAINTENANCE = 0.0
+_MAINTENANCE_EVERY = 900.0
 
 
 def _interval(name: str, is_open: bool) -> float:
@@ -85,6 +87,16 @@ def _set_job(name: str, ok: bool, error: str = "") -> None:
         _LAST_ERROR = str(error or "")[:300]
 
 
+def _maintenance(now: float) -> None:
+    global _LAST_MAINTENANCE
+    if now - _LAST_MAINTENANCE < _MAINTENANCE_EVERY:
+        return
+    try:
+        db.prune_cache()
+    finally:
+        _LAST_MAINTENANCE = now
+
+
 def tick_once(force: bool = False) -> str | None:
     """Run at most one due job.  Safe to call from the worker or a test."""
     global _LAST_TICK, _LAST_JOB, _NEXT_DUE
@@ -93,6 +105,7 @@ def tick_once(force: bool = False) -> str | None:
     keys = _cache_keys()
     jobs = _job_table()
     now = time.time()
+    _maintenance(now)
     for name in ("spot", "state", "daily", "index", "models", "evaluation", "factors"):
         key = keys[name][0]
         age = db.cache_age(key)
@@ -174,6 +187,8 @@ def status() -> dict:
         last_error = _LAST_ERROR
         next_due = _NEXT_DUE
         forced = sorted(_FORCE)
+        last_maint = _LAST_MAINTENANCE
+    cache_stats = db.cache_stats()
     return {
         "enabled": os.environ.get("STOCKDESK_SCHEDULER", "1") != "0",
         "running": bool(_THREAD and _THREAD.is_alive()),
@@ -185,5 +200,7 @@ def status() -> dict:
         "next_tick": next_due,
         "force_pending": forced,
         "tick_seconds": _TICK_EVERY,
+        "last_maintenance": last_maint or None,
+        "cache": cache_stats,
         "jobs": jobs,
     }
