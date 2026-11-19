@@ -901,7 +901,7 @@ def model_snapshot() -> dict:
     the page usable, with the timestamp visible.
     """
     global _MODEL_REFRESHING
-    cached = db.cache_get("market:models:v11")
+    cached = db.cache_get("market:models:v12")
     if cached:
         age = time.time() - float(cached.get("ts") or 0)
         if age > 600:
@@ -914,7 +914,7 @@ def model_snapshot() -> dict:
 
 
 def _compute_model_snapshot() -> dict:
-    cached = db.cache_get("market:models:v11", 600)
+    cached = db.cache_get("market:models:v12", 600)
     if cached:
         return cached
     rows = (market.fetch_spot(ttl=600) or {}).get("rows") or []
@@ -991,5 +991,5 @@ def _compute_model_snapshot() -> dict:
         "conclusion": conclusion,
         "model_meta": model_registry.meta(),
     }
-    db.cache_set("market:models:v11", out)
+    db.cache_set("market:models:v12", out)
     return out

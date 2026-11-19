@@ -179,7 +179,7 @@ def market_td(code: str, limit: int = Query(220, ge=30, le=800)):
 @router.get("/api/market/industry-focus")
 def market_industry_focus():
     """Industry breadth + flow + key names from the cached model snapshot."""
-    snap = db.cache_get("market:models:v11", 900)
+    snap = db.cache_get("market:models:v12", 900)
     if snap:
         return ok({"focus": snap.get("industry_focus") or [], "td": snap.get("td") or {},
                    "conclusion": snap.get("conclusion") or {}, "cached": True})
@@ -347,7 +347,7 @@ def stock_detail(code: str):
     # Industry focus: use the cached model snapshot instead of triggering a
     # full-market recompute while the user is just opening a stock.
     try:
-        snap = db.cache_get("market:models:v11", 900)
+        snap = db.cache_get("market:models:v12", 900)
         if snap:
             ind = data.get("industry") or ""
             focus = next((x for x in (snap.get("industry_focus") or []) if x.get("name") == ind), None)

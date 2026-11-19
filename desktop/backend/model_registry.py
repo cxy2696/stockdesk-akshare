@@ -9,14 +9,14 @@ import time
 
 from . import native
 
-MODEL_VERSION = "2.7.0"
+MODEL_VERSION = "2.8.0"
 NATIVE_VERSION = native.VERSION or "1.6.0"
 
 MODELS = {
     "hmm": {
-        "version": "2.1.0",
+        "version": "2.2.0",
         "name": "Gaussian HMM market regime",
-        "params": {"states": 3, "iterations": 80, "lookback": 420, "min_samples": 60, "restarts": 3},
+        "params": {"states": 3, "iterations": 120, "lookback": 420, "min_samples": 60, "restarts": 3},
         "description": (
             "Three-state Gaussian HMM on daily log returns of five A-share indices. "
             "Multi-start Baum-Welch (rflux C++ trainer when installed, StockDesk native/NumPy fallback), "

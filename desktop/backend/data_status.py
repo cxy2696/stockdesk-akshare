@@ -24,7 +24,7 @@ _CACHE_ITEMS = [
     ("state", "market:state:v2", "行情状态", 120),
     ("daily", "market:daily:v11", "每日策略", 120),
     ("index", "market:index-analysis:v1", "指数分析", 300),
-    ("models", "market:models:v11", "量化模型", 600),
+    ("models", "market:models:v12", "量化模型", 600),
     ("evaluation", "model:history:v2:000300:1000", "历史测评", 1800),
 ]
 
@@ -149,7 +149,7 @@ def _refresh_worker(target: str) -> None:
             from . import state
             state.index_analysis()
         elif target == "models":
-            db.cache_delete("market:models:v11")
+            db.cache_delete("market:models:v12")
             from . import models
             models.model_snapshot()
         elif target == "evaluation":

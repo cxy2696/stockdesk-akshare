@@ -51,7 +51,6 @@ const IndexAnalysis = lazy(() => import('./pages/IndexAnalysis'))
 const HubMap = lazy(() => import('./pages/HubMap'))
 const Models = lazy(() => import('./pages/Models'))
 const Evaluation = lazy(() => import('./pages/Evaluation'))
-const Research = lazy(() => import('./pages/Research'))
 
 const UI_VERSION = __APP_VERSION__
 
@@ -61,7 +60,6 @@ const EN_NAV: Record<string, { label: string; title: string; sub: string }> = {
   '/decision': { label: 'Decision', title: 'Trade Decision', sub: 'Buy zone · stop · target · rating' },
   '/forecast': { label: 'Forecast', title: 'Market Forecast', sub: '5-day regime-conditional outlook' },
   '/evaluation': { label: 'Evaluation', title: 'Model Evaluation', sub: 'Walk-forward hit rate and equity' },
-  '/research': { label: 'Research', title: 'Research', sub: 'Models · factors · sectors · index · regions' },
   '/watchlist': { label: 'Watchlist', title: 'Watchlist', sub: 'Symbols you follow' },
   '/portfolio': { label: 'Portfolio', title: 'Portfolio', sub: 'Positions · analysis · advice · trades' },
   '/analytics': { label: 'Review', title: 'Performance Review', sub: 'NAV · drawdown · statistics' },
@@ -150,7 +148,6 @@ export default function App() {
       if (loc.pathname === '/index-analysis' || loc.pathname === '/industry-news') return { title: 'Index Analysis', sub: 'A-share and global indices · conclusions' }
       if (loc.pathname === '/models') return { title: 'Quant Models', sub: 'HMM · percolation · position plans' }
       if (loc.pathname === '/evaluation') return { title: 'Model Evaluation', sub: 'Walk-forward hit rate and equity' }
-      if (loc.pathname === '/research') return { title: 'Research', sub: 'From market conclusion to one research direction' }
       if (loc.pathname === '/decision') return { title: 'Trade Decision', sub: 'Buy zone · stop · target · rating' }
       if (loc.pathname === '/forecast') return { title: 'Market Forecast', sub: '5-day regime-conditional outlook' }
       if (loc.pathname === '/industry-news') return { title: 'Index Analysis', sub: 'A-share and global indices · conclusions' }
@@ -299,7 +296,6 @@ export default function App() {
               <Route path="/industry-news" element={<IndexAnalysis />} />
               <Route path="/models" element={<Models />} />
               <Route path="/evaluation" element={<Evaluation />} />
-              <Route path="/research" element={<Research />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </Suspense>

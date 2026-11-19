@@ -36,7 +36,7 @@ def _portfolio_plan(summary: dict, low: int, high: int, single_cap: int) -> dict
     if not snap.get("ready") or not rows:
         return {"recommended": [], "rebalance": [], "recommend_method": "因子快照暂不可用", "recommend_asof": snap.get("date")}
 
-    model = db.cache_get("market:models:v11") or {}
+    model = db.cache_get("market:models:v12") or {}
     focus = {str(x.get("name")) for x in (model.get("industry_focus") or []) if x.get("name")}
 
     def rank(row):
