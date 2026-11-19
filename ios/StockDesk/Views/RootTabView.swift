@@ -21,10 +21,9 @@ struct InvestHudHeader: View {
     private let left: [(String, String, String)] = [
         ("每日策略", "calendar", "daily"),
         ("板块跟踪", "square.grid.3x3.fill", "market"),
-        ("收益复盘", "chart.line.uptrend.xyaxis", "analytics"),
+        ("交易决策", "target", "decision"),
     ]
     private let right: [(String, String, String)] = [
-        ("交易决策", "target", "decision"),
         ("市场预测", "waveform.path.ecg", "forecast"),
         ("策略回测", "flask.fill", "backtest"),
         ("因子筛选", "line.3.horizontal.decrease.circle", "factors"),
