@@ -38,7 +38,7 @@ LOOKBACK = 220
 HORIZON = 5
 STEP = 5
 CACHE_TTL = 1800
-CACHE_VERSION = "v2"
+CACHE_VERSION = "v3"
 
 _LOCK = threading.Lock()
 _REFRESHING: set[str] = set()
@@ -79,15 +79,17 @@ def _state_exposure(state: str, prob_up: float | None) -> float:
     return round(max(0.10, min(1.0, base)), 2)
 
 
-def _compute(code: str, limit: int) -> dict:
+def _compute(code: str, limit: int, lookback: int = LOOKBACK, horizon: int = HORIZON,
+             step: int | None = None) -> dict:
     name, secid = INDEXES[code]
+    step = max(1, int(step or horizon))
     try:
         rows = market.klines(code, limit=limit, adjust="", secid_override=secid)
     except Exception:
         rows = []
-    if len(rows) < LOOKBACK + HORIZON + 20:
+    if len(rows) < lookback + horizon + 20:
         return {
-            "code": code, "name": name, "error": f"历史日线不足（{len(rows)} 根），至少需要 {LOOKBACK + HORIZON + 20} 根。",
+            "code": code, "name": name, "error": f"历史日线不足（{len(rows)} 根），至少需要 {lookback + horizon + 20} 根。",
             "ts": time.time(),
         }
     closes = [float(r["close"]) for r in rows if _num(r.get("close"))]
@@ -98,18 +100,18 @@ def _compute(code: str, limit: int) -> dict:
         closes = [p[0] for p in pairs]
         dates = [p[1] for p in pairs]
     n = len(closes)
-    if n < LOOKBACK + HORIZON + 20:
+    if n < lookback + horizon + 20:
         return {"code": code, "name": name, "error": "历史日线样本不足。", "ts": time.time()}
 
     records: list[dict] = []
-    curve: list[dict] = [{"date": dates[LOOKBACK], "strategy": 1.0, "benchmark": 1.0}]
+    curve: list[dict] = [{"date": dates[lookback], "strategy": 1.0, "benchmark": 1.0}]
     equity = 1.0
     benchmark = 1.0
     prev_exposure: float | None = None
     engine = ""
 
-    for i in range(LOOKBACK, n - HORIZON, STEP):
-        window = np.asarray(closes[i - LOOKBACK:i + 1], dtype=float)
+    for i in range(lookback, n - horizon, step):
+        window = np.asarray(closes[i - lookback:i + 1], dtype=float)
         rets = np.diff(np.log(window)) * 100.0
         try:
             hmm = models._hmm(rets)
@@ -127,7 +129,7 @@ def _compute(code: str, limit: int) -> dict:
         state = str(hmm.get("state") or forecast.get("state") or "震荡")
         engine = str(hmm.get("engine") or engine)
 
-        actual = closes[i + HORIZON] / closes[i] - 1.0
+        actual = closes[i + horizon] / closes[i] - 1.0
         if expected is not None:
             pred_up = expected > 0
         elif prob_up is not None:
@@ -156,7 +158,7 @@ def _compute(code: str, limit: int) -> dict:
             "period_return": round(period_return, 6),
         })
         curve.append({
-            "date": dates[i + HORIZON],
+            "date": dates[i + horizon],
             "strategy": round(equity, 4),
             "benchmark": round(benchmark, 4),
         })
@@ -175,10 +177,10 @@ def _compute(code: str, limit: int) -> dict:
     returns = [r["period_return"] for r in records]
     mean_return = float(np.mean(returns))
     std_return = float(np.std(returns, ddof=1)) if len(returns) > 1 else 0.0
-    sharpe = mean_return / std_return * math.sqrt(244.0 / HORIZON) if std_return > 1e-12 else None
+    sharpe = mean_return / std_return * math.sqrt(244.0 / horizon) if std_return > 1e-12 else None
     total_return = equity - 1.0
     bench_return = benchmark - 1.0
-    years = max(1e-9, len(records) * HORIZON / 244.0)
+    years = max(1e-9, len(records) * horizon / 244.0)
     annual = (1.0 + total_return) ** (1.0 / years) - 1.0 if total_return > -1 else -1.0
 
     by_state = []
@@ -212,10 +214,10 @@ def _compute(code: str, limit: int) -> dict:
         "name": name,
         "ts": time.time(),
         "bars": n,
-        "lookback": LOOKBACK,
-        "horizon": HORIZON,
-        "step": STEP,
-        "start": dates[LOOKBACK],
+        "lookback": lookback,
+        "horizon": horizon,
+        "step": step,
+        "start": dates[lookback],
         "end": dates[-1],
         "samples": len(records),
         "hit_rate": round(hits / len(directional), 3) if directional else None,
@@ -236,12 +238,12 @@ def _compute(code: str, limit: int) -> dict:
         "by_state": by_state,
         "calibration": calibration,
         "recent": recent,
-        "method": "滚动 220 日重训 HMM；每 5 个交易日评估；次日不调仓，持有 5 日；不计滑点外的额外成本。",
+        "method": f"滚动 {lookback} 日重训 HMM；每 {step} 个交易日评估；次日不调仓，持有 {horizon} 日；不计滑点外的额外成本。",
         "caveat": "这是对历史状态条件预测的检验，不是策略收益承诺。样本只有约 5 年、单一指数，且 HMM 状态切换有滞后；请结合交易决策和风险约束使用。",
     }
 
 
-def _refresh_async(key: str, code: str, limit: int) -> None:
+def _refresh_async(key: str, code: str, limit: int, lookback: int, horizon: int, step: int) -> None:
     with _LOCK:
         if key in _REFRESHING:
             return
@@ -249,7 +251,7 @@ def _refresh_async(key: str, code: str, limit: int) -> None:
 
     def run():
         try:
-            data = _compute(code, limit)
+            data = _compute(code, limit, lookback, horizon, step)
             if not data.get("error"):
                 db.cache_set(key, data)
         except Exception:
@@ -261,21 +263,26 @@ def _refresh_async(key: str, code: str, limit: int) -> None:
     threading.Thread(target=run, daemon=True, name=f"model-history-{code}").start()
 
 
-def model_history(code: str = "000300", limit: int = 1000) -> dict:
-    """Cached walk-forward history; serves a stale result while refreshing."""
+def model_history(code: str = "000300", limit: int = 1000,
+                  lookback: int = LOOKBACK, horizon: int = HORIZON,
+                  step: int | None = None) -> dict:
+    """Cached walk-forward history; horizon/lookback are configurable."""
     code = str(code or "000300")
     if code not in INDEXES:
         raise ValueError(f"不支持的指数代码：{code}")
-    limit = max(LOOKBACK + HORIZON + 100, min(int(limit or 1000), 1600))
-    key = f"model:history:{CACHE_VERSION}:{code}:{limit}"
+    lookback = max(80, min(int(lookback or LOOKBACK), 420))
+    horizon = max(2, min(int(horizon or HORIZON), 20))
+    step = max(1, min(int(step or horizon), horizon))
+    limit = max(lookback + horizon + 100, min(int(limit or 1000), 1600))
+    key = f"model:history:{CACHE_VERSION}:{code}:{limit}:{lookback}:{horizon}:{step}"
     cached = db.cache_get(key)
     if cached:
         age = time.time() - float(cached.get("ts") or 0)
         stale = age > CACHE_TTL
         if stale:
-            _refresh_async(key, code, limit)
+            _refresh_async(key, code, limit, lookback, horizon, step)
         return {**cached, "stale": stale, "age": round(age, 1)}
-    data = _compute(code, limit)
+    data = _compute(code, limit, lookback, horizon, step)
     if not data.get("error"):
         db.cache_set(key, data)
     data["stale"] = False

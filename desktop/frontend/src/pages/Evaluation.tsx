@@ -23,16 +23,18 @@ const STATE_TONE: Record<string, string> = {
 
 export default function Evaluation() {
   const [code, setCode] = useState('000300')
+  const [horizon, setHorizon] = useState(5)
+  const [lookback, setLookback] = useState(220)
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { colors } = useTheme()
 
-  const load = async (next = code) => {
+  const load = async (next = code, nextHorizon = horizon, nextLookback = lookback) => {
     setLoading(true)
     setError('')
     try {
-      const result = await api.get<any>(`/api/models/history?code=${next}&limit=1000`)
+      const result = await api.get<any>(`/api/models/history?code=${next}&limit=1000&horizon=${nextHorizon}&lookback=${nextLookback}`)
       if (result?.error) {
         setError(result.error)
         setData(null)
@@ -50,7 +52,7 @@ export default function Evaluation() {
   useEffect(() => {
     load(code)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code])
+  }, [code, horizon, lookback])
 
   const curve = data?.curve ?? []
   const option = useMemo<EChartsOption>(() => {
@@ -121,6 +123,20 @@ export default function Evaluation() {
           onChange={setCode}
           style={{ width: 132 }}
           popupMatchSelectWidth={false}
+        />
+        <Select
+          size="small"
+          value={horizon}
+          options={[{ label: '持有 3 日', value: 3 }, { label: '持有 5 日', value: 5 }, { label: '持有 10 日', value: 10 }]}
+          onChange={setHorizon}
+          style={{ width: 104 }}
+        />
+        <Select
+          size="small"
+          value={lookback}
+          options={[{ label: '回看 120 日', value: 120 }, { label: '回看 220 日', value: 220 }, { label: '回看 320 日', value: 320 }]}
+          onChange={setLookback}
+          style={{ width: 112 }}
         />
         <span className="muted small">{data ? `${data.lookback} 日回看 · 每 ${data.step} 日评估 · 持有 ${data.horizon} 日` : '滚动 220 日 · 5 日持有'}</span>
         <span className="daily-nav-spacer" />

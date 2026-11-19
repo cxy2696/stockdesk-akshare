@@ -143,11 +143,14 @@ def market_models():
 
 
 @router.get("/api/models/history")
-def models_history(code: str = "000300", limit: int = Query(1000, ge=300, le=1600)):
+def models_history(code: str = "000300", limit: int = Query(1000, ge=300, le=1600),
+                   lookback: int = Query(220, ge=80, le=420),
+                   horizon: int = Query(5, ge=2, le=20)):
     """Walk-forward evaluation of the HMM regime model."""
     from . import evaluation
     try:
-        return ok(evaluation.model_history(code=code, limit=limit))
+        return ok(evaluation.model_history(code=code, limit=limit,
+                                           lookback=lookback, horizon=horizon))
     except ValueError as exc:
         raise HTTPException(400, str(exc))
 

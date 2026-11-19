@@ -53,7 +53,6 @@ export default function Factors() {
   const screening = data?.screening ?? {}
   const classification = data?.classification ?? {}
   const selected = useMemo(() => factors.filter((f: any) => f.selected), [factors])
-  const rejected = useMemo(() => factors.filter((f: any) => !f.selected), [factors])
   const selectedByCategory = useMemo(() => {
     const out: Record<string, number> = {}
     for (const f of selected) out[f.category] = (out[f.category] ?? 0) + 1
@@ -143,12 +142,7 @@ export default function Factors() {
               ),
             },
             { title: '类别', dataIndex: 'category', render: (v: string) => <Tag>{catGroups.find((g: any) => g.key === v)?.label ?? v}</Tag> },
-            { title: '周期', dataIndex: 'horizon', render: (v: string) => <span className="muted small">{v}</span> },
-            { title: '来源', dataIndex: 'source', render: (v: string) => <span className="muted small">{v}</span> },
-            { title: '方向', dataIndex: 'direction', render: (v: number) => <Tag color={v > 0 ? 'green' : 'orange'}>{v > 0 ? '正向' : '反向'}</Tag> },
             { title: '覆盖率', dataIndex: 'coverage', align: 'right', render: (v: number) => <Tag color={coverageTone(v)}>{`${((v ?? 0) * 100).toFixed(1)}%`}</Tag> },
-            { title: '均值', dataIndex: ['stats', 'mean'], align: 'right', render: (v: number) => <span className="num">{fmtZ(v)}</span> },
-            { title: '中位数', dataIndex: ['stats', 'median'], align: 'right', render: (v: number) => <span className="num">{fmtZ(v)}</span> },
             {
               title: '筛选结果',
               dataIndex: 'selected',
@@ -161,12 +155,6 @@ export default function Factors() {
             },
           ]}
         />
-        {rejected.length > 0 && (
-          <div className="muted small" style={{ marginTop: 8 }}>
-            剔除原因：{rejected.slice(0, 4).map((r: any) => `${r.label}（${r.reason}）`).join('；')}
-            {rejected.length > 4 ? ` 等 ${rejected.length} 个` : ''}
-          </div>
-        )}
       </Card>
 
       <Card
@@ -195,7 +183,7 @@ export default function Factors() {
           rowKey="code"
           dataSource={filteredStocks}
           pagination={{ pageSize: 15, size: 'small', showSizeChanger: false }}
-          scroll={{ x: 1180 }}
+          scroll={{ x: 980 }}
           onRow={(r) => ({ onClick: () => nav(`/stock/${r.code}`), style: { cursor: 'pointer' } })}
           columns={[
             {
@@ -218,12 +206,6 @@ export default function Factors() {
                 </div>
               ),
             },
-            ...CATEGORY_ORDER.map((key) => ({
-              title: catGroups.find((g: any) => g.key === key)?.label ?? key,
-              dataIndex: ['scores', key],
-              align: 'right' as const,
-              render: (v: number) => <span className="num muted" style={{ fontSize: 11 }}>{fmtZ(v)}</span>,
-            })),
             { title: '60日动量', dataIndex: 'pct60', align: 'right', render: (v: number) => v == null ? <span className="muted small">源未提供</span> : <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
             { title: '日内动量', dataIndex: 'intraday', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{v == null ? '--' : fmt.pct(v)}</span> },
             { title: '资金占比', dataIndex: 'main_inflow_ratio', align: 'right', render: (v: number) => <span className={`num ${trendClass(v)}`}>{v == null ? '--' : `${v > 0 ? '+' : ''}${Number(v).toFixed(2)}%`}</span> },

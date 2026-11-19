@@ -1267,7 +1267,7 @@ def _sina_region_direct() -> list[dict]:
     import json
     import urllib.request
 
-    cached = db.cache_get("region:sina:enrich:v1", 6 * 3600)
+    cached = db.cache_get("region:sina:enrich:v2", 6 * 3600)
     if cached:
         return cached
     t0 = time.time()
@@ -1304,7 +1304,7 @@ def _sina_region_direct() -> list[dict]:
         # area summary has no membership.  Sina's node endpoint does.
         def enrich(b: dict) -> dict:
             try:
-                members = market.sina_node_members(b["code"], limit=100, pages=1)
+                members = market.sina_node_members(b["code"], limit=2000, pages=20)
             except Exception:
                 return b
             if not members:
@@ -1332,8 +1332,8 @@ def _sina_region_direct() -> list[dict]:
                 if ind:
                     counts[ind] = counts.get(ind, 0) + 1
             b["industries"] = [k for k, _ in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:3]]
-            b["sample_capped"] = True
-            b["source"] = "sina-area-sample"
+            b["sample_capped"] = False
+            b["source"] = "sina-area-full"
             return b
 
         try:
@@ -1343,7 +1343,7 @@ def _sina_region_direct() -> list[dict]:
             pass
         out.sort(key=lambda x: x["count"], reverse=True)
         if out:
-            db.cache_set("region:sina:enrich:v1", out)
+            db.cache_set("region:sina:enrich:v2", out)
         source_health.mark("sina", bool(out), time.time() - t0, "regions")
         return out
     except Exception as exc:
@@ -1417,7 +1417,7 @@ def _sina_region_rows() -> list[dict]:
 
 
 def company_distribution() -> dict:
-    cached = db.cache_get("market:company-map:v1", 600)
+    cached = db.cache_get("market:company-map:v3", 600)
     if cached:
         return cached
     # Sina's compact area table answers in ~0.2 s; Eastmoney's push2 list often
@@ -1425,7 +1425,7 @@ def company_distribution() -> dict:
     # source for first paint; the capped sample is explicitly labelled in UI.
     direct = _sina_region_direct()
     if direct:
-        capped = True
+        capped = any(bool(x.get("sample_capped")) for x in direct)
         universe = 0
         try:
             spot = market.cached_spot() or {}
@@ -1433,8 +1433,8 @@ def company_distribution() -> dict:
         except Exception:
             universe = 0
         result = {"total": sum(x["count"] for x in direct), "total_universe": universe or None,
-                  "capped": capped, "source": "sina-area", "provinces": direct, "updated": time.time()}
-        db.cache_set("market:company-map:v1", result)
+                  "capped": capped, "source": (direct[0].get("source") if direct else "sina-area"), "provinces": direct, "updated": time.time()}
+        db.cache_set("market:company-map:v3", result)
         return result
     url = (
         "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3"
@@ -1478,18 +1478,18 @@ def company_distribution() -> dict:
         "provinces": out, "updated": time.time(),
     }
     if out:
-        db.cache_set("market:company-map:v1", result)
+        db.cache_set("market:company-map:v3", result)
     return result
 
 def province_leaders() -> dict:
-    cached = db.cache_get("market:province-leaders:v1", 600)
+    cached = db.cache_get("market:province-leaders:v3", 600)
     if cached:
         return cached
     dist = company_distribution()
     provinces = dist.get("provinces", [])
     if provinces and provinces[0].get("leaders"):
         result = {"updated": time.time(), "provinces": [{**p, "industries": []} for p in provinces]}
-        db.cache_set("market:province-leaders:v1", result)
+        db.cache_set("market:province-leaders:v3", result)
         return result
 
     def fetch(p: dict) -> dict:
@@ -1526,5 +1526,5 @@ def province_leaders() -> dict:
         out = [fetch(p) for p in provinces]
     result = {"updated": time.time(), "provinces": out}
     if out:
-        db.cache_set("market:province-leaders:v1", result)
+        db.cache_set("market:province-leaders:v3", result)
     return result
