@@ -589,14 +589,28 @@ def _percolation(rows: list[dict], min_n: int = 100, with_grid: bool = True, lig
     }
     if with_grid:
         groups: dict[str, list[dict]] = {}
-        missing_industry = sum(1 for r in rows if not r.get("industry"))
+        # Prefer the bundled Sina industry mapping when the quote source left
+        # f100 blank.  Falling back to 沪市主板/深市主板 made the model's
+        # "industry focus" a duplicate of the market boards and hid real
+        # sector structure.
+        enriched = []
+        for r in rows:
+            item = dict(r)
+            if not item.get("industry"):
+                item["industry"] = market.industry_name(str(item.get("code") or ""))
+            enriched.append(item)
+        missing_industry = sum(1 for r in enriched if not r.get("industry"))
         group_by_market = missing_industry > n * 0.6
+        rows = enriched
         for r in rows:
             key = r.get("industry") if not group_by_market else (r.get("market") or "其他")
             groups.setdefault(key or "其他", []).append(r)
         industries = []
         for name, rr in sorted(groups.items(), key=lambda kv: len(kv[1]), reverse=True)[:20]:
-            if len(rr) < 8:
+            # "其他" is a fallback bucket, not a tradeable industry; showing it
+            # as the largest focus card was misleading and pushed real sectors
+            # off the page.
+            if name == "其他" or len(rr) < 8:
                 continue
             p = _percolation(rr, min_n=8, with_grid=False, light=True)
             if not p:
@@ -887,7 +901,7 @@ def model_snapshot() -> dict:
     the page usable, with the timestamp visible.
     """
     global _MODEL_REFRESHING
-    cached = db.cache_get("market:models:v10")
+    cached = db.cache_get("market:models:v11")
     if cached:
         age = time.time() - float(cached.get("ts") or 0)
         if age > 600:
@@ -900,7 +914,7 @@ def model_snapshot() -> dict:
 
 
 def _compute_model_snapshot() -> dict:
-    cached = db.cache_get("market:models:v10", 600)
+    cached = db.cache_get("market:models:v11", 600)
     if cached:
         return cached
     rows = (market.fetch_spot(ttl=600) or {}).get("rows") or []
@@ -977,5 +991,5 @@ def _compute_model_snapshot() -> dict:
         "conclusion": conclusion,
         "model_meta": model_registry.meta(),
     }
-    db.cache_set("market:models:v10", out)
+    db.cache_set("market:models:v11", out)
     return out

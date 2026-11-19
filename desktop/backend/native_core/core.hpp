@@ -161,6 +161,8 @@ FibResult fibonacci(const double *highs, const double *lows, const double *close
 
 /// Column-wise z-score standardisation; non-finite cells become 0.
 std::vector<double> standardize_matrix(const double *values, std::size_t rows, std::size_t cols);
+std::vector<double> standardize_matrix_fit(const double *values, std::size_t rows,
+                                           std::size_t cols, std::size_t fit_rows);
 
 /// Cross-sectional factor rank/composite/percentile kernel.
 ///

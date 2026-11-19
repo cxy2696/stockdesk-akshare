@@ -82,12 +82,12 @@ export default function Forecast() {
           <>
             <div className="grid-3" style={{ marginBottom: 12 }}>
               <Kpi label="上涨概率（未来5日）" value={`${Math.round((ml.prob_up || 0) * 100)}%`} color={(ml.prob_up || 0) >= 0.55 ? 'var(--up)' : (ml.prob_up || 0) <= 0.45 ? 'var(--down)' : undefined} sub={`${ml.direction} · 不是收益承诺`} />
-              <Kpi label="验证准确率" value={`${Math.round((ml.accuracy || 0) * 100)}%`} sub={`基线 ${Math.round((ml.base_rate || 0) * 100)}% · logloss ${ml.logloss}`} />
+              <Kpi label="验证准确率 / AUC" value={`${Math.round((ml.accuracy || 0) * 100)}% / ${ml.auc ?? '--'}`} sub={`基线 ${Math.round((ml.base_rate || 0) * 100)}% · logloss ${ml.logloss}`} />
               <Kpi label="样本 / 特征" value={`${ml.train_samples} / ${ml.valid_samples}`} sub={`Alpha158 ${ml.alpha158_count} · 入选 ${ml.feature_count}`} />
             </div>
             <div className="small" style={{ lineHeight: 1.85, marginBottom: 8 }}>
               模型用 {ml.bars} 根 K 线，按时间前 {Math.round((ml.train_samples / Math.max(1, ml.train_samples + ml.valid_samples)) * 100)}% 训练、后段验证；
-              标签是未来 5 个交易日方向。验证准确率接近基线时，不要把它当方向预测器，只作为因子有效性的参考。
+              标签是未来 5 个交易日方向；训练后隔离 {ml.embargo ?? 5} 天再验证，标准化只用训练段统计量（{ml.standardization ?? 'train-only'}）。验证准确率接近基线、AUC 不高时，不要把它当方向预测器，只作为因子有效性的参考。
             </div>
             <Table
               size="small"

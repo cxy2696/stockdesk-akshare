@@ -44,10 +44,6 @@ def load_bars(code: str, limit: int = 1400) -> list[dict]:
                          secid_override=sec)
 
 
-def _q(series: pd.Series, q: float) -> pd.Series:
-    return series.rolling(20, min_periods=10).quantile(q)
-
-
 def build_alpha158(rows: list[dict]) -> pd.DataFrame:
     """Return exactly 158 causal OHLCV factors (Alpha158-compatible names)."""
     df = pd.DataFrame(rows)
@@ -152,16 +148,24 @@ def select_features(frame: pd.DataFrame, count: int = FEATURE_COUNT) -> list[str
     return selected
 
 
-def standardize(matrix: np.ndarray) -> np.ndarray:
-    """C++ column standardisation; missing cells become neutral 0."""
+def standardize(matrix: np.ndarray, fit_rows: int | None = None) -> np.ndarray:
+    """C++ column standardisation; fit statistics can be restricted to train.
+
+    ``fit_rows`` prevents the validation/live part from leaking its mean and
+    volatility into the training transform.
+    """
     arr = np.asarray(matrix, dtype=float)
+    if fit_rows is None:
+        fit_rows = len(arr)
+    fit_rows = max(1, min(int(fit_rows), len(arr)))
     if native.NATIVE:
         try:
-            return np.asarray(native.native.standardize_matrix(arr), dtype=float)
+            return np.asarray(native.native.standardize_matrix_fit(arr, fit_rows), dtype=float)
         except Exception:
             pass
-    means = np.nanmean(arr, axis=0)
-    stds = np.nanstd(arr, axis=0)
+    train = arr[:fit_rows]
+    means = np.nanmean(train, axis=0)
+    stds = np.nanstd(train, axis=0)
     stds[~np.isfinite(stds) | (stds <= 1e-12)] = 1.0
     out = (arr - means) / stds
     return np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
@@ -180,21 +184,32 @@ def train_predict(code: str = "000300", limit: int = 1400) -> dict:
         return {"available": False, "reason": f"K线不足（{len(rows)} 根，至少 320 根）",
                 "alpha158_count": 0, "feature_count": 0, "code": code}
     frame = build_alpha158(rows)
-    feature_names = select_features(frame)
+    closes = pd.to_numeric(pd.Series([r["close"] for r in rows]), errors="coerce").to_numpy(float)
+    y_all = _targets(closes)
+    raw_split = max(220, int(len(rows) * 0.8))
+    # Feature selection must also be fitted on the past only; using the full
+    # frame would let future variance choose today's features.
+    feature_names = select_features(frame.iloc[:raw_split])
+    if len(feature_names) < FEATURE_COUNT:
+        feature_names = select_features(frame)
     if len(feature_names) < FEATURE_COUNT:
         return {"available": False, "reason": f"有效因子不足（{len(feature_names)}/48）",
                 "alpha158_count": len(frame.columns), "feature_count": len(feature_names), "code": code}
-    closes = pd.to_numeric(pd.Series([r["close"] for r in rows]), errors="coerce").to_numpy(float)
-    y_all = _targets(closes)
-    X_all = standardize(frame[feature_names].to_numpy(float))
+    X_raw = frame[feature_names].to_numpy(float)
     valid = np.isfinite(y_all) & np.isfinite(closes)
-    X = X_all[valid]
+    X = X_raw[valid]
     y = y_all[valid].astype(int)
     n = len(X)
     split = max(200, int(n * 0.8))
-    if n - split < 40:
-        return {"available": False, "reason": "验证样本不足", "alpha158_count": len(frame.columns),
-                "feature_count": len(feature_names), "code": code}
+    embargo = HORIZON
+    valid_start = split + embargo
+    if n - valid_start < 40:
+        return {"available": False, "reason": "验证样本不足（含 5 日隔离期）",
+                "alpha158_count": len(frame.columns), "feature_count": len(feature_names), "code": code}
+    X = standardize(X, fit_rows=split)
+    # The last completed bar is transformed with training statistics only.
+    live_X = np.vstack([X_raw[valid][:split], X_raw[-1:]])
+    live_X = standardize(live_X, fit_rows=split)[-1:]
     try:
         # PyInstaller may omit scipy.sparse even though LightGBM imports it for
         # optional sparse-matrix support.  We only pass dense numpy arrays, so
@@ -230,26 +245,36 @@ def train_predict(code: str = "000300", limit: int = 1400) -> dict:
             "lambda_l2": 1.0, "seed": 42, "num_threads": 2,
         }
         dtrain = lgb.Dataset(X[:split], label=y[:split], feature_name=feature_names)
-        dvalid = lgb.Dataset(X[split:], label=y[split:], reference=dtrain)
+        dvalid = lgb.Dataset(X[valid_start:], label=y[valid_start:], reference=dtrain)
         booster = lgb.train(params, dtrain, num_boost_round=400,
                             valid_sets=[dvalid],
                             callbacks=[lgb.early_stopping(30, verbose=False), lgb.log_evaluation(0)])
-        prob_valid = booster.predict(X[split:])
+        prob_valid = booster.predict(X[valid_start:])
         pred = (prob_valid >= 0.5).astype(int)
-        acc = float((pred == y[split:]).mean())
+        acc = float((pred == y[valid_start:]).mean())
+        yv = y[valid_start:]
+        # Rank AUC is threshold-free and more honest than accuracy when the
+        # positive class is imbalanced.
+        order = np.argsort(prob_valid)
+        ranks = np.empty_like(order, dtype=float)
+        ranks[order] = np.arange(1, len(prob_valid) + 1)
+        n_pos = int(yv.sum())
+        n_neg = int(len(yv) - n_pos)
+        auc = ((ranks[yv == 1].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
+               if n_pos and n_neg else 0.5)
         eps = 1e-6
-        logloss = float(-np.mean(y[split:] * np.log(np.clip(prob_valid, eps, 1 - eps)) +
-                                 (1 - y[split:]) * np.log(np.clip(1 - prob_valid, eps, 1 - eps))))
-        live_X = X_all[-1:]
+        logloss = float(-np.mean(y[valid_start:] * np.log(np.clip(prob_valid, eps, 1 - eps)) +
+                                 (1 - y[valid_start:]) * np.log(np.clip(1 - prob_valid, eps, 1 - eps))))
         prob_up = float(booster.predict(live_X)[0])
         gain = booster.feature_importance(importance_type="gain")
         top = sorted(zip(feature_names, gain.tolist()), key=lambda kv: kv[1], reverse=True)[:8]
         return {
             "available": True, "code": code, "source": f"LightGBM {lgb.__version__}",
             "alpha158_count": int(frame.columns.size), "feature_count": len(feature_names),
-            "train_samples": split, "valid_samples": n - split,
-            "accuracy": round(acc, 3), "logloss": round(logloss, 4),
-            "base_rate": round(float(y[split:].mean()), 3),
+            "train_samples": split, "valid_samples": n - valid_start,
+            "embargo": embargo, "standardization": "train-only C++ fit",
+            "accuracy": round(acc, 3), "auc": round(float(auc), 3), "logloss": round(logloss, 4),
+            "base_rate": round(float(y[valid_start:].mean()), 3),
             "prob_up": round(prob_up, 4),
             "direction": "偏多" if prob_up >= 0.55 else ("偏空" if prob_up <= 0.45 else "中性"),
             "top_features": [{"name": k, "gain": round(float(v), 2)} for k, v in top],
@@ -265,7 +290,7 @@ def train_predict(code: str = "000300", limit: int = 1400) -> dict:
 
 
 def forecast(code: str = "000300") -> dict:
-    key = f"ml:forecast:{code}"
+    key = f"ml:forecast:v2:{code}"
     cached = db.cache_get(key, CACHE_TTL)
     if cached:
         return cached
