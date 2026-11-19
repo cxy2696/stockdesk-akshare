@@ -25,7 +25,7 @@ _CACHE_ITEMS = [
     ("daily", "market:daily:v12", "每日策略", 120),
     ("index", "market:index-analysis:v2", "指数分析", 300),
     ("models", "market:models:v13", "量化模型", 600),
-    ("evaluation", "model:history:v3:000300:1000:220:5:5", "历史测评", 1800),
+    ("evaluation", "model:history:v4:000300:1000:220:5:5", "历史测评", 1800),
 ]
 
 _REFRESH_LOCK = threading.Lock()
@@ -153,7 +153,7 @@ def _refresh_worker(target: str) -> None:
             from . import models
             models.model_snapshot()
         elif target == "evaluation":
-            for key in ("model:history:v3:000300:1000:220:5:5",):
+            for key in ("model:history:v4:000300:1000:220:5:5",):
                 db.cache_delete(key)
             from . import evaluation
             evaluation.model_history("000300", 1000)

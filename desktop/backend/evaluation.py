@@ -38,7 +38,7 @@ LOOKBACK = 220
 HORIZON = 5
 STEP = 5
 CACHE_TTL = 1800
-CACHE_VERSION = "v3"
+CACHE_VERSION = "v4"
 
 _LOCK = threading.Lock()
 _REFRESHING: set[str] = set()
@@ -168,6 +168,18 @@ def _compute(code: str, limit: int, lookback: int = LOOKBACK, horizon: int = HOR
 
     directional = [r for r in records if r["expected_5d"] is not None or r["prob_up"] is not None]
     hits = sum(1 for r in directional if r["hit"])
+    n_dir = len(directional)
+    # Wilson interval: a 58% hit rate on 20 samples is not the same evidence as
+    # 58% on 150 samples, and the UI should show that uncertainty.
+    if n_dir:
+        p_hat = hits / n_dir
+        z = 1.959963984540054
+        denom = 1 + z * z / n_dir
+        center = (p_hat + z * z / (2 * n_dir)) / denom
+        half = z * math.sqrt((p_hat * (1 - p_hat) + z * z / (4 * n_dir)) / n_dir) / denom
+        hit_ci = [round(max(0.0, center - half), 3), round(min(1.0, center + half), 3)]
+    else:
+        hit_ci = None
     expected_values = [r["expected_5d"] for r in records if r["expected_5d"] is not None]
     actual_values = [r["actual_5d"] for r in records if r["expected_5d"] is not None]
     correlation = None
@@ -221,6 +233,8 @@ def _compute(code: str, limit: int, lookback: int = LOOKBACK, horizon: int = HOR
         "end": dates[-1],
         "samples": len(records),
         "hit_rate": round(hits / len(directional), 3) if directional else None,
+        "hit_rate_ci95": hit_ci,
+        "hit_baseline": 0.5,
         "correlation": round(correlation, 3) if correlation is not None else None,
         "mae": round(sum(abs(a - e) for e, a in zip(expected_values, actual_values)) / len(expected_values), 2) if expected_values else None,
         "expected_avg": round(sum(expected_values) / len(expected_values), 2) if expected_values else None,

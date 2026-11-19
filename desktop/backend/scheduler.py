@@ -55,7 +55,7 @@ def _cache_keys() -> dict[str, tuple[str, str]]:
         "daily": ("market:daily:v12", "每日策略"),
         "index": ("market:index-analysis:v2", "指数分析"),
         "models": ("market:models:v13", "量化模型"),
-        "evaluation": ("model:history:v3:000300:1000:220:5:5", "历史测评"),
+        "evaluation": ("model:history:v4:000300:1000:220:5:5", "历史测评"),
         "factors": ("factor:screen:6000:30000000.0:1", "因子筛选"),
     }
 

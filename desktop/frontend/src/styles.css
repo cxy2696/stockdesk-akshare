@@ -4254,3 +4254,11 @@ html, body { overflow-x: hidden; }
 .daily-index-price { font-size: 17px; font-weight: 600; }
 .daily-index-note { font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 900px) { .daily-index-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Evaluation: one verdict line replaces a fifth KPI and the long reading card. */
+.evaluation-verdict { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 10px 0 2px; padding: 8px 0; border-top: 1px solid var(--border-soft); font-size: calc(11px * var(--fs, 1)); }
+.evaluation-verdict b { font-size: calc(13px * var(--fs, 1)); }
+.evaluation-verdict b.up { color: var(--up); }
+.evaluation-verdict b.down { color: var(--down); }
+.evaluation-verdict .muted:last-child { margin-left: auto; }
+@media (max-width: 900px) { .evaluation-verdict .muted:last-child { margin-left: 0; } }

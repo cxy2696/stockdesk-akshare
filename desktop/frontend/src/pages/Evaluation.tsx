@@ -110,7 +110,13 @@ export default function Evaluation() {
 
   const stateRows = data?.by_state ?? []
   const calRows = data?.calibration ?? []
-  const recent = data?.recent ?? []
+  const recent = (data?.recent ?? []).slice(0, 10)
+  const h = data?.horizon ?? horizon
+  const hit = data?.hit_rate
+  const corr = data?.correlation
+  const ci = data?.hit_rate_ci95
+  const edge = hit == null ? '样本不足' : (ci && ci[0] > 0.5 && (corr == null || corr > 0)) ? '方向有优势' : hit <= 0.45 ? '方向偏弱' : '方向不稳定'
+  const edgeTone = edge === '方向有优势' ? 'up' : edge === '方向偏弱' ? 'down' : 'muted'
 
   return (
     <div>
@@ -163,18 +169,12 @@ export default function Evaluation() {
             />
             <Kpi
               label="方向命中率"
-              value={data.hit_rate == null ? '--' : `${(data.hit_rate * 100).toFixed(1)}%`}
-              color={data.hit_rate >= 0.5 ? 'var(--up)' : 'var(--text)'}
-              sub={<span className="muted">预期方向 vs 实际 5 日方向</span>}
+              value={hit == null ? '--' : `${(hit * 100).toFixed(1)}%`}
+              color={hit >= 0.5 ? 'var(--up)' : 'var(--text)'}
+              sub={<span className="muted">实际 {h} 日方向 · CI {data.hit_rate_ci95 ? `${(data.hit_rate_ci95[0] * 100).toFixed(0)}–${(data.hit_rate_ci95[1] * 100).toFixed(0)}%` : '--'} · 相关 {corr == null ? '--' : corr.toFixed(2)}</span>}
             />
             <Kpi
-              label="预测相关性"
-              value={data.correlation == null ? '--' : data.correlation.toFixed(2)}
-              color={data.correlation > 0 ? 'var(--up)' : 'var(--text)'}
-              sub={<span className="muted">预期收益与实际收益的 Pearson 相关</span>}
-            />
-            <Kpi
-              label="模型仓位"
+              label="模型仓位收益"
               value={fmt.pct(data.strategy_return * 100)}
               color={data.strategy_return >= 0 ? 'var(--up)' : 'var(--down)'}
               sub={<span className="muted">买入持有 {fmt.pct(data.benchmark_return * 100)} · 超额 {fmt.pct(data.excess_return * 100)}</span>}
@@ -183,8 +183,13 @@ export default function Evaluation() {
               label="最大回撤"
               value={fmt.pct(data.max_drawdown * 100)}
               color="var(--down)"
-              sub={<span className="muted">基准回撤 {fmt.pct(data.benchmark_drawdown * 100)} · 夏普 {data.sharpe ?? '--'}</span>}
+              sub={<span className="muted">基准 {fmt.pct(data.benchmark_drawdown * 100)} · 夏普 {data.sharpe ?? '--'}</span>}
             />
+          </div>
+          <div className="evaluation-verdict">
+            <b className={edgeTone}>{edge}</b>
+            <span className="muted">命中率 {hit == null ? '--' : `${(hit * 100).toFixed(1)}%`} · 50% 为随机 · 样本 {data.samples} 期 · 回看 {data.lookback} 日 · 持有 {h} 日</span>
+            <span className="muted">先看样本和回撤，再看命中率；这是样本外检验，不是收益承诺。</span>
           </div>
 
           <div style={{ marginTop: 14 }}>
@@ -195,13 +200,13 @@ export default function Evaluation() {
             >
               <EChart option={option} height={300} />
               <div className="muted small" style={{ marginTop: 6, lineHeight: 1.7 }}>
-                这是一段滚动样本外检验，不是未来收益承诺。每 5 个交易日重训一次 HMM，信号只使用当日及以前的数据，持有 5 日再结算。
+                滚动样本外检验；每 {data.step} 个交易日重训 HMM，信号只使用当日及以前的数据，持有 {h} 日结算。不是未来收益承诺。
               </div>
             </Card>
           </div>
 
           <div className="grid-2" style={{ marginTop: 14, alignItems: 'start' }}>
-            <Card title="分状态表现" desc="状态、样本、实际 5 日平均收益与方向命中">
+            <Card title="分状态表现" desc={`状态、样本、实际 ${h} 日平均收益与方向命中`}>
               <Table
                 size="small"
                 rowKey="state"
@@ -214,7 +219,7 @@ export default function Evaluation() {
                     render: (v: string) => <Tag color={STATE_TONE[v] ?? 'default'} style={{ marginInlineEnd: 0 }}>{v}</Tag>,
                   },
                   { title: '样本', dataIndex: 'count', align: 'right' as const },
-                  { title: '实际 5 日', dataIndex: 'actual_avg', align: 'right' as const, render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+                  { title: `实际 ${h} 日`, dataIndex: 'actual_avg', align: 'right' as const, render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
                   { title: '命中率', dataIndex: 'hit_rate', align: 'right' as const, render: (v: number | null) => (v == null ? '--' : `${(v * 100).toFixed(0)}%`) },
                   { title: '平均置信', dataIndex: 'confidence', align: 'right' as const, render: (v: number | null) => (v == null ? '--' : `${(v * 100).toFixed(0)}%`) },
                 ]}
@@ -239,8 +244,8 @@ export default function Evaluation() {
 
           <div style={{ marginTop: 14 }}>
             <Card
-              title="最近 24 期记录"
-              desc="状态、预测方向、实际 5 日收益与模型仓位"
+              title="最近 10 期"
+              desc={`状态、预测方向、实际 ${h} 日收益与模型仓位`}
               extra={<span className="muted small">按时间倒序 · 绿=命中 / 红=未命中</span>}
             >
               <Table
@@ -253,9 +258,9 @@ export default function Evaluation() {
                   { title: '日期', dataIndex: 'date', width: 96, render: (v: string) => <span className="mono small">{v}</span> },
                   { title: '状态', dataIndex: 'state', width: 72, render: (v: string) => <span style={{ color: STATE_TONE[v] ?? 'var(--text-sub)', fontWeight: 600 }}>{v}</span> },
                   { title: '置信', dataIndex: 'confidence', width: 62, align: 'right' as const, render: (v: number) => (v == null ? '--' : `${(v * 100).toFixed(0)}%`) },
-                  { title: '预期 5 日', dataIndex: 'expected_5d', width: 88, align: 'right' as const, render: (v: number | null) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+                  { title: `预期 ${h} 日`, dataIndex: 'expected_5d', width: 88, align: 'right' as const, render: (v: number | null) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
                   { title: '上涨概率', dataIndex: 'prob_up', width: 78, align: 'right' as const, render: (v: number | null) => (v == null ? '--' : `${(v * 100).toFixed(0)}%`) },
-                  { title: '实际 5 日', dataIndex: 'actual_5d', width: 88, align: 'right' as const, render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+                  { title: `实际 ${h} 日`, dataIndex: 'actual_5d', width: 88, align: 'right' as const, render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
                   { title: '结果', dataIndex: 'hit', width: 66, align: 'center' as const, render: (v: boolean) => <span style={{ color: v ? 'var(--up)' : 'var(--down)', fontWeight: 600 }}>{v ? '命中' : '未中'}</span> },
                   { title: '仓位', dataIndex: 'exposure', width: 62, align: 'right' as const, render: (v: number) => `${(v * 100).toFixed(0)}%` },
                 ]}
@@ -263,23 +268,6 @@ export default function Evaluation() {
             </Card>
           </div>
 
-          <div style={{ marginTop: 14 }}>
-            <Card title="怎么读这份测评" desc="先看样本和回撤，再看命中率">
-              <div className="small" style={{ display: 'grid', gap: 6, color: 'var(--text-sub)', lineHeight: 1.8 }}>
-                <div>· 命中率只看方向，不代表赚多少；预测相关为负说明这段样本里模型方向没有优势。</div>
-                <div>· 模型仓位是状态映射的机械执行，不含选股、止损和人工判断，和“策略回测”不是同一件事。</div>
-                <div>· 5 日持有、非重叠样本约 {data.samples} 期；样本越长越可靠，但市场结构变化也会让旧样本失效。</div>
-              </div>
-              <More title="方法、成本与边界" desc="滚动窗口 · 持有期 · 不构成投资建议">
-                <div className="small" style={{ lineHeight: 1.85, color: 'var(--text-sub)' }}>
-                  <p style={{ margin: 0 }}><b>样本：</b>{data.name}，{data.bars} 根日线，回看 {data.lookback} 日，每 {data.step} 个交易日评估一次，持有 {data.horizon} 日；共 {data.samples} 期。</p>
-                  <p style={{ margin: '6px 0 0' }}><b>预测：</b>{data.method}</p>
-                  <p style={{ margin: '6px 0 0' }}><b>边界：</b>{data.caveat}</p>
-                  <p style={{ margin: '6px 0 0' }}><b>成本：</b>每次仓位变化按 0.05% 计；不含滑点、税费和选股误差。</p>
-                </div>
-              </More>
-            </Card>
-          </div>
         </>
       )}
     </div>
