@@ -901,7 +901,7 @@ def model_snapshot() -> dict:
     the page usable, with the timestamp visible.
     """
     global _MODEL_REFRESHING
-    cached = db.cache_get("market:models:v12")
+    cached = db.cache_get("market:models:v13")
     if cached:
         age = time.time() - float(cached.get("ts") or 0)
         if age > 600:
@@ -914,7 +914,7 @@ def model_snapshot() -> dict:
 
 
 def _compute_model_snapshot() -> dict:
-    cached = db.cache_get("market:models:v12", 600)
+    cached = db.cache_get("market:models:v13", 600)
     if cached:
         return cached
     rows = (market.fetch_spot(ttl=600) or {}).get("rows") or []
@@ -961,13 +961,19 @@ def _compute_model_snapshot() -> dict:
         if code == "000300":
             hmm = h
 
+    # The primary index can fail independently (network/rate-limit).  Do not
+    # leave the entire conclusion without an HMM leg: use the first successfully
+    # fitted index and report the real coverage instead of hard-coding "5".
+    if not hmm and hmm_indices:
+        hmm = hmm_indices[0]
     states = [x.get("state") for x in hmm_indices]
     counts = {s: states.count(s) for s in STATE_LABELS}
     dominant = max(counts, key=counts.get) if counts else "震荡"
     same = sum(1 for s in states if s == dominant)
     hmm_summary = {
-        "dominant": dominant, "counts": counts,
-        "text": (f"5 个核心指数里 {counts.get('强势', 0)} 个强势、{counts.get('震荡', 0)} 个震荡、"
+        "dominant": dominant, "counts": counts, "coverage": len(hmm_indices), "expected": len(A_INDICES),
+        "text": (f"{len(hmm_indices)}/{len(A_INDICES)} 个核心指数完成拟合："
+                 f"{counts.get('强势', 0)} 个强势、{counts.get('震荡', 0)} 个震荡、"
                  f"{counts.get('弱势', 0)} 个弱势，{same} 个方向一致；整体以{dominant}为主。"),
     }
     perc = _percolation(rows)
@@ -991,5 +997,5 @@ def _compute_model_snapshot() -> dict:
         "conclusion": conclusion,
         "model_meta": model_registry.meta(),
     }
-    db.cache_set("market:models:v12", out)
+    db.cache_set("market:models:v13", out)
     return out

@@ -218,8 +218,8 @@ _TTL_RULES = (
     ("concepts:", 30 * 86400),
 )
 _PROTECTED_KEYS = (
-    "spot:v7", "market:state:v2", "market:daily:v11", "market:index-analysis:v1",
-    "market:models:v12", "model:history:v2:000300:1000",
+    "spot:v7", "market:state:v2", "market:daily:v12", "market:index-analysis:v1",
+    "market:models:v13", "model:history:v2:000300:1000",
     "factor:screen:6000:30000000.0:1",
 )
 

@@ -4175,3 +4175,6 @@ html, body { overflow-x: hidden; }
 .model-health em { font-style: normal; font-size: calc(9px * var(--fs, 1)); color: var(--text-sub); }
 .model-health .model-health-note { grid-column: 1 / -1; font-size: calc(10px * var(--fs, 1)); color: var(--text-sub); line-height: 1.7; }
 @media (max-width: 900px) { .model-health { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Daily brief: hide empty industry columns instead of leaving a large blank block. */
+.sector-columns.concepts-only { grid-template-columns: 1fr; }

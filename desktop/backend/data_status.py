@@ -22,9 +22,9 @@ _SOURCE_REGISTRY = [
 _CACHE_ITEMS = [
     ("spot", market.SPOT_KEY, "全市场快照", 180),
     ("state", "market:state:v2", "行情状态", 120),
-    ("daily", "market:daily:v11", "每日策略", 120),
+    ("daily", "market:daily:v12", "每日策略", 120),
     ("index", "market:index-analysis:v1", "指数分析", 300),
-    ("models", "market:models:v12", "量化模型", 600),
+    ("models", "market:models:v13", "量化模型", 600),
     ("evaluation", "model:history:v2:000300:1000", "历史测评", 1800),
 ]
 
@@ -141,7 +141,7 @@ def _refresh_worker(target: str) -> None:
             from . import state
             state.market_state(light=False)
         elif target == "daily":
-            db.cache_delete("market:daily:v11")
+            db.cache_delete("market:daily:v12")
             from . import daily
             daily.daily_brief()
         elif target == "index":
@@ -149,7 +149,7 @@ def _refresh_worker(target: str) -> None:
             from . import state
             state.index_analysis()
         elif target == "models":
-            db.cache_delete("market:models:v12")
+            db.cache_delete("market:models:v13")
             from . import models
             models.model_snapshot()
         elif target == "evaluation":

@@ -92,19 +92,6 @@ export default function Daily() {
 
   return (
     <div className="daily-page">
-      <div className="daily-nav">
-        <span className="daily-nav-label">页面导航</span>
-        {[
-          ['daily-market', '今日结论'],
-          ['daily-industry', '行业'],
-          ['daily-picks', '今日标的'],
-        ].map(([id, label]) => (
-          <button key={id} className="daily-nav-chip" onClick={() => jump(id)}>{label}</button>
-        ))}
-        <span className="daily-nav-spacer" />
-        <Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button>
-      </div>
-
       <Card
         title={`每日行情 · ${brief.date}`}
         desc={`${brief.status?.label ?? ''} · 数据 ${new Date((brief.ts ?? 0) * 1000).toLocaleTimeString('zh-CN', { hour12: false })}`}
@@ -153,23 +140,23 @@ export default function Daily() {
           </div>
         </div>
 
-        <div className="sector-columns">
-          <div>
+        <div className={`sector-columns ${!(brief.sectors?.top ?? []).length && !(brief.sectors?.bottom ?? []).length ? 'concepts-only' : ''}`}>
+          {(brief.sectors?.top ?? []).length > 0 && <div>
             <div className="muted small">领涨行业</div>
             <div className="sector-list">
               {(brief.sectors?.top ?? []).map((x: any) => (
                 <div key={x.code} className="sector-row"><span>{x.name}</span><b className={trendClass(x.pct)}>{fmt.pct(x.pct)}</b></div>
               ))}
             </div>
-          </div>
-          <div>
+          </div>}
+          {(brief.sectors?.bottom ?? []).length > 0 && <div>
             <div className="muted small">靠后行业</div>
             <div className="sector-list">
               {(brief.sectors?.bottom ?? []).map((x: any) => (
                 <div key={x.code} className="sector-row"><span>{x.name}</span><b className={trendClass(x.pct)}>{fmt.pct(x.pct)}</b></div>
               ))}
             </div>
-          </div>
+          </div>}
           <div>
             <div className="muted small">领涨概念</div>
             <div className="sector-list">
