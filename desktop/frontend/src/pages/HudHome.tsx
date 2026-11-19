@@ -14,11 +14,10 @@ import { fmt, trendClass } from '../utils'
 const LEFT = [
   { key: '/daily', label: '每日策略', en: 'Daily Plan', icon: <CalendarOutlined /> },
   { key: '/screener', label: '板块跟踪', en: 'Sectors', icon: <FundOutlined /> },
-  { key: '/analytics', label: '收益复盘', en: 'Review', icon: <PieChartOutlined /> },
+  { key: '/decision', label: '交易决策', en: 'Decision', icon: <CompassOutlined /> },
 ]
 
 const RIGHT = [
-  { key: '/decision', label: '交易决策', en: 'Decision', icon: <CompassOutlined /> },
   { key: '/evaluation', label: '历史测评', en: 'Evaluation', icon: <HistoryOutlined /> },
   { key: '/forecast', label: '市场预测', en: 'Forecast', icon: <RadarChartOutlined /> },
   { key: '/backtest', label: '策略回测', en: 'Backtest', icon: <ExperimentOutlined /> },

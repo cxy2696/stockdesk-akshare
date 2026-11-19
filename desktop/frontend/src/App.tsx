@@ -38,7 +38,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Watchlist = lazy(() => import('./pages/Watchlist'))
 const StockDetail = lazy(() => import('./pages/StockDetail'))
 const Portfolio = lazy(() => import('./pages/Portfolio'))
-const Analytics = lazy(() => import('./pages/Analytics'))
 const Backtest = lazy(() => import('./pages/Backtest'))
 const Factors = lazy(() => import('./pages/Factors'))
 const MarketBoard = lazy(() => import('./pages/MarketBoard'))
@@ -62,7 +61,6 @@ const EN_NAV: Record<string, { label: string; title: string; sub: string }> = {
   '/evaluation': { label: 'Evaluation', title: 'Model Evaluation', sub: 'Walk-forward hit rate and equity' },
   '/watchlist': { label: 'Watchlist', title: 'Watchlist', sub: 'Symbols you follow' },
   '/portfolio': { label: 'Portfolio', title: 'Portfolio', sub: 'Positions · analysis · advice · trades' },
-  '/analytics': { label: 'Review', title: 'Performance Review', sub: 'NAV · drawdown · statistics' },
   '/backtest': { label: 'Backtest', title: 'Strategy Backtest', sub: 'Test rules on historical data' },
   '/factors': { label: 'Factors', title: 'Factor Screen', sub: 'Factor classification · cross-sectional screen' },
   '/screener': { label: 'Sectors', title: 'Sector Tracker', sub: 'Boards · mood · heatmap' },
@@ -71,15 +69,13 @@ const EN_NAV: Record<string, { label: string; title: string; sub: string }> = {
 const NAV_CORE = [
   { key: '/', label: '总览', icon: <HomeOutlined />, title: '投资总览', sub: '资产、持仓与今日市场' },
   { key: '/daily', label: '每日策略', icon: <CalendarOutlined />, title: '每日策略', sub: '今日结论 · 仓位 · 标的' },
-  { key: '/decision', label: '交易决策', icon: <CompassOutlined />, title: '交易决策', sub: '买区 · 止损 · 目标 · 评级' },
   { key: '/evaluation', label: '历史测评', icon: <HistoryOutlined />, title: '历史测评', sub: '模型滚动检验 · 命中率 · 净值对比' },
   { key: '/portfolio', label: '持仓管理', icon: <ProfileOutlined />, title: '持仓管理', sub: '持仓 · 交易流水 · 资产与建议' },
-  { key: '/analytics', label: '收益复盘', icon: <PieChartOutlined />, title: '收益复盘', sub: '净值 · 回撤 · 交易统计' },
+  { key: '/decision', label: '交易决策', icon: <CompassOutlined />, title: '交易决策', sub: '买区 · 止损 · 目标 · 评级' },
   { key: '/backtest', label: '策略回测', icon: <ExperimentOutlined />, title: '策略回测', sub: '用历史数据检验交易规则' },
 ]
 
 const NAV_RESEARCH = [
-  { key: '/research', label: '研究台', icon: <NodeIndexOutlined />, title: '研究台', sub: '市场结论 · 模型 · 因子 · 板块 · 指数' },
   { key: '/forecast', label: '市场预测', icon: <RadarChartOutlined />, title: '市场预测', sub: '未来 5 日状态条件收益 · 上涨概率' },
   { key: '/models', label: '量化模型', icon: <ThunderboltOutlined />, title: '量化模型', sub: 'HMM · 渗流 · 九转 · 行业与仓位' },
   { key: '/factors', label: '因子筛选', icon: <FilterOutlined />, title: '因子筛选', sub: '因子分类 · 覆盖率 · 横截面打分' },
@@ -164,7 +160,6 @@ export default function App() {
     if (loc.pathname === '/index-analysis' || loc.pathname === '/industry-news') return { title: '指数分析', sub: 'A股主要宽基 · 海外指数 · 操作结论' }
     if (loc.pathname === '/models') return { title: '量化模型', sub: 'HMM · 渗流 · 九转 · 行业关注 · 仓位建议' }
     if (loc.pathname === '/evaluation') return { title: '历史测评', sub: '滚动检验 · 命中率 · 净值对比' }
-    if (loc.pathname === '/research') return { title: '研究台', sub: '模型 · 因子 · 板块 · 指数 · 地域' }
     if (loc.pathname === '/decision') return { title: '交易决策', sub: '买入区间 · 止损 · 目标 · 评级与原因' }
     if (loc.pathname === '/forecast') return { title: '市场预测', sub: '未来 5 日状态条件收益 · 上涨概率' }
     return NAV.find((n) => n.key === loc.pathname) ?? { title: 'StockDesk', sub: '' }
@@ -280,7 +275,7 @@ export default function App() {
         <Route path="/watchlist" element={<Watchlist />} />
               <Route path="/stock/:code" element={<StockDetail />} />
               <Route path="/portfolio" element={<Portfolio />} />
-              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/analytics" element={<Navigate to="/portfolio?tab=analysis" replace />} />
               <Route path="/backtest" element={<Backtest />} />
               <Route path="/factors" element={<Factors />} />
               <Route path="/screener" element={<MarketBoard />} />

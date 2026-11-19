@@ -6,6 +6,7 @@ import dayjs from 'dayjs'
 import { api } from '../api'
 import { Card, EmptyState, Kpi, More, StatLine } from '../components/ui'
 import AccountAssetsModal from '../components/AccountAssetsModal'
+import NetWorthChart from '../components/NetWorthChart'
 import PositionAdviceCard from '../components/PositionAdvice'
 import { RatingTag, TierTag } from '../components/DecisionCard'
 import { fmt, trendClass, UP, DOWN } from '../utils'
@@ -1050,6 +1051,14 @@ function AnalysisView({
           )}
         </Card>
       </div>
+
+      {hasSeries ? (
+        <div style={{ marginTop: 14 }}>
+          <Card title="净值曲线与基准" desc="从第一笔交易起算 · 沪深300 为基准">
+            <NetWorthChart series={analytics.series} benchmark={analytics.benchmark} height={260} />
+          </Card>
+        </div>
+      ) : null}
 
       <More title="交易偏好与习惯" desc="从流水里看节奏，不是评价">
       <div style={{ marginTop: 14 }}>
