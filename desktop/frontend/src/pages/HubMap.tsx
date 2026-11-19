@@ -109,7 +109,7 @@ function buildProvinceRows(dist: any, leaders: any[]): ProvinceRow[] {
   return PROVINCES.map((seed, idx) => {
     const d = distBy.get(seed.short) ?? distBy.get(seed.name) ?? null
     const l = leaderBy.get(seed.short) ?? leaderBy.get(seed.name) ?? null
-    const industries = (l?.industries ?? d?.industries ?? []).filter(Boolean)
+    const industries = ((l?.industries?.length ? l.industries : d?.industries) ?? []).filter(Boolean)
     return {
       ...seed,
       idx,
@@ -120,7 +120,7 @@ function buildProvinceRows(dist: any, leaders: any[]): ProvinceRow[] {
       pct: numOrNull(d?.pct ?? l?.pct),
       inflow: numOrNull(d?.inflow ?? l?.inflow),
       industries,
-      leaders: l?.leaders ?? d?.leaders ?? [],
+      leaders: (d?.leaders?.length ? d.leaders : (l?.leaders ?? [])),
       hasData: Boolean(d || l),
       special: SPECIAL_REGIONS.has(seed.short),
     }
@@ -338,7 +338,7 @@ export default function HubMap() {
 
       {selected && (
         <div style={{ marginTop: 14 }}>
-          <ProvinceOverview row={selected} />
+          <ProvinceOverview row={selected} capped={capped} />
         </div>
       )}
 
@@ -346,12 +346,12 @@ export default function HubMap() {
   )
 }
 
-function ProvinceOverview({ row }: { row: ProvinceRow }) {
+function ProvinceOverview({ row, capped }: { row: ProvinceRow; capped?: boolean }) {
   const hasLeaders = row.leaders.length > 0
   return (
     <Card
       title={`${row.short} · 地域概览`}
-      desc={row.hasData ? `${row.count} 家上市公司` : '该省数据源暂未返回'}
+      desc={row.hasData ? `${row.count} 家${capped ? '样本' : '上市公司'}` : '该省数据源暂未返回'}
     >
       {!row.hasData && (
         <div
@@ -364,7 +364,7 @@ function ProvinceOverview({ row }: { row: ProvinceRow }) {
 
       <div className="kpi-grid" style={{ gap: 10 }}>
         <Kpi
-          label="上市公司"
+          label={capped ? "样本公司" : "上市公司"}
           value={row.hasData ? row.count.toLocaleString('zh-CN') : '--'}
           sub={<span className="muted">{row.type}</span>}
         />
@@ -377,7 +377,7 @@ function ProvinceOverview({ row }: { row: ProvinceRow }) {
           label="地域涨跌"
           value={row.pct === null ? '--' : fmt.pct(row.pct)}
           color={row.pct === null ? undefined : row.pct >= 0 ? 'var(--up)' : 'var(--down)'}
-          sub={<span className="muted">{row.hasData ? '东方财富地域板块' : (row.special ? '不在 A 股注册地样本' : '待数据源返回')}</span>}
+          sub={<span className="muted">{row.hasData ? (capped ? '地域样本（新浪）' : '东方财富地域板块') : (row.special ? '不在 A 股注册地样本' : '待数据源返回')}</span>}
         />
         <Kpi
           label="主力净流入"

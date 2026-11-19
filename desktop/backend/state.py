@@ -1258,6 +1258,9 @@ def _sina_region_direct() -> list[dict]:
     import json
     import urllib.request
 
+    cached = db.cache_get("region:sina:enrich:v1", 6 * 3600)
+    if cached:
+        return cached
     t0 = time.time()
     try:
         url = "https://money.finance.sina.com.cn/q/view/newFLJK.php?param=area"
@@ -1287,7 +1290,51 @@ def _sina_region_direct() -> list[dict]:
                 "industries": [],
                 "source": "sina-area",
             })
+        # Enrich the compact area table with its constituent sample.  The
+        # old page showed "100 companies" but no up/down/leaders because the
+        # area summary has no membership.  Sina's node endpoint does.
+        def enrich(b: dict) -> dict:
+            try:
+                members = market.sina_node_members(b["code"], limit=100, pages=1)
+            except Exception:
+                return b
+            if not members:
+                return b
+            pcts = [m.get("pct") for m in members if m.get("pct") is not None]
+            b["count"] = len(members)
+            b["up"] = sum(1 for x in pcts if x > 0)
+            b["down"] = sum(1 for x in pcts if x < 0)
+            b["flat"] = len(pcts) - b["up"] - b["down"]
+            by_pct = sorted(members, key=lambda m: m.get("pct") or -999, reverse=True)
+            leaders = []
+            for m in by_pct[:3]:
+                code = str(m.get("code") or "")
+                leaders.append({
+                    "code": code, "name": m.get("name") or "",
+                    "price": m.get("price"), "pct": m.get("pct"),
+                    "inflow": None, "industry": market.industry_name(code),
+                })
+            b["leaders"] = leaders
+            if leaders:
+                b["leader"], b["leader_code"], b["leader_pct"] = leaders[0]["name"], leaders[0]["code"], leaders[0]["pct"]
+            counts: dict[str, int] = {}
+            for m in members:
+                ind = market.industry_name(str(m.get("code") or ""))
+                if ind:
+                    counts[ind] = counts.get(ind, 0) + 1
+            b["industries"] = [k for k, _ in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:3]]
+            b["sample_capped"] = True
+            b["source"] = "sina-area-sample"
+            return b
+
+        try:
+            with ThreadPoolExecutor(max_workers=12) as ex:
+                out = list(ex.map(enrich, out))
+        except Exception:
+            pass
         out.sort(key=lambda x: x["count"], reverse=True)
+        if out:
+            db.cache_set("region:sina:enrich:v1", out)
         source_health.mark("sina", bool(out), time.time() - t0, "regions")
         return out
     except Exception as exc:

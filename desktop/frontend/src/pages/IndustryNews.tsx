@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Button, Spin, Tag } from 'antd'
+import { Button, Spin, Table, Tag } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { Card, EmptyState, More } from '../components/ui'
 import { api } from '../api'
@@ -262,6 +262,25 @@ export default function IndustryNews() {
   const avgTone = summary.avg >= 55 ? 'var(--up)' : summary.avg <= 45 ? 'var(--down)' : 'var(--amber)'
   const usUp = overseas.filter((x) => (x.pct ?? 0) > 0).length
   const usDown = overseas.filter((x) => (x.pct ?? 0) < 0).length
+  const indexColumns = [
+    {
+      title: '指数', dataIndex: 'name',
+      render: (v: string, x: any) => (
+        <span><b>{v}</b> <span className="muted mono small">{x.code}</span>{x.style ? <span className="chip" style={{ marginLeft: 6 }}>{x.style}</span> : null}</span>
+      ),
+    },
+    { title: '现价', dataIndex: 'price', align: 'right' as const, render: (v: number) => <span className="num">{fmt.price(v)}</span> },
+    { title: '涨跌', dataIndex: 'pct', align: 'right' as const, render: (v: number) => <span className={`num ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+    { title: '5日', dataIndex: 'pct5', align: 'right' as const, render: (v: number) => <span className={`num small ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+    { title: '20日', dataIndex: 'pct20', align: 'right' as const, render: (v: number) => <span className={`num small ${trendClass(v)}`}>{fmt.pct(v)}</span> },
+    {
+      title: 'MA20', dataIndex: 'ma20', align: 'right' as const,
+      render: (v: number, x: any) => v ? <span className={`small ${x.price >= v ? 'up' : 'down'}`}>{x.price >= v ? '上方' : '下方'} {Math.abs((x.price / v - 1) * 100).toFixed(1)}%</span> : '--',
+    },
+    { title: 'RSI', dataIndex: 'rsi', align: 'right' as const, render: (v: number) => <span className="num small">{v ?? '--'}</span> },
+    { title: '趋势', dataIndex: 'trend', render: (v: string) => <span className="muted small">{v || '--'}</span> },
+    { title: '结论', render: (_: any, x: any) => <BiasTag x={x} /> },
+  ]
 
   return (
     <div>
@@ -390,11 +409,14 @@ export default function IndustryNews() {
           <CardSkeleton />
         </div>
       ) : aRows.length ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 14 }}>
-          {aRows.map((x) => (
-            <IndexCard key={x.code} x={x} />
-          ))}
-        </div>
+        <Table
+          size="small"
+          rowKey="code"
+          pagination={false}
+          dataSource={aRows}
+          columns={indexColumns as any}
+          scroll={{ x: 980 }}
+        />
       ) : rows.length ? (
         <div
           style={{
