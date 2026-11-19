@@ -53,7 +53,7 @@ def _cache_keys() -> dict[str, tuple[str, str]]:
         "spot": (market.SPOT_KEY, "全市场快照"),
         "state": ("market:state:v2", "行情状态"),
         "daily": ("market:daily:v12", "每日策略"),
-        "index": ("market:index-analysis:v1", "指数分析"),
+        "index": ("market:index-analysis:v2", "指数分析"),
         "models": ("market:models:v13", "量化模型"),
         "evaluation": ("model:history:v2:000300:1000", "历史测评"),
         "factors": ("factor:screen:6000:30000000.0:1", "因子筛选"),

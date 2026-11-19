@@ -1092,7 +1092,7 @@ def _us_index_klines(code: str) -> list[dict]:
         return []
 
 
-_INDEX_ANALYSIS_KEY = "market:index-analysis:v1"
+_INDEX_ANALYSIS_KEY = "market:index-analysis:v2"
 _INDEX_ANALYSIS_LOCK = threading.Lock()
 _INDEX_ANALYSIS_COMPUTE_LOCK = threading.Lock()
 _INDEX_ANALYSIS_REFRESHING = False
@@ -1161,7 +1161,7 @@ def _compute_index_analysis() -> list[dict]:
                         "price": None, "pct": None, "ma20": None, "ma60": None, "trend": "无数据",
                         "support": None, "resistance": None, "pct7": None, "pct20": None, "pct60": None,
                         "note": note, "bias": "无数据", "score": 50, "action": "等待数据", "conclusion": "暂无数据",
-                        "source": None, "as_of": None})
+                        "attention": None, "focus": note, "source": None, "as_of": None})
             continue
 
         def ma(n):
@@ -1220,6 +1220,14 @@ def _compute_index_analysis() -> list[dict]:
             bias = "中性"
             action = "震荡格局，控制仓位，等待放量突破压力或回踩支撑。"
         conclusion = f"{trend}结构 · {bias}（{round(score)}分）。{action}"
+        attention = f"支撑 {support:.2f} · 压力 {resistance:.2f} · MA20 {m20:.2f}" if m20 else f"支撑 {support:.2f} · 压力 {resistance:.2f}"
+        if trend == "多头":
+            focus = "站稳 MA20 可继续持有；跌破 MA20 先减仓。"
+        elif trend == "空头":
+            focus = "先看能否收复 MA20；站不回去，反弹只当减仓。"
+        else:
+            focus = "区间思路：支撑附近观察承接，压力附近看放量突破。"
+        focus = f"{focus} {note or ''}".strip()
         out.append({
             "code": code, "name": name, "region": region, "style": style, "desc": desc,
             "price": round(price, 2), "pct": rows[-1].get("pct"), "chg": rows[-1].get("chg"),
@@ -1230,6 +1238,7 @@ def _compute_index_analysis() -> list[dict]:
             "rsi": round(rsi, 1), "dif": round(dif, 2), "dea": round(dea, 2), "macd_hist": round(hist, 2),
             "vol20": round(vol20, 2), "bias20": round(bias20, 2),
             "score": round(score), "bias": bias, "action": action, "conclusion": conclusion,
+            "attention": attention, "focus": focus,
             "note": note, "date": rows[-1].get("date"),
             "source": rows[-1].get("source") or "unknown",
             "as_of": rows[-1].get("date"),

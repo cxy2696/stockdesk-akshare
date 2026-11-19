@@ -279,6 +279,15 @@ export default function IndustryNews() {
     },
     { title: 'RSI', dataIndex: 'rsi', align: 'right' as const, render: (v: number) => <span className="num small">{v ?? '--'}</span> },
     { title: '趋势', dataIndex: 'trend', render: (v: string) => <span className="muted small">{v || '--'}</span> },
+    {
+      title: '注意位置与重点', width: 280,
+      render: (_: any, x: any) => (
+        <div>
+          <div className="mono small">{x.attention || `支撑 ${fmt.price(x.support)} · 压力 ${fmt.price(x.resistance)}`}</div>
+          <div className="muted" style={{ fontSize: 10.5, lineHeight: 1.5 }}>{x.focus || x.note || '--'}</div>
+        </div>
+      ),
+    },
     { title: '结论', render: (_: any, x: any) => <BiasTag x={x} /> },
   ]
 
@@ -415,7 +424,7 @@ export default function IndustryNews() {
           pagination={false}
           dataSource={aRows}
           columns={indexColumns as any}
-          scroll={{ x: 980 }}
+          scroll={{ x: 1240 }}
         />
       ) : rows.length ? (
         <div
