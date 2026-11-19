@@ -186,24 +186,131 @@ def cache_delete(key: str):
 
 
 OBSOLETE_CACHE_KEYS = (
-    "spot:v6", "market:state", "market:daily:v9", "market:daily:v10",
+    "spot:v3", "spot:v4", "spot:v5", "spot:v6",
+    "market:state", "market:daily:v9", "market:daily:v10",
     "market:news:v2", "boards:rows:v1", "model:history:v1",
 )
 
+_LAST_PRUNE = 0
+_LAST_PRUNE_AT = 0.0
+_LAST_VACUUM = 0.0
+
 
 def prune_cache(max_age: float = 14 * 86400, obsolete: tuple[str, ...] | None = None) -> int:
-    """Drop expired cache rows and superseded schema keys after a refresh."""
+    """Drop expired rows, superseded keys and old factor-screen variants.
+
+    This runs after every completed refresh job.  It deliberately uses narrow
+    patterns so active caches (spot:v7, state:v2, daily:v11, factor:screen:6000)
+    are never touched.
+    """
+    global _LAST_PRUNE, _LAST_PRUNE_AT
     deleted = 0
+    now = time.time()
     with _lock, _db(CACHE_PATH) as c:
-        cur = c.execute("DELETE FROM kv WHERE ts < ?", (time.time() - max_age,))
+        cur = c.execute("DELETE FROM kv WHERE ts < ?", (now - max_age,))
         deleted += max(0, cur.rowcount)
         obsolete = OBSOLETE_CACHE_KEYS if obsolete is None else obsolete
         if obsolete:
             marks = ",".join("?" for _ in obsolete)
             cur = c.execute(f"DELETE FROM kv WHERE k IN ({marks})", tuple(obsolete))
             deleted += max(0, cur.rowcount)
+        # Old UI variants can be recreated by API calls; keep only the current
+        # full factor screen and drop the tiny/stale one-off screens.
+        cur = c.execute(
+            "DELETE FROM kv WHERE k LIKE 'factor:screen:%' "
+            "AND k != 'factor:screen:6000:30000000.0:1' AND ts < ?",
+            (now - 3600,),
+        )
+        deleted += max(0, cur.rowcount)
+        # Drop superseded heatmap keys older than the current 10-minute window.
+        cur = c.execute(
+            "DELETE FROM kv WHERE k LIKE 'market:heatmap:%' AND ts < ?", (now - 3600,)
+        )
+        deleted += max(0, cur.rowcount)
+
+        # K-line caches are keyed by both a plain code and an explicit secid,
+        # and by several limits.  Keep only the longest/newest series per
+        # code+period+adjust; shorter duplicates are pure redundancy.
+        try:
+            rows = c.execute("SELECT k, ts FROM kv WHERE k LIKE 'kline:%'").fetchall()
+            groups: dict[tuple[str, str, str], list[tuple[str, int, float]]] = {}
+            for row in rows:
+                parts = str(row["k"]).split(":")
+                if len(parts) < 5:
+                    continue
+                code = parts[1].split(".")[-1]
+                try:
+                    limit = int(parts[4])
+                except ValueError:
+                    limit = 0
+                groups.setdefault((code, parts[2], parts[3]), []).append((row["k"], limit, float(row["ts"])))
+            for items in groups.values():
+                if len(items) <= 1:
+                    continue
+                items.sort(key=lambda x: (x[1], x[2]), reverse=True)
+                for key, _, _ in items[1:]:
+                    cur = c.execute("DELETE FROM kv WHERE k=?", (key,))
+                    deleted += max(0, cur.rowcount)
+        except sqlite3.DatabaseError:
+            pass
+
+        # Hard value budget: keep current snapshot/state/factor caches, then
+        # trim oldest K-lines until the disposable cache is below 40 MB.
+        try:
+            total = c.execute("SELECT COALESCE(SUM(length(v)),0) FROM kv").fetchone()[0]
+            if total > 40 * 1024 * 1024:
+                rows = c.execute(
+                    "SELECT k, length(v) AS n, ts FROM kv WHERE k LIKE 'kline:%' ORDER BY ts ASC"
+                ).fetchall()
+                for row in rows:
+                    if total <= 40 * 1024 * 1024:
+                        break
+                    c.execute("DELETE FROM kv WHERE k=?", (row["k"],))
+                    total -= int(row["n"] or 0)
+                    deleted += 1
+        except sqlite3.DatabaseError:
+            pass
         c.commit()
+    _LAST_PRUNE = deleted
+    _LAST_PRUNE_AT = now
+    if deleted:
+        try:
+            with _lock, _db(CACHE_PATH) as c:
+                c.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        except sqlite3.DatabaseError:
+            pass
+        # Reclaim free pages after a meaningful prune.  Checkpoint alone leaves
+        # the old 70–80 MB file on disk even when most rows are gone.
+        try:
+            file_bytes = CACHE_PATH.stat().st_size
+        except Exception:
+            file_bytes = 0
+        if (deleted >= 50 or file_bytes > 60 * 1024 * 1024) and now - _LAST_VACUUM > 3600:
+            try:
+                with _lock, _db(CACHE_PATH) as c:
+                    c.execute("VACUUM")
+                _LAST_VACUUM = now
+            except sqlite3.DatabaseError:
+                pass
     return deleted
+
+
+def cache_stats() -> dict:
+    """Cheap observable cache size/row count for the data-status bar."""
+    try:
+        size = CACHE_PATH.stat().st_size if hasattr(CACHE_PATH, "stat") else 0
+    except Exception:
+        size = 0
+    try:
+        with _lock, _db(CACHE_PATH) as c:
+            rows = c.execute("SELECT COUNT(*) FROM kv").fetchone()[0]
+            bytes_used = c.execute("SELECT COALESCE(SUM(length(v)),0) FROM kv").fetchone()[0]
+    except Exception:
+        rows = bytes_used = 0
+    return {
+        "rows": int(rows), "value_bytes": int(bytes_used), "file_bytes": int(size),
+        "last_pruned": int(_LAST_PRUNE), "last_pruned_at": _LAST_PRUNE_AT or None,
+    }
 
 
 def cache_clear(prefix: str = ""):

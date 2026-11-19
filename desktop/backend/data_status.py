@@ -126,6 +126,7 @@ def snapshot() -> dict:
         "coverage": coverage,
         "sources": sources,
         "cache": _cache_rows(),
+        "cache_stats": db.cache_stats(),
         "scheduler": scheduler_row,
         "refresh_in_progress": sorted(_REFRESHING),
     }
@@ -161,6 +162,10 @@ def _refresh_worker(target: str) -> None:
     except Exception as exc:
         print(f"[stockdesk] manual refresh {target} failed: {exc}")
     finally:
+        try:
+            db.prune_cache()
+        except Exception:
+            pass
         with _REFRESH_LOCK:
             _REFRESHING.discard(target)
 
