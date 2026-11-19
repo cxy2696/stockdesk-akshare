@@ -121,20 +121,60 @@ def _family(name: str) -> str:
     return name.split("_", 1)[0]
 
 
-def select_features(frame: pd.DataFrame, count: int = FEATURE_COUNT) -> list[str]:
-    """Deterministic, family-balanced selector over the 158 factors."""
+def _spearman(a: np.ndarray, b: np.ndarray) -> float | None:
+    if len(a) < 8 or len(a) != len(b):
+        return None
+    ar = np.argsort(np.argsort(a)).astype(float)
+    br = np.argsort(np.argsort(b)).astype(float)
+    if np.std(ar) <= 1e-12 or np.std(br) <= 1e-12:
+        return None
+    return float(np.corrcoef(ar, br)[0, 1])
+
+
+def _forward_returns(closes: np.ndarray, horizon: int = HORIZON) -> np.ndarray:
+    out = np.full(len(closes), np.nan, dtype=float)
+    for i in range(len(closes) - horizon):
+        if closes[i] > 0:
+            out[i] = (closes[i + horizon] / closes[i] - 1.0) * 100.0
+    return out
+
+
+def select_features(frame: pd.DataFrame, count: int = FEATURE_COUNT,
+                    target: np.ndarray | None = None,
+                    train_end: int | None = None) -> list[str]:
+    """Family-balanced selector; when target is supplied, require stable IC.
+
+    IC is measured separately on the first/second half of the training prefix.
+    A feature must keep the same sign and a meaningful minimum |IC| in both
+    halves.  This is a training-only stability filter, not a test-set choice.
+    """
+    n = len(frame) if train_end is None else min(len(frame), int(train_end))
+    y = None if target is None else np.asarray(target[:n], dtype=float)
     stats = []
     for name in frame.columns:
-        col = frame[name]
-        coverage = float(col.notna().mean())
-        std = float(col.std(skipna=True) or 0.0)
-        if coverage >= 0.55 and math.isfinite(std) and std > 1e-12:
-            stats.append((name, coverage, std))
-    by_family: dict[str, list[tuple[str, float, float]]] = {}
+        col = frame[name].to_numpy(float)[:n]
+        coverage = float(np.isfinite(col).mean()) if n else 0.0
+        std = float(np.nanstd(col)) if np.isfinite(col).any() else 0.0
+        if coverage < 0.55 or not math.isfinite(std) or std <= 1e-12:
+            continue
+        score = coverage
+        if y is not None:
+            half = n // 2
+            valid_a = np.isfinite(col[:half]) & np.isfinite(y[:half])
+            valid_b = np.isfinite(col[half:]) & np.isfinite(y[half:])
+            ic_a = _spearman(col[:half][valid_a], y[:half][valid_a])
+            ic_b = _spearman(col[half:][valid_b], y[half:][valid_b])
+            if ic_a is None or ic_b is None or ic_a * ic_b <= 0:
+                continue
+            score = min(abs(ic_a), abs(ic_b)) * math.sqrt(coverage)
+            if score < 0.015:
+                continue
+        stats.append((name, coverage, std, score))
+    by_family: dict[str, list[tuple[str, float, float, float]]] = {}
     for item in stats:
         by_family.setdefault(_family(item[0]), []).append(item)
     for items in by_family.values():
-        items.sort(key=lambda x: (-x[1], -x[2], x[0]))
+        items.sort(key=lambda x: (-x[3], -x[1], x[0]))
     selected: list[str] = []
     while len(selected) < count:
         progressed = False
@@ -145,6 +185,12 @@ def select_features(frame: pd.DataFrame, count: int = FEATURE_COUNT) -> list[str
                 progressed = True
         if not progressed:
             break
+    if len(selected) < count:
+        # A pure IC filter can be too strict on a short history; fall back to
+        # coverage/variance only for the remaining slots.
+        rest = [x for x in stats if x[0] not in selected]
+        rest.sort(key=lambda x: (-x[1], -x[2], x[0]))
+        selected.extend(x[0] for x in rest[:count - len(selected)])
     return selected
 
 
@@ -171,11 +217,7 @@ def standardize(matrix: np.ndarray, fit_rows: int | None = None) -> np.ndarray:
     return np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
 
 
-def _targets(closes: np.ndarray, horizon: int = HORIZON) -> np.ndarray:
-    y = np.full(len(closes), np.nan)
-    for i in range(len(closes) - horizon):
-        y[i] = 1.0 if closes[i + horizon] > closes[i] else 0.0
-    return y
+
 
 
 def train_predict(code: str = "000300", limit: int = 1400) -> dict:
@@ -185,20 +227,22 @@ def train_predict(code: str = "000300", limit: int = 1400) -> dict:
                 "alpha158_count": 0, "feature_count": 0, "code": code}
     frame = build_alpha158(rows)
     closes = pd.to_numeric(pd.Series([r["close"] for r in rows]), errors="coerce").to_numpy(float)
-    y_all = _targets(closes)
+    fwd = _forward_returns(closes)
     raw_split = max(220, int(len(rows) * 0.8))
-    # Feature selection must also be fitted on the past only; using the full
-    # frame would let future variance choose today's features.
-    feature_names = select_features(frame.iloc[:raw_split])
+    train_end = min(raw_split, len(rows) - HORIZON)
+    # Feature selection is trained on the past only and requires stable
+    # two-half IC, not just high variance.
+    feature_names = select_features(frame, target=fwd, train_end=train_end)
     if len(feature_names) < FEATURE_COUNT:
-        feature_names = select_features(frame)
+        feature_names = select_features(frame.iloc[:raw_split])
     if len(feature_names) < FEATURE_COUNT:
         return {"available": False, "reason": f"有效因子不足（{len(feature_names)}/48）",
                 "alpha158_count": len(frame.columns), "feature_count": len(feature_names), "code": code}
     X_raw = frame[feature_names].to_numpy(float)
-    valid = np.isfinite(y_all) & np.isfinite(closes)
+    valid = np.isfinite(fwd) & np.isfinite(closes)
     X = X_raw[valid]
-    y = y_all[valid].astype(int)
+    y_return = fwd[valid].astype(float)
+    y = (y_return > 0).astype(int)
     n = len(X)
     split = max(200, int(n * 0.8))
     embargo = HORIZON
@@ -266,6 +310,18 @@ def train_predict(code: str = "000300", limit: int = 1400) -> dict:
         logloss = float(-np.mean(y[valid_start:] * np.log(np.clip(prob_valid, eps, 1 - eps)) +
                                  (1 - y[valid_start:]) * np.log(np.clip(1 - prob_valid, eps, 1 - eps))))
         prob_up = float(booster.predict(live_X)[0])
+        # A regression head is more appropriate for "expected 5-day return";
+        # rank IC is threshold-free and complements binary AUC.
+        rparams = dict(params)
+        rparams.update({"objective": "regression", "metric": "rmse"})
+        rtrain = lgb.Dataset(X[:split], label=y_return[:split], feature_name=feature_names)
+        rvalid = lgb.Dataset(X[valid_start:], label=y_return[valid_start:], reference=rtrain)
+        regression = lgb.train(rparams, rtrain, num_boost_round=400,
+                               valid_sets=[rvalid],
+                               callbacks=[lgb.early_stopping(30, verbose=False), lgb.log_evaluation(0)])
+        expected_valid = regression.predict(X[valid_start:])
+        expected_5d = float(regression.predict(live_X)[0])
+        rank_ic = _spearman(expected_valid, y_return[valid_start:])
         gain = booster.feature_importance(importance_type="gain")
         top = sorted(zip(feature_names, gain.tolist()), key=lambda kv: kv[1], reverse=True)[:8]
         return {
@@ -275,13 +331,15 @@ def train_predict(code: str = "000300", limit: int = 1400) -> dict:
             "embargo": embargo, "standardization": "train-only C++ fit",
             "accuracy": round(acc, 3), "auc": round(float(auc), 3), "logloss": round(logloss, 4),
             "base_rate": round(float(y[valid_start:].mean()), 3),
-            "prob_up": round(prob_up, 4),
-            "direction": "偏多" if prob_up >= 0.55 else ("偏空" if prob_up <= 0.45 else "中性"),
+            "prob_up": round(prob_up, 4), "expected_5d": round(expected_5d, 2),
+            "rank_ic": round(rank_ic, 3) if rank_ic is not None else None,
+            "selection": "train-only stable rank IC",
+            "direction": "偏多" if prob_up >= 0.55 and expected_5d > 0 else ("偏空" if prob_up <= 0.45 and expected_5d < 0 else "中性"),
             "top_features": [{"name": k, "gain": round(float(v), 2)} for k, v in top],
             "feature_names": feature_names,
             "params": {k: params[k] for k in ("num_leaves", "learning_rate", "min_data_in_leaf", "lambda_l2")},
             "bars": len(rows), "updated": time.time(),
-            "caveat": "时序验证结果只说明历史样本表现，不是收益承诺；概率接近 50% 时不要据此重仓。",
+            "caveat": "时序验证结果只说明历史样本表现，不是收益承诺；概率接近 50% 或 Rank IC 接近 0 时不要据此重仓。",
         }
     except Exception as exc:
         return {"available": False, "reason": f"LightGBM 训练失败：{exc}",
@@ -290,7 +348,7 @@ def train_predict(code: str = "000300", limit: int = 1400) -> dict:
 
 
 def forecast(code: str = "000300") -> dict:
-    key = f"ml:forecast:v2:{code}"
+    key = f"ml:forecast:v3:{code}"
     cached = db.cache_get(key, CACHE_TTL)
     if cached:
         return cached
